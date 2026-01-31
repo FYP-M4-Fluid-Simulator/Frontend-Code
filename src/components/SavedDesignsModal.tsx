@@ -1,4 +1,6 @@
-import { X, Download, Trash2, Calendar, TrendingUp } from 'lucide-react';
+'use client';
+
+import { X, FileText, Trash2, Download } from 'lucide-react';
 
 interface SavedDesignsModalProps {
   isOpen: boolean;
@@ -84,7 +86,7 @@ export function SavedDesignsModal({ isOpen, onClose }: SavedDesignsModalProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
-                      <Calendar className="w-3.5 h-3.5" />
+                      <FileText className="w-3.5 h-3.5" />
                       <span>Saved on {design.date}</span>
                     </div>
                     <div className="grid grid-cols-4 gap-3">

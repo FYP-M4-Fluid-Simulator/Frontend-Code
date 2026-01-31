@@ -1,3 +1,5 @@
+'use client';
+
 import { TrendingUp, Target, Settings, Sliders } from 'lucide-react';
 import { useState } from 'react';
 

@@ -1,3 +1,5 @@
+'use client';
+
 import { Play, Settings } from 'lucide-react';
 import { useState } from 'react';
 

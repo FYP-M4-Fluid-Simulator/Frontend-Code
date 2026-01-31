@@ -1,3 +1,5 @@
+'use client';
+
 import { Play, Pause, RotateCcw, Download, Save, FileText } from 'lucide-react';
 import { UserMenu } from './UserMenu';
 

@@ -1,5 +1,7 @@
-import { useEffect, useRef } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 
 interface ProfessionalTurbineProps {
   liftToDragRatio: number;
@@ -7,11 +9,7 @@ interface ProfessionalTurbineProps {
   onToggleFullscreen: () => void;
 }
 
-export function ProfessionalTurbine({
-  liftToDragRatio,
-  isFullscreen,
-  onToggleFullscreen,
-}: ProfessionalTurbineProps) {
+export function ProfessionalTurbine({ liftToDragRatio, isFullscreen, onToggleFullscreen }: ProfessionalTurbineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
   const animationRef = useRef<number>();
@@ -20,7 +18,7 @@ export function ProfessionalTurbine({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const width = canvas.width;
@@ -30,22 +28,22 @@ export function ProfessionalTurbine({
     const drawScene = () => {
       // Professional dark background like CFD software
       const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-      bgGradient.addColorStop(0, "#0a0e1a");
-      bgGradient.addColorStop(1, "#151b2e");
+      bgGradient.addColorStop(0, '#0a0e1a');
+      bgGradient.addColorStop(1, '#151b2e');
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, width, height);
 
       // Draw subtle grid
-      ctx.strokeStyle = "rgba(100, 150, 200, 0.1)";
+      ctx.strokeStyle = 'rgba(100, 150, 200, 0.1)';
       ctx.lineWidth = 1;
-
+      
       for (let x = 0; x < width; x += 50) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, height);
         ctx.stroke();
       }
-
+      
       for (let y = 0; y < height; y += 50) {
         ctx.beginPath();
         ctx.moveTo(0, y);
@@ -55,27 +53,26 @@ export function ProfessionalTurbine({
 
       // Turbine specifications
       const turbineX = width / 2;
-      const turbineY = height * 0.7;
+      const turbineY = height *0.7;
       const towerHeight = 280;
       const hubRadius = 20;
       const bladeLength = 150;
 
       // Draw velocity field streamlines (professional CFD style)
       const time = Date.now() / 1000;
-      ctx.strokeStyle = "rgba(100, 150, 255, 0.15)";
+      ctx.strokeStyle = 'rgba(100, 150, 255, 0.15)';
       ctx.lineWidth = 1;
-
+      
       for (let i = 0; i < 12; i++) {
         const yOffset = -200 + i * 40;
         ctx.beginPath();
-
-        // this loop is drawing a single streamline i.e. one line
+        
         for (let x = 0; x < width; x += 5) {
           const distFromTurbine = Math.abs(x - turbineX);
           const distFactor = Math.max(0, 1 - distFromTurbine / 300);
           const wave = Math.sin(x * 0.02 + time + i * 0.5) * 5 * distFactor;
           const y = turbineY + yOffset + wave;
-
+          
           if (x === 0) {
             ctx.moveTo(x, y);
           } else {
@@ -88,42 +85,34 @@ export function ProfessionalTurbine({
       // Draw pressure field visualization
       ctx.save();
       ctx.globalAlpha = 0.3;
-
+      
       // Low pressure zone (blue) behind turbine
       const lowPressureGradient = ctx.createRadialGradient(
-        turbineX + 100,
-        turbineY,
-        0,
-        turbineX + 100,
-        turbineY,
-        200,
+        turbineX + 100, turbineY, 0,
+        turbineX + 100, turbineY, 200
       );
-      lowPressureGradient.addColorStop(0, "rgba(0, 150, 255, 0.4)");
-      lowPressureGradient.addColorStop(1, "rgba(0, 150, 255, 0)");
+      lowPressureGradient.addColorStop(0, 'rgba(0, 150, 255, 0.4)');
+      lowPressureGradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
       ctx.fillStyle = lowPressureGradient;
       ctx.fillRect(turbineX, turbineY - 200, 300, 400);
-
+      
       // High pressure zone (red) in front of turbine
       const highPressureGradient = ctx.createRadialGradient(
-        turbineX - 100,
-        turbineY,
-        0,
-        turbineX - 100,
-        turbineY,
-        150,
+        turbineX - 100, turbineY, 0,
+        turbineX - 100, turbineY, 150
       );
-      highPressureGradient.addColorStop(0, "rgba(255, 100, 100, 0.4)");
-      highPressureGradient.addColorStop(1, "rgba(255, 100, 100, 0)");
+      highPressureGradient.addColorStop(0, 'rgba(255, 100, 100, 0.4)');
+      highPressureGradient.addColorStop(1, 'rgba(255, 100, 100, 0)');
       ctx.fillStyle = highPressureGradient;
       ctx.fillRect(turbineX - 250, turbineY - 150, 250, 300);
-
+      
       ctx.restore();
 
       // Draw tower with technical appearance
-      ctx.strokeStyle = "#4a5568";
+      ctx.strokeStyle = '#4a5568';
       ctx.lineWidth = 2;
-      ctx.fillStyle = "#2d3748";
-
+      ctx.fillStyle = '#2d3748';
+      
       // Tower structure
       ctx.beginPath();
       ctx.moveTo(turbineX - 12, turbineY + 50);
@@ -136,8 +125,8 @@ export function ProfessionalTurbine({
 
       // Tower panels
       for (let i = 0; i < 5; i++) {
-        const y = turbineY + 50 - (i * towerHeight) / 5;
-        ctx.strokeStyle = "#4a5568";
+        const y = turbineY + 50 - (i * towerHeight / 5);
+        ctx.strokeStyle = '#4a5568';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(turbineX - 12 + i * 0.8, y);
@@ -150,18 +139,18 @@ export function ProfessionalTurbine({
       const hubY = turbineY - towerHeight;
 
       // Draw nacelle (technical design)
-      ctx.fillStyle = "#374151";
-      ctx.strokeStyle = "#6b7280";
+      ctx.fillStyle = '#374151';
+      ctx.strokeStyle = '#6b7280';
       ctx.lineWidth = 2;
-
+      
       // Main nacelle body
       ctx.beginPath();
       ctx.roundRect(hubX - 35, hubY - 15, 70, 30, 5);
       ctx.fill();
       ctx.stroke();
-
+      
       // Nacelle details
-      ctx.fillStyle = "#4b5563";
+      ctx.fillStyle = '#4b5563';
       ctx.fillRect(hubX - 30, hubY - 10, 60, 5);
       ctx.fillRect(hubX - 30, hubY + 5, 60, 5);
 
@@ -176,18 +165,18 @@ export function ProfessionalTurbine({
 
         // Blade gradient for 3D effect
         const bladeGradient = ctx.createLinearGradient(0, -8, 0, 8);
-        bladeGradient.addColorStop(0, "#9ca3af");
-        bladeGradient.addColorStop(0.5, "#e5e7eb");
-        bladeGradient.addColorStop(1, "#6b7280");
-
+        bladeGradient.addColorStop(0, '#9ca3af');
+        bladeGradient.addColorStop(0.5, '#e5e7eb');
+        bladeGradient.addColorStop(1, '#6b7280');
+        
         ctx.fillStyle = bladeGradient;
-        ctx.strokeStyle = "#4b5563";
+        ctx.strokeStyle = '#4b5563';
         ctx.lineWidth = 2;
-
+        
         // Aerodynamic blade shape
         ctx.beginPath();
         ctx.moveTo(0, 0);
-
+        
         // Smooth airfoil-like blade
         const segments = 50;
         for (let s = 0; s <= segments; s++) {
@@ -195,14 +184,14 @@ export function ProfessionalTurbine({
           const x = t * bladeLength;
           const thickness = 8 * Math.sin(t * Math.PI) * (1 - t * 0.7);
           const y = -thickness;
-
+          
           if (s === 0) {
             ctx.moveTo(x, y);
           } else {
             ctx.lineTo(x, y);
           }
         }
-
+        
         for (let s = segments; s >= 0; s--) {
           const t = s / segments;
           const x = t * bladeLength;
@@ -210,13 +199,13 @@ export function ProfessionalTurbine({
           const y = thickness;
           ctx.lineTo(x, y);
         }
-
+        
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
 
         // Blade highlight
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(10, -2);
@@ -225,11 +214,10 @@ export function ProfessionalTurbine({
 
         // Blade sections
         for (let section = 0.2; section < 1; section += 0.2) {
-          ctx.strokeStyle = "rgba(75, 85, 99, 0.5)";
+          ctx.strokeStyle = 'rgba(75, 85, 99, 0.5)';
           ctx.lineWidth = 1;
           const sx = section * bladeLength;
-          const thickness =
-            6 * Math.sin(section * Math.PI) * (1 - section * 0.7);
+          const thickness = 6 * Math.sin(section * Math.PI) * (1 - section * 0.7);
           ctx.beginPath();
           ctx.moveTo(sx, -thickness);
           ctx.lineTo(sx, thickness);
@@ -242,24 +230,17 @@ export function ProfessionalTurbine({
       ctx.restore();
 
       // Hub center (technical design)
-      const hubGradient = ctx.createRadialGradient(
-        hubX,
-        hubY,
-        0,
-        hubX,
-        hubY,
-        hubRadius,
-      );
-      hubGradient.addColorStop(0, "#6b7280");
-      hubGradient.addColorStop(0.6, "#4b5563");
-      hubGradient.addColorStop(1, "#374151");
+      const hubGradient = ctx.createRadialGradient(hubX, hubY, 0, hubX, hubY, hubRadius);
+      hubGradient.addColorStop(0, '#6b7280');
+      hubGradient.addColorStop(0.6, '#4b5563');
+      hubGradient.addColorStop(1, '#374151');
       ctx.fillStyle = hubGradient;
-
+      
       ctx.beginPath();
       ctx.arc(hubX, hubY, hubRadius, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.strokeStyle = "#9ca3af";
+      
+      ctx.strokeStyle = '#9ca3af';
       ctx.lineWidth = 2;
       ctx.stroke();
 
@@ -268,8 +249,8 @@ export function ProfessionalTurbine({
         const angle = (i / 6) * Math.PI * 2;
         const bx = hubX + Math.cos(angle) * (hubRadius - 5);
         const by = hubY + Math.sin(angle) * (hubRadius - 5);
-
-        ctx.fillStyle = "#374151";
+        
+        ctx.fillStyle = '#374151';
         ctx.beginPath();
         ctx.arc(bx, by, 2, 0, Math.PI * 2);
         ctx.fill();
@@ -280,48 +261,48 @@ export function ProfessionalTurbine({
       for (let y = 100; y < height - 100; y += vectorSpacing) {
         for (let x = 50; x < width - 50; x += vectorSpacing) {
           const distFromTurbine = Math.sqrt(
-            Math.pow(x - turbineX, 2) + Math.pow(y - hubY, 2),
+            Math.pow(x - turbineX, 2) + Math.pow(y - hubY, 2)
           );
-
+          
           if (distFromTurbine > 100) {
             let vx = 15;
             let vy = 0;
-
+            
             // Flow deflection
             if (x > turbineX && distFromTurbine < 300) {
               const deflection = Math.exp(-distFromTurbine / 150);
               vy = (y - hubY) * 0.05 * deflection;
-              vx *= 1 - deflection * 0.5;
+              vx *= (1 - deflection * 0.5);
             }
-
+            
             const velocity = Math.sqrt(vx * vx + vy * vy);
             const normalizedVel = velocity / 15;
-
+            
             // Color by velocity magnitude
             const r = Math.floor(255 * normalizedVel);
             const g = Math.floor(150 * (1 - normalizedVel * 0.5));
             const b = Math.floor(50 + 200 * (1 - normalizedVel));
-
+            
             ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
             ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
             ctx.lineWidth = 1.5;
-
+            
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(x + vx, y + vy);
             ctx.stroke();
-
+            
             // Arrow head
             const angle = Math.atan2(vy, vx);
             ctx.beginPath();
             ctx.moveTo(x + vx, y + vy);
             ctx.lineTo(
               x + vx - 5 * Math.cos(angle - 0.3),
-              y + vy - 5 * Math.sin(angle - 0.3),
+              y + vy - 5 * Math.sin(angle - 0.3)
             );
             ctx.lineTo(
               x + vx - 5 * Math.cos(angle + 0.3),
-              y + vy - 5 * Math.sin(angle + 0.3),
+              y + vy - 5 * Math.sin(angle + 0.3)
             );
             ctx.closePath();
             ctx.fill();
@@ -330,60 +311,45 @@ export function ProfessionalTurbine({
       }
 
       // Technical annotations
-      ctx.fillStyle = "rgba(200, 220, 255, 0.9)";
-      ctx.font = "11px monospace";
-
+      ctx.fillStyle = 'rgba(200, 220, 255, 0.9)';
+      ctx.font = '11px monospace';
+      
       // Blade length annotation
-      ctx.strokeStyle = "rgba(100, 150, 255, 0.5)";
+      ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
       ctx.moveTo(hubX, hubY);
-      ctx.lineTo(
-        hubX + bladeLength * Math.cos(rotationRef.current),
-        hubY + bladeLength * Math.sin(rotationRef.current),
-      );
+      ctx.lineTo(hubX + bladeLength * Math.cos(rotationRef.current), hubY + bladeLength * Math.sin(rotationRef.current));
       ctx.stroke();
       ctx.setLineDash([]);
-
+      
       ctx.fillText(`R = ${bladeLength}px`, hubX + 20, hubY - 20);
-
+      
       // Tower height annotation
       ctx.beginPath();
       ctx.moveTo(turbineX + 30, hubY);
       ctx.lineTo(turbineX + 30, turbineY + 50);
       ctx.stroke();
-      ctx.fillText(
-        `H = ${towerHeight}px`,
-        turbineX + 35,
-        hubY + towerHeight / 2,
-      );
+      ctx.fillText(`H = ${towerHeight}px`, turbineX + 35, hubY + towerHeight / 2);
 
       // Performance data overlay
-      ctx.fillStyle = "rgba(20, 30, 50, 0.85)";
+      ctx.fillStyle = 'rgba(20, 30, 50, 0.85)';
       ctx.fillRect(20, 20, 220, 110);
-      ctx.strokeStyle = "rgba(100, 150, 255, 0.5)";
+      ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
       ctx.lineWidth = 1;
       ctx.strokeRect(20, 20, 220, 110);
-
-      ctx.fillStyle = "rgba(200, 220, 255, 0.9)";
-      ctx.font = "bold 12px monospace";
-      ctx.fillText("TURBINE PERFORMANCE", 30, 40);
-
-      ctx.font = "11px monospace";
+      
+      ctx.fillStyle = 'rgba(200, 220, 255, 0.9)';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('TURBINE PERFORMANCE', 30, 40);
+      
+      ctx.font = '11px monospace';
       ctx.fillText(`RPM: ${(liftToDragRatio * 0.12).toFixed(1)}`, 30, 60);
       ctx.fillText(`Power: ${(liftToDragRatio * 2.5).toFixed(0)} kW`, 30, 75);
       ctx.fillText(`L/D Ratio: ${liftToDragRatio.toFixed(1)}`, 30, 90);
-      ctx.fillText(
-        `Efficiency: ${Math.min(95, (liftToDragRatio / 100) * 95).toFixed(1)}%`,
-        30,
-        105,
-      );
-      ctx.fillText(
-        `Tip Speed: ${(liftToDragRatio * 0.8).toFixed(1)} m/s`,
-        30,
-        120,
-      );
+      ctx.fillText(`Efficiency: ${Math.min(95, (liftToDragRatio / 100 * 95)).toFixed(1)}%`, 30, 105);
+      ctx.fillText(`Tip Speed: ${(liftToDragRatio * 0.8).toFixed(1)} m/s`, 30, 120);
 
       rotationRef.current += rotationSpeed;
       animationRef.current = requestAnimationFrame(drawScene);
@@ -399,9 +365,7 @@ export function ProfessionalTurbine({
   }, [liftToDragRatio]);
 
   return (
-    <div
-      className={`flex-1 flex items-center justify-center bg-[#0a0e1a] relative ${isFullscreen ? "fixed inset-0 z-50" : ""}`}
-    >
+    <div className={`flex-1 flex items-center justify-center bg-[#0a0e1a] relative ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       <canvas
         ref={canvasRef}
         width={1200}
@@ -411,13 +375,9 @@ export function ProfessionalTurbine({
       <button
         onClick={onToggleFullscreen}
         className="absolute top-4 right-4 p-2 bg-gray-800/90 hover:bg-gray-700 text-white rounded-lg shadow-lg transition-colors border border-gray-600"
-        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+        title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
       >
-        {isFullscreen ? (
-          <Minimize2 className="w-5 h-5" />
-        ) : (
-          <Maximize2 className="w-5 h-5" />
-        )}
+        {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
       </button>
     </div>
   );

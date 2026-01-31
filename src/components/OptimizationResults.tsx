@@ -1,3 +1,5 @@
+'use client';
+
 import { RotateCcw, Maximize2, Minimize2, Download, ArrowRight, BarChart3 } from 'lucide-react';
 import { LineChart, Line, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import { AirfoilCanvas } from './AirfoilCanvas';

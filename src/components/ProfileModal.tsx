@@ -1,4 +1,6 @@
-import { X, User, Mail, Briefcase, Calendar, Award } from 'lucide-react';
+'use client';
+
+import { X, User, Mail, Calendar, Award } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -55,17 +57,6 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                   <input
                     type="email"
                     defaultValue={user.email}
-                    className="w-full bg-transparent border-none p-0 text-sm font-medium text-gray-900 focus:ring-0"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Briefcase className="w-5 h-5 text-gray-600" />
-                <div className="flex-1">
-                  <label className="text-xs text-gray-600">Organization</label>
-                  <input
-                    type="text"
-                    placeholder="Your organization"
                     className="w-full bg-transparent border-none p-0 text-sm font-medium text-gray-900 focus:ring-0"
                   />
                 </div>
