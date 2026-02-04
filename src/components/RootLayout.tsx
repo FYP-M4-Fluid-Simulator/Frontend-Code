@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 // import { TopBar } from '@/components/TopBar';
-import { AuthModal } from './AuthModal';
-import { SavedDesignsModal } from './SavedDesignsModal';
-import { ProfileModal } from './ProfileModal';
-import { useAppContext } from '../app/providers';
+import { AuthModal } from "./AuthModal";
+import { SavedDesignsModal } from "./SavedDesignsModal";
+import { ProfileModal } from "./ProfileModal";
+import { useAppContext } from "../app/providers";
 
 export function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,13 +16,13 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   const [showSavedDesigns, setShowSavedDesigns] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
-  const getSelectedTab = (): 'design' | 'optimize' | 'turbine' => {
-    if (pathname?.includes('/optimize')) return 'optimize';
-    if (pathname?.includes('/turbine')) return 'turbine';
-    return 'design';
+  const getSelectedTab = (): "design" | "optimize" | "turbine" => {
+    if (pathname?.includes("/optimize")) return "optimize";
+    if (pathname?.includes("/turbine")) return "turbine";
+    return "design";
   };
 
-  const handleTabChange = (tab: 'design' | 'optimize' | 'turbine') => {
+  const handleTabChange = (tab: "design" | "optimize" | "turbine") => {
     router.push(`/${tab}`);
   };
 
@@ -35,7 +35,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-50">
+    <div className="min-h-screen w-full">
       {/* <TopBar
         selectedTab={getSelectedTab()}
         onTabChange={handleTabChange}
@@ -47,7 +47,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
         onOpenProfile={() => setShowProfile(true)}
       /> */}
 
-      <div className="flex-1 flex overflow-hidden">{children}</div>
+      <div className="w-full">{children}</div>
 
       {/* Global Modals */}
       <AuthModal

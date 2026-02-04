@@ -1,16 +1,23 @@
-'use client';
+"use client";
 
-import { Wind, TrendingUp, ArrowRight, Zap, Target, BarChart3 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import {
+  Wind,
+  TrendingUp,
+  ArrowRight,
+  Zap,
+  Target,
+  BarChart3,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface LandingPageProps {
-  onNavigate: (page: 'login' | 'signup') => void;
+  onNavigate: (page: "login" | "signup") => void;
 }
 
 export function LandingPage({ onNavigate }: LandingPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
@@ -47,7 +54,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             <span className="text-xl font-bold">AeroSim CFD</span>
           </div>
           <motion.button
-            onClick={() => onNavigate('login')}
+            onClick={() => onNavigate("login")}
             className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -85,16 +92,20 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
             <p className="text-lg md:text-xl text-gray-300 mb-8 leading-relaxed">
               Advanced computational fluid dynamics simulations and optimization
-              for wind turbine airfoils. Harness the power of CST parameterization
-              and genetic algorithms to achieve peak aerodynamic performance.
+              for wind turbine airfoils. Harness the power of CST
+              parameterization and genetic algorithms to achieve peak
+              aerodynamic performance.
             </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <motion.button
-                onClick={() => onNavigate('login')}
+                onClick={() => onNavigate("login")}
                 className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-all"
-                whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(59, 130, 246, 0.4)" }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 20px 40px rgba(59, 130, 246, 0.4)",
+                }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Zap className="w-5 h-5" />
@@ -103,9 +114,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               </motion.button>
 
               <motion.button
-                onClick={() => onNavigate('login')}
+                onClick={() => onNavigate("login")}
                 className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 transition-all"
-                whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)" }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)",
+                }}
                 whileTap={{ scale: 0.95 }}
               >
                 <TrendingUp className="w-5 h-5" />
@@ -140,7 +154,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                 alt="Wind Turbine Aerodynamics"
                 className="relative rounded-2xl shadow-2xl w-full"
               />
-              
+
               {/* Floating Stats Cards */}
               <motion.div
                 className="absolute -bottom-6 -left-6 bg-slate-900/90 backdrop-blur-md border border-blue-500/30 rounded-xl p-4 shadow-xl"
@@ -190,19 +204,22 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             {
               icon: Wind,
               title: "CST Parameterization",
-              description: "Convert any airfoil to Class Shape Transformation format for precise control",
+              description:
+                "Convert any airfoil to Class Shape Transformation format for precise control",
               color: "blue",
             },
             {
               icon: TrendingUp,
               title: "Genetic Optimization",
-              description: "Evolutionary algorithms to find optimal airfoil shapes for your conditions",
+              description:
+                "Evolutionary algorithms to find optimal airfoil shapes for your conditions",
               color: "purple",
             },
             {
               icon: Zap,
               title: "Real-time CFD",
-              description: "Fast computational fluid dynamics simulations with instant visualization",
+              description:
+                "Fast computational fluid dynamics simulations with instant visualization",
               color: "cyan",
             },
           ].map((feature, index) => (
@@ -216,8 +233,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             >
               <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl blur group-hover:blur-md transition-all" />
               <div className="relative bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 group-hover:border-blue-500/50 transition-colors">
-                <div className={`w-12 h-12 bg-${feature.color}-500/20 rounded-lg flex items-center justify-center mb-4`}>
-                  <feature.icon className={`w-6 h-6 text-${feature.color}-400`} />
+                <div
+                  className={`w-12 h-12 bg-${feature.color}-500/20 rounded-lg flex items-center justify-center mb-4`}
+                >
+                  <feature.icon
+                    className={`w-6 h-6 text-${feature.color}-400`}
+                  />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
                 <p className="text-gray-400">{feature.description}</p>

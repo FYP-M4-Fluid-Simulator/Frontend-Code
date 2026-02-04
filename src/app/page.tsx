@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { LandingPage } from "@/components/LandingPage";
 import { LoginPage } from "@/components/LoginPage";
 import { SignupPage } from "@/components/SignupPage";
@@ -9,10 +10,18 @@ type Page = "landing" | "login" | "signup" | "app";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>("landing");
+  const router = useRouter();
 
   const handleNavigate = (page: Page) => {
     setCurrentPage(page);
   };
+
+  // Redirect to design page when user is authenticated
+  useEffect(() => {
+    if (currentPage === "app") {
+      router.push("/design");
+    }
+  }, [currentPage, router]);
 
   // Render the appropriate page based on current state
   if (currentPage === "landing") {
@@ -27,20 +36,15 @@ export default function App() {
     return <SignupPage onNavigate={handleNavigate} />;
   }
 
-  // Main app placeholder - you can add your simulation controls here later
+  // If user reaches app state, they will be redirected to design page
+  // This is just a fallback loading state
   return (
-    <div className="size-full flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen w-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          Welcome to AeroSim CFD
+        <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+          Redirecting to Design...
         </h1>
-        <p className="text-gray-600 mb-6">You're now logged in!</p>
-        <button
-          onClick={() => handleNavigate("landing")}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-        >
-          Back to Landing
-        </button>
+        <p className="text-gray-600">Please wait</p>
       </div>
     </div>
   );
