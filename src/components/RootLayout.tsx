@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { TopBar } from './TopBar';
+// import { TopBar } from '@/components/TopBar';
 import { AuthModal } from './AuthModal';
 import { SavedDesignsModal } from './SavedDesignsModal';
 import { ProfileModal } from './ProfileModal';
@@ -36,7 +36,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="h-screen w-full flex flex-col bg-gray-50">
-      <TopBar
+      {/* <TopBar
         selectedTab={getSelectedTab()}
         onTabChange={handleTabChange}
         isSimulating={isSimulating}
@@ -45,7 +45,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
         onLogout={handleLogout}
         onOpenSavedDesigns={() => setShowSavedDesigns(true)}
         onOpenProfile={() => setShowProfile(true)}
-      />
+      /> */}
 
       <div className="flex-1 flex overflow-hidden">{children}</div>
 

@@ -10,6 +10,7 @@ interface OptimizationInputProps {
 export function OptimizationInput({ onStartOptimization }: OptimizationInputProps) {
   const [maxIterations, setMaxIterations] = useState(50);
   const [populationSize, setPopulationSize] = useState(30);
+  const [learningRate, setLearningRate] = useState(0.01);
   const [maxThickness, setMaxThickness] = useState(18);
   const [minThickness, setMinThickness] = useState(10);
 
@@ -65,64 +66,15 @@ export function OptimizationInput({ onStartOptimization }: OptimizationInputProp
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Leading Edge Radius
+                    Thickness Control Points
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      defaultValue={0.5}
-                      step={0.1}
-                      placeholder="Min"
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <input
-                      type="number"
-                      defaultValue={2.0}
-                      step={0.1}
-                      placeholder="Max"
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Max Thickness Position (%)
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      defaultValue={25}
-                      placeholder="Min %"
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <input
-                      type="number"
-                      defaultValue={40}
-                      placeholder="Max %"
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Trailing Edge Angle (°)
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      defaultValue={8}
-                      placeholder="Min"
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <input
-                      type="number"
-                      defaultValue={15}
-                      placeholder="Max"
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
+                  <input
+                    type="number"
+                    defaultValue={5}
+                    min={3}
+                    max={10}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
 
                 <div>
@@ -132,83 +84,90 @@ export function OptimizationInput({ onStartOptimization }: OptimizationInputProp
                   <input
                     type="number"
                     defaultValue={5}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    min={3}
+                    max={10}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
             </div>
 
             {/* Algorithm Settings */}
-            <div>
+            <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <Settings className="w-5 h-5 text-blue-600" />
                 <h2 className="text-xl font-semibold text-gray-900">Algorithm Settings</h2>
               </div>
-              <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Optimization Method
-                  </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option>Genetic Algorithm</option>
-                    <option>Particle Swarm</option>
-                    <option>Gradient Descent</option>
-                    <option>Adjoint Method</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Max Iterations: {maxIterations}
+                    Max Iterations: <span className="text-blue-600">{maxIterations}</span>
                   </label>
                   <input
                     type="range"
                     min={10}
                     max={100}
+                    step={5}
                     value={maxIterations}
                     onChange={(e) => setMaxIterations(Number(e.target.value))}
-                    className="w-full"
+                    className="w-full accent-blue-600"
                   />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>10</span>
+                    <span>100</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Population Size: {populationSize}
+                    Population Size: <span className="text-blue-600">{populationSize}</span>
                   </label>
                   <input
                     type="range"
                     min={10}
-                    max={50}
+                    max={100}
+                    step={5}
                     value={populationSize}
                     onChange={(e) => setPopulationSize(Number(e.target.value))}
-                    className="w-full"
+                    className="w-full accent-blue-600"
                   />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>10</span>
+                    <span>100</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Convergence Tolerance
+                    Learning Rate: <span className="text-blue-600">{learningRate.toFixed(3)}</span>
                   </label>
                   <input
-                    type="number"
-                    defaultValue={0.001}
-                    step={0.0001}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    type="range"
+                    min={0.001}
+                    max={0.1}
+                    step={0.001}
+                    value={learningRate}
+                    onChange={(e) => setLearningRate(Number(e.target.value))}
+                    className="w-full accent-blue-600"
                   />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>0.001</span>
+                    <span>0.1</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Constraints */}
-            <div>
+            <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <Sliders className="w-5 h-5 text-blue-600" />
                 <h2 className="text-xl font-semibold text-gray-900">Constraints</h2>
               </div>
-              <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Max Thickness (%): {maxThickness}
+                    Max Thickness (%): <span className="text-blue-600">{maxThickness}</span>
                   </label>
                   <input
                     type="range"
@@ -216,13 +175,17 @@ export function OptimizationInput({ onStartOptimization }: OptimizationInputProp
                     max={25}
                     value={maxThickness}
                     onChange={(e) => setMaxThickness(Number(e.target.value))}
-                    className="w-full"
+                    className="w-full accent-blue-600"
                   />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>12%</span>
+                    <span>25%</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
-                    Min Thickness (%): {minThickness}
+                    Min Thickness (%): <span className="text-blue-600">{minThickness}</span>
                   </label>
                   <input
                     type="range"
@@ -230,23 +193,12 @@ export function OptimizationInput({ onStartOptimization }: OptimizationInputProp
                     max={15}
                     value={minThickness}
                     onChange={(e) => setMinThickness(Number(e.target.value))}
-                    className="w-full"
+                    className="w-full accent-blue-600"
                   />
-                </div>
-
-                <div className="space-y-3 pt-2">
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 rounded" />
-                    <span className="text-sm text-gray-700">Enforce smoothness</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 rounded" />
-                    <span className="text-sm text-gray-700">Prevent separation</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded" />
-                    <span className="text-sm text-gray-700">Structural feasibility</span>
-                  </label>
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>8%</span>
+                    <span>15%</span>
+                  </div>
                 </div>
               </div>
             </div>
