@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { 
-  Wind, 
-  Settings, 
-  Download, 
-  Save, 
-  LogOut, 
+import { useState, useRef, useEffect } from "react";
+import {
+  Wind,
+  Settings,
+  Download,
+  Save,
+  LogOut,
   Plus,
   Trash2,
   ChevronLeft,
@@ -27,56 +27,62 @@ import {
   User,
   Cpu,
   Clock,
-  ArrowRight
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { DynamicAirfoilSVG } from './DynamicAirfoilSVG';
-import { GridSimulationCanvas } from './GridSimulationCanvas';
-import { EulerianFlowCanvas } from './EulerianFlowCanvas';
-import { InteractiveAirfoilCanvas } from './InteractiveAirfoilCanvas';
-import { generateAirfoil } from '@/lib/cst';
-import { createSimulationConfig, downloadConfigFile } from '@/lib/exportData';
+  ArrowRight,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { DynamicAirfoilSVG } from "./DynamicAirfoilSVG";
+import { GridSimulationCanvas } from "./GridSimulationCanvas";
+import { EulerianFlowCanvas } from "./EulerianFlowCanvas";
+import { InteractiveAirfoilCanvas } from "./InteractiveAirfoilCanvas";
+import { generateAirfoil } from "@/lib/cst";
+import { createSimulationConfig, downloadConfigFile } from "@/lib/exportData";
 
 interface DesignPageProps {
   onLogout: () => void;
 }
 
-type PageMode = 'design' | 'simulate' | 'optimize';
-type WorkflowStage = 'drafting' | 'simulator';
+type PageMode = "design" | "simulate" | "optimize";
+type WorkflowStage = "drafting" | "simulator";
 
 export function DesignPage({ onLogout }: DesignPageProps) {
-  const [pageMode, setPageMode] = useState<PageMode>('design');
-  const [workflowStage, setWorkflowStage] = useState<WorkflowStage>('drafting');
+  const [pageMode, setPageMode] = useState<PageMode>("design");
+  const [workflowStage, setWorkflowStage] = useState<WorkflowStage>("drafting");
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [showSimDesignerModal, setShowSimDesignerModal] = useState(false);
   const [showSimDesignerDropdown, setShowSimDesignerDropdown] = useState(false);
-  const [showAirfoilDesignDropdown, setShowAirfoilDesignDropdown] = useState(false);
+  const [showAirfoilDesignDropdown, setShowAirfoilDesignDropdown] =
+    useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
-  
+
   // Simulation state
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationProgress, setSimulationProgress] = useState(0);
   const [showResults, setShowResults] = useState(false);
-  
+
   // Optimization state
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationIteration, setOptimizationIteration] = useState(0);
-  const [previousAirfoil, setPreviousAirfoil] = useState<{upper: number[], lower: number[]} | null>(null);
+  const [previousAirfoil, setPreviousAirfoil] = useState<{
+    upper: number[];
+    lower: number[];
+  } | null>(null);
 
   // CST Coefficients (these are the A_u and A_l parameters)
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.15, 0.20, 0.18, 0.12, 0.08
+    0.15, 0.2, 0.18, 0.12, 0.08,
   ]);
-  
+
   const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.10, -0.12, -0.09, -0.06, -0.04
+    -0.1, -0.12, -0.09, -0.06, -0.04,
   ]);
 
   // Flow parameters
   const [angleOfAttack, setAngleOfAttack] = useState(5);
   const [velocity, setVelocity] = useState(15);
-  const [meshDensity, setMeshDensity] = useState<'coarse' | 'medium' | 'fine' | 'ultra'>('medium');
+  const [meshDensity, setMeshDensity] = useState<
+    "coarse" | "medium" | "fine" | "ultra"
+  >("medium");
   const [showPressureField, setShowPressureField] = useState(true);
   const [showVectorField, setShowVectorField] = useState(true);
   const [showMeshOverlay, setShowMeshOverlay] = useState(false);
@@ -96,18 +102,22 @@ export function DesignPage({ onLogout }: DesignPageProps) {
       if (canvasRef.current) {
         setCanvasSize({
           width: canvasRef.current.offsetWidth,
-          height: canvasRef.current.offsetHeight
+          height: canvasRef.current.offsetHeight,
         });
       }
     };
-    
+
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
   }, [leftSidebarOpen, rightSidebarOpen]);
 
-  const updateCSTCoefficient = (surface: 'upper' | 'lower', index: number, value: number) => {
-    if (surface === 'upper') {
+  const updateCSTCoefficient = (
+    surface: "upper" | "lower",
+    index: number,
+    value: number,
+  ) => {
+    if (surface === "upper") {
       const newCoeffs = [...upperCoefficients];
       newCoeffs[index] = value;
       setUpperCoefficients(newCoeffs);
@@ -124,10 +134,13 @@ export function DesignPage({ onLogout }: DesignPageProps) {
       lowerCoefficients,
       velocity,
       angleOfAttack,
-      meshDensity
+      meshDensity,
     );
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .slice(0, -5);
     downloadConfigFile(config, `airfoil-design-${timestamp}.json`);
   };
 
@@ -152,7 +165,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
   const handleStartOptimization = () => {
     setPreviousAirfoil({
       upper: [...upperCoefficients],
-      lower: [...lowerCoefficients]
+      lower: [...lowerCoefficients],
     });
     setIsOptimizing(true);
     setOptimizationIteration(0);
@@ -166,11 +179,11 @@ export function DesignPage({ onLogout }: DesignPageProps) {
         }
 
         // Simulate optimization by slightly modifying coefficients
-        setUpperCoefficients(coeffs => 
-          coeffs.map(c => c + (Math.random() - 0.5) * 0.01)
+        setUpperCoefficients((coeffs) =>
+          coeffs.map((c) => c + (Math.random() - 0.5) * 0.01),
         );
-        setLowerCoefficients(coeffs => 
-          coeffs.map(c => c + (Math.random() - 0.5) * 0.01)
+        setLowerCoefficients((coeffs) =>
+          coeffs.map((c) => c + (Math.random() - 0.5) * 0.01),
         );
 
         return prev + 1;
@@ -179,25 +192,25 @@ export function DesignPage({ onLogout }: DesignPageProps) {
   };
 
   const handleResetDesign = () => {
-    setUpperCoefficients([0.15, 0.20, 0.18, 0.12, 0.08]);
-    setLowerCoefficients([-0.10, -0.12, -0.09, -0.06, -0.04]);
+    setUpperCoefficients([0.15, 0.2, 0.18, 0.12, 0.08]);
+    setLowerCoefficients([-0.1, -0.12, -0.09, -0.06, -0.04]);
     setAngleOfAttack(5);
     setVelocity(15);
   };
 
-  const addCSTCoefficient = (surface: 'upper' | 'lower') => {
-    if (surface === 'upper') {
+  const addCSTCoefficient = (surface: "upper" | "lower") => {
+    if (surface === "upper") {
       setUpperCoefficients([...upperCoefficients, 0.05]);
     } else {
       setLowerCoefficients([...lowerCoefficients, -0.05]);
     }
   };
 
-  const removeCSTCoefficient = (surface: 'upper' | 'lower', index: number) => {
-    if (surface === 'upper' && upperCoefficients.length > 2) {
+  const removeCSTCoefficient = (surface: "upper" | "lower", index: number) => {
+    if (surface === "upper" && upperCoefficients.length > 2) {
       const newCoeffs = upperCoefficients.filter((_, i) => i !== index);
       setUpperCoefficients(newCoeffs);
-    } else if (surface === 'lower' && lowerCoefficients.length > 2) {
+    } else if (surface === "lower" && lowerCoefficients.length > 2) {
       const newCoeffs = lowerCoefficients.filter((_, i) => i !== index);
       setLowerCoefficients(newCoeffs);
     }
@@ -209,20 +222,33 @@ export function DesignPage({ onLogout }: DesignPageProps) {
       <div className="bg-white border-b border-gray-300 flex items-center justify-between px-4 py-2 shadow-sm z-40">
         {/* Left: Project Controls */}
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={handleResetDesign}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-blue-600 shadow-sm"
-            style={{ boxShadow: '0 0 0 1px rgba(59, 130, 246, 0)' }}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 8px 2px rgba(59, 130, 246, 0.3)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0)'}
+            style={{ boxShadow: "0 0 0 1px rgba(59, 130, 246, 0)" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.boxShadow =
+                "0 0 8px 2px rgba(59, 130, 246, 0.3)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.boxShadow =
+                "0 0 0 1px rgba(59, 130, 246, 0)")
+            }
           >
             <FilePlus className="w-3.5 h-3.5" />
             <span>New Simulation</span>
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-blue-600 shadow-sm"
-            style={{ boxShadow: '0 0 0 1px rgba(59, 130, 246, 0)' }}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 8px 2px rgba(59, 130, 246, 0.3)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0)'}
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-blue-600 shadow-sm"
+            style={{ boxShadow: "0 0 0 1px rgba(59, 130, 246, 0)" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.boxShadow =
+                "0 0 8px 2px rgba(59, 130, 246, 0.3)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.boxShadow =
+                "0 0 0 1px rgba(59, 130, 246, 0)")
+            }
           >
             <FolderOpen className="w-3.5 h-3.5" />
             <span>Import .dat</span>
@@ -233,7 +259,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 border border-gray-300">
             <button
-              onClick={() => setZoomLevel(prev => Math.min(prev + 0.1, 3))}
+              onClick={() => setZoomLevel((prev) => Math.min(prev + 0.1, 3))}
               className="p-1.5 hover:bg-white rounded transition-colors"
               title="Zoom In"
             >
@@ -243,7 +269,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
               {(zoomLevel * 100).toFixed(0)}%
             </div>
             <button
-              onClick={() => setZoomLevel(prev => Math.max(prev - 0.1, 0.3))}
+              onClick={() => setZoomLevel((prev) => Math.max(prev - 0.1, 0.3))}
               className="p-1.5 hover:bg-white rounded transition-colors"
               title="Zoom Out"
             >
@@ -251,10 +277,16 @@ export function DesignPage({ onLogout }: DesignPageProps) {
             </button>
           </div>
 
-          <button className="p-1.5 hover:bg-gray-100 rounded border border-gray-300 transition-colors" title="Reload View">
+          <button
+            className="p-1.5 hover:bg-gray-100 rounded border border-gray-300 transition-colors"
+            title="Reload View"
+          >
             <RefreshCw className="w-3.5 h-3.5 text-gray-600" />
           </button>
-          <button className="p-1.5 hover:bg-gray-100 rounded border border-gray-300 transition-colors" title="Measure">
+          <button
+            className="p-1.5 hover:bg-gray-100 rounded border border-gray-300 transition-colors"
+            title="Measure"
+          >
             <Ruler className="w-3.5 h-3.5 text-gray-600" />
           </button>
 
@@ -274,9 +306,15 @@ export function DesignPage({ onLogout }: DesignPageProps) {
           <button
             onClick={() => setShowSimDesignerModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all text-xs font-bold shadow-md"
-            style={{ boxShadow: '0 0 0 1px rgba(147, 51, 234, 0)' }}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 12px 3px rgba(147, 51, 234, 0.5)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 0 0 1px rgba(147, 51, 234, 0)'}
+            style={{ boxShadow: "0 0 0 1px rgba(147, 51, 234, 0)" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.boxShadow =
+                "0 0 12px 3px rgba(147, 51, 234, 0.5)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.boxShadow =
+                "0 0 0 1px rgba(147, 51, 234, 0)")
+            }
           >
             <Settings className="w-3.5 h-3.5" />
             <span>Simulation Designer</span>
@@ -284,7 +322,10 @@ export function DesignPage({ onLogout }: DesignPageProps) {
         </div>
 
         {/* Right: Account */}
-        <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Account">
+        <button
+          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+          title="Account"
+        >
           <User className="w-4 h-4 text-gray-600" />
         </button>
       </div>
@@ -297,8 +338,10 @@ export function DesignPage({ onLogout }: DesignPageProps) {
               <Wind className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-gray-900">AeroSim CFD</h1>
-              <p className="text-xs text-gray-500 font-medium">CST-Based Airfoil Design & Optimization</p>
+              <h1 className="text-2xl font-black text-gray-900">TurboDiff</h1>
+              <p className="text-xs text-gray-500 font-medium">
+                CST-Based Airfoil Design & Optimization
+              </p>
             </div>
           </div>
 
@@ -306,35 +349,35 @@ export function DesignPage({ onLogout }: DesignPageProps) {
             {/* Mode Toggle */}
             <div className="flex items-center bg-gray-100 rounded-xl p-1 border-2 border-gray-200">
               <button
-                onClick={() => setPageMode('design')}
+                onClick={() => setPageMode("design")}
                 className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
-                  pageMode === 'design'
-                    ? 'bg-white text-cyan-600 shadow-md'
-                    : 'text-gray-600 hover:text-gray-900'
+                  pageMode === "design"
+                    ? "bg-white text-cyan-600 shadow-md"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 Design
               </button>
               <button
                 onClick={() => {
-                  setPageMode('simulate');
+                  setPageMode("simulate");
                   setShowResults(false);
                 }}
                 className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${
-                  pageMode === 'simulate'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg'
-                    : 'text-gray-600 hover:text-gray-900'
+                  pageMode === "simulate"
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 <Play className="w-4 h-4" />
                 Simulate
               </button>
               <button
-                onClick={() => setPageMode('optimize')}
+                onClick={() => setPageMode("optimize")}
                 className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${
-                  pageMode === 'optimize'
-                    ? 'bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-lg'
-                    : 'text-gray-600 hover:text-gray-900'
+                  pageMode === "optimize"
+                    ? "bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-lg"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 <Sparkles className="w-4 h-4" />
@@ -343,7 +386,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
             </div>
 
             <div className="w-px h-8 bg-gray-300" />
-            
+
             <button
               onClick={handleResetDesign}
               className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
@@ -364,9 +407,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
             <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
               <Settings className="w-5 h-5" />
             </button>
-            
+
             <div className="w-px h-8 bg-gray-300" />
-            
+
             <button
               onClick={onLogout}
               className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors font-medium"
@@ -387,7 +430,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
               initial={{ x: -380 }}
               animate={{ x: 0 }}
               exit={{ x: -380 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 180 }}
+              transition={{ type: "spring", damping: 25, stiffness: 180 }}
               className="w-96 bg-white border-r-2 border-gray-200 shadow-2xl overflow-y-auto relative"
             >
               <button
@@ -399,8 +442,12 @@ export function DesignPage({ onLogout }: DesignPageProps) {
 
               <div className="p-6 space-y-6 pt-16">
                 <div className="text-center pb-4 border-b-2 border-gray-200">
-                  <h2 className="text-xl font-black text-gray-900">Flow Parameters</h2>
-                  <p className="text-xs text-gray-500 mt-1 font-medium">Control simulation conditions</p>
+                  <h2 className="text-xl font-black text-gray-900">
+                    Flow Parameters
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1 font-medium">
+                    Control simulation conditions
+                  </p>
                 </div>
 
                 {/* Velocity Slider */}
@@ -410,7 +457,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                     Flow Velocity
                   </label>
                   <div className="mb-4 text-center bg-white/60 rounded-xl py-3 px-4 backdrop-blur-sm border border-cyan-200">
-                    <div className="text-5xl font-black text-cyan-600">{velocity}</div>
+                    <div className="text-5xl font-black text-cyan-600">
+                      {velocity}
+                    </div>
                     <div className="text-sm text-cyan-700 font-bold">m/s</div>
                   </div>
                   <input
@@ -427,7 +476,8 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                     <span>100 m/s</span>
                   </div>
                   <div className="mt-3 bg-white/80 rounded-lg px-3 py-2 text-xs text-cyan-900 font-semibold border border-cyan-200">
-                    <strong>Reynolds:</strong> ~{Math.floor(velocity * 10000).toLocaleString()}
+                    <strong>Reynolds:</strong> ~
+                    {Math.floor(velocity * 10000).toLocaleString()}
                   </div>
                 </div>
 
@@ -438,8 +488,12 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                     Angle of Attack (α)
                   </label>
                   <div className="mb-4 text-center bg-white/60 rounded-xl py-3 px-4 backdrop-blur-sm border border-purple-200">
-                    <div className="text-5xl font-black text-purple-600">{angleOfAttack.toFixed(1)}°</div>
-                    <div className="text-sm text-purple-700 font-bold">degrees</div>
+                    <div className="text-5xl font-black text-purple-600">
+                      {angleOfAttack.toFixed(1)}°
+                    </div>
+                    <div className="text-sm text-purple-700 font-bold">
+                      degrees
+                    </div>
                   </div>
                   <input
                     type="range"
@@ -467,17 +521,37 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                   </label>
                   <div className="space-y-2">
                     {[
-                      { value: 'coarse' as const, label: 'Coarse', desc: '~5k nodes', color: 'border-green-300' },
-                      { value: 'medium' as const, label: 'Medium', desc: '~15k nodes', color: 'border-blue-300' },
-                      { value: 'fine' as const, label: 'Fine', desc: '~40k nodes', color: 'border-purple-300' },
-                      { value: 'ultra' as const, label: 'Ultra Fine', desc: '~100k nodes', color: 'border-orange-300' }
+                      {
+                        value: "coarse" as const,
+                        label: "Coarse",
+                        desc: "~5k nodes",
+                        color: "border-green-300",
+                      },
+                      {
+                        value: "medium" as const,
+                        label: "Medium",
+                        desc: "~15k nodes",
+                        color: "border-blue-300",
+                      },
+                      {
+                        value: "fine" as const,
+                        label: "Fine",
+                        desc: "~40k nodes",
+                        color: "border-purple-300",
+                      },
+                      {
+                        value: "ultra" as const,
+                        label: "Ultra Fine",
+                        desc: "~100k nodes",
+                        color: "border-orange-300",
+                      },
                     ].map((option) => (
                       <label
                         key={option.value}
                         className={`flex items-center justify-between p-3 border-2 rounded-xl cursor-pointer transition-all ${
                           meshDensity === option.value
                             ? `bg-white shadow-lg scale-105 ${option.color}`
-                            : 'bg-white/50 border-gray-200 hover:border-gray-400'
+                            : "bg-white/50 border-gray-200 hover:border-gray-400"
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -486,12 +560,18 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                             name="mesh"
                             value={option.value}
                             checked={meshDensity === option.value}
-                            onChange={(e) => setMeshDensity(e.target.value as any)}
+                            onChange={(e) =>
+                              setMeshDensity(e.target.value as any)
+                            }
                             className="w-5 h-5"
                           />
                           <div>
-                            <div className="text-sm font-black text-gray-900">{option.label}</div>
-                            <div className="text-xs text-gray-600 font-medium">{option.desc}</div>
+                            <div className="text-sm font-black text-gray-900">
+                              {option.label}
+                            </div>
+                            <div className="text-xs text-gray-600 font-medium">
+                              {option.desc}
+                            </div>
                           </div>
                         </div>
                       </label>
@@ -512,7 +592,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                       onChange={(e) => setShowPressureField(e.target.checked)}
                       className="w-5 h-5"
                     />
-                    <div className="text-sm text-gray-700 font-medium">Enable Pressure Field</div>
+                    <div className="text-sm text-gray-700 font-medium">
+                      Enable Pressure Field
+                    </div>
                   </div>
                 </div>
 
@@ -529,7 +611,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                       onChange={(e) => setShowVectorField(e.target.checked)}
                       className="w-5 h-5"
                     />
-                    <div className="text-sm text-gray-700 font-medium">Enable Vector Field</div>
+                    <div className="text-sm text-gray-700 font-medium">
+                      Enable Vector Field
+                    </div>
                   </div>
                 </div>
 
@@ -546,7 +630,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                       onChange={(e) => setShowMeshOverlay(e.target.checked)}
                       className="w-5 h-5"
                     />
-                    <div className="text-sm text-gray-700 font-medium">Enable Mesh Overlay</div>
+                    <div className="text-sm text-gray-700 font-medium">
+                      Enable Mesh Overlay
+                    </div>
                   </div>
                 </div>
 
@@ -563,7 +649,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                       onChange={(e) => setShowControlPoints(e.target.checked)}
                       className="w-5 h-5"
                     />
-                    <div className="text-sm text-gray-700 font-medium">Enable Control Points</div>
+                    <div className="text-sm text-gray-700 font-medium">
+                      Enable Control Points
+                    </div>
                   </div>
                 </div>
               </div>
@@ -584,7 +672,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
         <main className="flex-1 bg-gradient-to-br from-gray-50 via-white to-blue-50 overflow-hidden relative">
           <div className="h-full flex flex-col">
             {/* Info Banner */}
-            {pageMode === 'design' && (
+            {pageMode === "design" && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -595,9 +683,13 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                     <Wind className="w-7 h-7 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-black text-gray-900 text-lg">CST Airfoil Designer</h3>
+                    <h3 className="font-black text-gray-900 text-lg">
+                      CST Airfoil Designer
+                    </h3>
                     <p className="text-sm text-gray-600 font-medium">
-                      Adjust CST coefficients (A<sub>u</sub>, A<sub>l</sub>) in real-time. Airfoil geometry updates via Bernstein polynomials.
+                      Adjust CST coefficients (A<sub>u</sub>, A<sub>l</sub>) in
+                      real-time. Airfoil geometry updates via Bernstein
+                      polynomials.
                     </p>
                   </div>
                 </div>
@@ -606,11 +698,16 @@ export function DesignPage({ onLogout }: DesignPageProps) {
 
             {/* Canvas Area */}
             <div className="flex-1 mx-6 mb-4 relative" ref={canvasRef}>
-              <div className="absolute inset-0 rounded-2xl shadow-2xl overflow-hidden" style={{
-                background: 'linear-gradient(135deg, #FFF8F0 0%, #FFF5E8 50%, #FFE8D5 100%)',
-                border: '3px solid rgba(59, 130, 246, 0.2)',
-                boxShadow: '0 20px 60px rgba(59, 130, 246, 0.15), inset 0 1px 3px rgba(255, 255, 255, 0.5)'
-              }}>
+              <div
+                className="absolute inset-0 rounded-2xl shadow-2xl overflow-hidden"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #FFF8F0 0%, #FFF5E8 50%, #FFE8D5 100%)",
+                  border: "3px solid rgba(59, 130, 246, 0.2)",
+                  boxShadow:
+                    "0 20px 60px rgba(59, 130, 246, 0.15), inset 0 1px 3px rgba(255, 255, 255, 0.5)",
+                }}
+              >
                 {/* Interactive Airfoil Canvas with CFD */}
                 <InteractiveAirfoilCanvas
                   width={canvasSize.width}
@@ -629,8 +726,11 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                 />
 
                 {/* Ghost airfoil overlay in optimize mode */}
-                {pageMode === 'optimize' && previousAirfoil && (
-                  <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.2 }}>
+                {pageMode === "optimize" && previousAirfoil && (
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ opacity: 0.2 }}
+                  >
                     <InteractiveAirfoilCanvas
                       width={canvasSize.width}
                       height={canvasSize.height}
@@ -665,7 +765,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                 {/* Simulation Progress */}
                 {isSimulating && (
                   <div className="absolute top-4 right-4 bg-white rounded-xl p-4 shadow-2xl border-2 border-blue-300">
-                    <div className="text-sm font-bold text-gray-700 mb-2">Simulation Progress</div>
+                    <div className="text-sm font-bold text-gray-700 mb-2">
+                      Simulation Progress
+                    </div>
                     <div className="flex items-center gap-3">
                       <div className="w-48 bg-gray-200 rounded-full h-3">
                         <div
@@ -673,7 +775,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                           style={{ width: `${simulationProgress}%` }}
                         />
                       </div>
-                      <span className="text-lg font-black text-blue-600">{simulationProgress}%</span>
+                      <span className="text-lg font-black text-blue-600">
+                        {simulationProgress}%
+                      </span>
                     </div>
                   </div>
                 )}
@@ -681,7 +785,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                 {/* Optimization Status */}
                 {isOptimizing && (
                   <div className="absolute top-4 right-4 bg-white rounded-xl p-4 shadow-2xl border-2 border-orange-300">
-                    <div className="text-sm font-bold text-gray-700 mb-2">Optimization Running</div>
+                    <div className="text-sm font-bold text-gray-700 mb-2">
+                      Optimization Running
+                    </div>
                     <div className="text-2xl font-black text-orange-600">
                       Iteration: {optimizationIteration} / {maxIterations}
                     </div>
@@ -692,9 +798,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
 
             {/* Bottom Action Bar */}
             <div className="mx-6 mb-6">
-              {pageMode === 'design' && (
+              {pageMode === "design" && (
                 <button
-                  onClick={() => setPageMode('simulate')}
+                  onClick={() => setPageMode("simulate")}
                   className="w-full bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white py-5 rounded-2xl flex items-center justify-center gap-3 transition-all font-black shadow-2xl hover:shadow-green-500/50 text-lg border-2 border-green-400"
                 >
                   <Check className="w-6 h-6" />
@@ -702,7 +808,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                 </button>
               )}
 
-              {pageMode === 'simulate' && !isSimulating && !showResults && (
+              {pageMode === "simulate" && !isSimulating && !showResults && (
                 <button
                   onClick={handleStartSimulation}
                   className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white py-5 rounded-2xl flex items-center justify-center gap-3 transition-all font-black shadow-2xl text-lg border-2 border-cyan-400"
@@ -712,7 +818,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                 </button>
               )}
 
-              {pageMode === 'optimize' && !isOptimizing && (
+              {pageMode === "optimize" && !isOptimizing && (
                 <button
                   onClick={handleStartOptimization}
                   className="w-full bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white py-5 rounded-2xl flex items-center justify-center gap-3 transition-all font-black shadow-2xl text-lg border-2 border-orange-400"
@@ -725,20 +831,36 @@ export function DesignPage({ onLogout }: DesignPageProps) {
               {showResults && (
                 <div className="grid grid-cols-4 gap-4">
                   <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-green-300">
-                    <div className="text-xs text-gray-600 font-bold mb-1">Lift Coefficient</div>
-                    <div className="text-3xl font-black text-green-600">1.24</div>
+                    <div className="text-xs text-gray-600 font-bold mb-1">
+                      Lift Coefficient
+                    </div>
+                    <div className="text-3xl font-black text-green-600">
+                      1.24
+                    </div>
                   </div>
                   <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-blue-300">
-                    <div className="text-xs text-gray-600 font-bold mb-1">Drag Coefficient</div>
-                    <div className="text-3xl font-black text-blue-600">0.018</div>
+                    <div className="text-xs text-gray-600 font-bold mb-1">
+                      Drag Coefficient
+                    </div>
+                    <div className="text-3xl font-black text-blue-600">
+                      0.018
+                    </div>
                   </div>
                   <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-purple-300">
-                    <div className="text-xs text-gray-600 font-bold mb-1">L/D Ratio</div>
-                    <div className="text-3xl font-black text-purple-600">68.9</div>
+                    <div className="text-xs text-gray-600 font-bold mb-1">
+                      L/D Ratio
+                    </div>
+                    <div className="text-3xl font-black text-purple-600">
+                      68.9
+                    </div>
                   </div>
                   <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-orange-300">
-                    <div className="text-xs text-gray-600 font-bold mb-1">Power Output</div>
-                    <div className="text-3xl font-black text-orange-600">2.4kW</div>
+                    <div className="text-xs text-gray-600 font-bold mb-1">
+                      Power Output
+                    </div>
+                    <div className="text-3xl font-black text-orange-600">
+                      2.4kW
+                    </div>
                   </div>
                 </div>
               )}
@@ -753,7 +875,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
               initial={{ x: 420 }}
               animate={{ x: 0 }}
               exit={{ x: 420 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 180 }}
+              transition={{ type: "spring", damping: 25, stiffness: 180 }}
               className="w-[420px] bg-white border-l-2 border-gray-200 shadow-2xl overflow-y-auto relative"
             >
               <button
@@ -766,27 +888,35 @@ export function DesignPage({ onLogout }: DesignPageProps) {
               <div className="p-6 space-y-6 pt-16">
                 <div className="text-center pb-4 border-b-2 border-gray-200">
                   <h2 className="text-xl font-black text-gray-900">
-                    {pageMode === 'optimize' ? 'Optimization Parameters' : 'CST Coefficients'}
+                    {pageMode === "optimize"
+                      ? "Optimization Parameters"
+                      : "CST Coefficients"}
                   </h2>
                   <p className="text-xs text-gray-500 mt-1 font-medium">
-                    {pageMode === 'optimize' ? 'Target metrics & constraints' : 'Bernstein polynomial weights'}
+                    {pageMode === "optimize"
+                      ? "Target metrics & constraints"
+                      : "Bernstein polynomial weights"}
                   </p>
                 </div>
 
-                {pageMode === 'optimize' ? (
+                {pageMode === "optimize" ? (
                   // Optimization Parameters
                   <div className="space-y-4">
                     <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-5 border-2 border-orange-300">
                       <label className="text-sm font-black text-gray-900 mb-3 block">
                         Target L/D Ratio
                       </label>
-                      <div className="text-3xl font-black text-orange-600 text-center mb-3">{targetLiftDrag}</div>
+                      <div className="text-3xl font-black text-orange-600 text-center mb-3">
+                        {targetLiftDrag}
+                      </div>
                       <input
                         type="range"
                         min={20}
                         max={150}
                         value={targetLiftDrag}
-                        onChange={(e) => setTargetLiftDrag(Number(e.target.value))}
+                        onChange={(e) =>
+                          setTargetLiftDrag(Number(e.target.value))
+                        }
                         className="w-full h-3 accent-orange-500"
                       />
                     </div>
@@ -795,14 +925,18 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                       <label className="text-sm font-black text-gray-900 mb-3 block">
                         Thickness Constraint
                       </label>
-                      <div className="text-3xl font-black text-purple-600 text-center mb-3">{(thicknessConstraint * 100).toFixed(1)}%</div>
+                      <div className="text-3xl font-black text-purple-600 text-center mb-3">
+                        {(thicknessConstraint * 100).toFixed(1)}%
+                      </div>
                       <input
                         type="range"
                         min={0.08}
-                        max={0.20}
+                        max={0.2}
                         step={0.01}
                         value={thicknessConstraint}
-                        onChange={(e) => setThicknessConstraint(Number(e.target.value))}
+                        onChange={(e) =>
+                          setThicknessConstraint(Number(e.target.value))
+                        }
                         className="w-full h-3 accent-purple-500"
                       />
                     </div>
@@ -811,14 +945,18 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                       <label className="text-sm font-black text-gray-900 mb-3 block">
                         Max Iterations
                       </label>
-                      <div className="text-3xl font-black text-blue-600 text-center mb-3">{maxIterations}</div>
+                      <div className="text-3xl font-black text-blue-600 text-center mb-3">
+                        {maxIterations}
+                      </div>
                       <input
                         type="range"
                         min={10}
                         max={500}
                         step={10}
                         value={maxIterations}
-                        onChange={(e) => setMaxIterations(Number(e.target.value))}
+                        onChange={(e) =>
+                          setMaxIterations(Number(e.target.value))
+                        }
                         className="w-full h-3 accent-blue-500"
                       />
                     </div>
@@ -834,7 +972,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                           Upper Surface (A<sub>u</sub>)
                         </h3>
                         <button
-                          onClick={() => addCSTCoefficient('upper')}
+                          onClick={() => addCSTCoefficient("upper")}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-all shadow-md font-bold"
                         >
                           <Plus className="w-3 h-3" />
@@ -844,7 +982,10 @@ export function DesignPage({ onLogout }: DesignPageProps) {
 
                       <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
                         {upperCoefficients.map((coeff, index) => (
-                          <div key={`upper-${index}`} className="bg-white rounded-xl p-3 border-2 border-blue-200 shadow-sm">
+                          <div
+                            key={`upper-${index}`}
+                            className="bg-white rounded-xl p-3 border-2 border-blue-200 shadow-sm"
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-black text-blue-700">
                                 A<sub>u,{index}</sub>
@@ -856,11 +997,19 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                                   max={0.5}
                                   step={0.01}
                                   value={coeff.toFixed(3)}
-                                  onChange={(e) => updateCSTCoefficient('upper', index, Number(e.target.value))}
+                                  onChange={(e) =>
+                                    updateCSTCoefficient(
+                                      "upper",
+                                      index,
+                                      Number(e.target.value),
+                                    )
+                                  }
                                   className="w-24 px-2 py-1 text-xs border-2 border-blue-300 rounded-lg font-mono text-blue-900 focus:ring-2 focus:ring-blue-500 font-bold"
                                 />
                                 <button
-                                  onClick={() => removeCSTCoefficient('upper', index)}
+                                  onClick={() =>
+                                    removeCSTCoefficient("upper", index)
+                                  }
                                   disabled={upperCoefficients.length <= 2}
                                   className="p-1 text-red-500 hover:bg-red-50 rounded disabled:opacity-30 transition-colors"
                                 >
@@ -874,7 +1023,13 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                               max={0.5}
                               step={0.01}
                               value={coeff}
-                              onChange={(e) => updateCSTCoefficient('upper', index, Number(e.target.value))}
+                              onChange={(e) =>
+                                updateCSTCoefficient(
+                                  "upper",
+                                  index,
+                                  Number(e.target.value),
+                                )
+                              }
                               className="w-full h-2 accent-blue-600"
                             />
                           </div>
@@ -893,7 +1048,7 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                           Lower Surface (A<sub>l</sub>)
                         </h3>
                         <button
-                          onClick={() => addCSTCoefficient('lower')}
+                          onClick={() => addCSTCoefficient("lower")}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs bg-green-600 text-white hover:bg-green-700 rounded-lg transition-all shadow-md font-bold"
                         >
                           <Plus className="w-3 h-3" />
@@ -903,7 +1058,10 @@ export function DesignPage({ onLogout }: DesignPageProps) {
 
                       <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
                         {lowerCoefficients.map((coeff, index) => (
-                          <div key={`lower-${index}`} className="bg-white rounded-xl p-3 border-2 border-green-200 shadow-sm">
+                          <div
+                            key={`lower-${index}`}
+                            className="bg-white rounded-xl p-3 border-2 border-green-200 shadow-sm"
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-black text-green-700">
                                 A<sub>l,{index}</sub>
@@ -915,11 +1073,19 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                                   max={0.5}
                                   step={0.01}
                                   value={coeff.toFixed(3)}
-                                  onChange={(e) => updateCSTCoefficient('lower', index, Number(e.target.value))}
+                                  onChange={(e) =>
+                                    updateCSTCoefficient(
+                                      "lower",
+                                      index,
+                                      Number(e.target.value),
+                                    )
+                                  }
                                   className="w-24 px-2 py-1 text-xs border-2 border-green-300 rounded-lg font-mono text-green-900 focus:ring-2 focus:ring-green-500 font-bold"
                                 />
                                 <button
-                                  onClick={() => removeCSTCoefficient('lower', index)}
+                                  onClick={() =>
+                                    removeCSTCoefficient("lower", index)
+                                  }
                                   disabled={lowerCoefficients.length <= 2}
                                   className="p-1 text-red-500 hover:bg-red-50 rounded disabled:opacity-30 transition-colors"
                                 >
@@ -933,7 +1099,13 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                               max={0.5}
                               step={0.01}
                               value={coeff}
-                              onChange={(e) => updateCSTCoefficient('lower', index, Number(e.target.value))}
+                              onChange={(e) =>
+                                updateCSTCoefficient(
+                                  "lower",
+                                  index,
+                                  Number(e.target.value),
+                                )
+                              }
                               className="w-full h-2 accent-green-600"
                             />
                           </div>
@@ -946,7 +1118,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
 
                     {/* Info */}
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-4">
-                      <h4 className="text-xs font-black text-purple-900 mb-2">💡 CST Methodology</h4>
+                      <h4 className="text-xs font-black text-purple-900 mb-2">
+                        💡 CST Methodology
+                      </h4>
                       <ul className="text-xs text-purple-700 space-y-1 font-medium">
                         <li>• Bernstein polynomial basis</li>
                         <li>• Real-time SVG rendering</li>
@@ -986,9 +1160,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border-2 border-blue-300"
-              style={{ boxShadow: '0 0 40px 10px rgba(59, 130, 246, 0.3)' }}
+              style={{ boxShadow: "0 0 40px 10px rgba(59, 130, 246, 0.3)" }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b-2 border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-2xl">
@@ -996,7 +1170,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                   <Settings className="w-7 h-7" />
                   Simulation Designer
                 </h2>
-                <p className="text-sm text-blue-100 mt-1 font-medium">Configure time-step parameters and computational resources</p>
+                <p className="text-sm text-blue-100 mt-1 font-medium">
+                  Configure time-step parameters and computational resources
+                </p>
               </div>
 
               <div className="p-6 space-y-5">
@@ -1086,7 +1262,9 @@ export function DesignPage({ onLogout }: DesignPageProps) {
 
                 {/* Info Panel */}
                 <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-300 rounded-xl p-4">
-                  <h4 className="text-xs font-black text-blue-900 mb-2">ℹ️ Computational Estimate</h4>
+                  <h4 className="text-xs font-black text-blue-900 mb-2">
+                    ℹ️ Computational Estimate
+                  </h4>
                   <ul className="text-xs text-blue-800 space-y-1 font-semibold">
                     <li>• Total Steps: ~10,000</li>
                     <li>• Est. Runtime: 2.5 minutes (4 cores)</li>
@@ -1105,9 +1283,15 @@ export function DesignPage({ onLogout }: DesignPageProps) {
                 <button
                   onClick={() => setShowSimDesignerModal(false)}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-black rounded-xl transition-all shadow-lg text-sm"
-                  style={{ boxShadow: '0 0 0 1px rgba(147, 51, 234, 0)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 16px 4px rgba(147, 51, 234, 0.6)'}
-                  onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 0 0 1px rgba(147, 51, 234, 0)'}
+                  style={{ boxShadow: "0 0 0 1px rgba(147, 51, 234, 0)" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.boxShadow =
+                      "0 0 16px 4px rgba(147, 51, 234, 0.6)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.boxShadow =
+                      "0 0 0 1px rgba(147, 51, 234, 0)")
+                  }
                 >
                   Apply Configuration
                 </button>
