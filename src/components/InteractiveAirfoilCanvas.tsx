@@ -34,6 +34,8 @@ interface InteractiveAirfoilCanvasProps {
   ) => void;
   allowFullScreen: boolean;
   designMode?: boolean; // NEW: flag for design mode
+  onControlPointDragStart?: () => void;
+  onControlPointDragEnd?: () => void;
 }
 
 export function InteractiveAirfoilCanvas({
@@ -51,6 +53,8 @@ export function InteractiveAirfoilCanvas({
   onCoefficientChange,
   allowFullScreen,
   designMode = false,
+  onControlPointDragStart,
+  onControlPointDragEnd,
 }: InteractiveAirfoilCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -568,6 +572,7 @@ export function InteractiveAirfoilCanvas({
 
     if (clicked) {
       setDraggedPoint(clicked);
+      onControlPointDragStart?.();
     }
   };
 
@@ -593,6 +598,9 @@ export function InteractiveAirfoilCanvas({
   };
 
   const handleMouseUp = () => {
+    if (draggedPoint) {
+      onControlPointDragEnd?.();
+    }
     setDraggedPoint(null);
   };
 
