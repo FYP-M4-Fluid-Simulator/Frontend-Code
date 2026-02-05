@@ -20,21 +20,21 @@ export interface FlowConditions {
 }
 
 export interface MeshSettings {
-  quality: 'coarse' | 'medium' | 'fine' | 'ultra';
+  quality: "coarse" | "medium" | "fine" | "ultra";
   nodeCount: number;
   refinementRegions: {
     leadingEdge: number;
     trailingEdge: number;
     wake: number;
   };
-  gridType: 'structured' | 'unstructured';
+  gridType: "structured" | "unstructured";
 }
 
 export interface OptimizationParameters {
   targetLiftDrag: number;
   thicknessConstraint: number;
   maxIterations: number;
-  algorithm: 'genetic' | 'gradient' | 'pso';
+  algorithm: "genetic" | "gradient" | "pso";
   convergenceTolerance: number;
 }
 
@@ -60,14 +60,14 @@ export function createSimulationConfig(
   lowerCoefficients: number[],
   velocity: number,
   angleOfAttack: number,
-  meshQuality: 'coarse' | 'medium' | 'fine' | 'ultra',
-  optimization?: OptimizationParameters
+  meshQuality: "coarse" | "medium" | "fine" | "ultra",
+  optimization?: OptimizationParameters,
 ): SimulationConfig {
   const nodeCount = {
     coarse: 5000,
     medium: 15000,
     fine: 40000,
-    ultra: 100000
+    ultra: 100000,
   }[meshQuality];
 
   const reynoldsNumber = velocity * 10000; // Simplified
@@ -75,15 +75,15 @@ export function createSimulationConfig(
 
   return {
     timestamp: new Date().toISOString(),
-    version: '1.0.0',
+    version: "1.0.0",
     cst: {
       upperCoefficients,
       lowerCoefficients,
       numPoints: 100,
       classParameters: {
         N1: 0.5,
-        N2: 1.0
-      }
+        N2: 1.0,
+      },
     },
     flow: {
       velocity,
@@ -91,7 +91,7 @@ export function createSimulationConfig(
       reynoldsNumber,
       machNumber,
       temperature: 288.15, // 15°C
-      pressure: 101325 // 1 atm
+      pressure: 101325, // 1 atm
     },
     mesh: {
       quality: meshQuality,
@@ -99,16 +99,16 @@ export function createSimulationConfig(
       refinementRegions: {
         leadingEdge: 3,
         trailingEdge: 2,
-        wake: 1.5
+        wake: 1.5,
       },
-      gridType: 'structured'
+      gridType: "structured",
     },
     optimization,
     metadata: {
-      airfoilName: 'Custom CST Airfoil',
-      description: 'Generated via AeroSim CFD Designer',
-      tags: ['CST', 'Wind Turbine', 'Optimization']
-    }
+      airfoilName: "Custom CST Airfoil",
+      description: "Generated via TurboDiff Designer",
+      tags: ["CST", "Wind Turbine", "Optimization"],
+    },
   };
 }
 
@@ -122,12 +122,15 @@ export function exportAsJSON(config: SimulationConfig): string {
 /**
  * Export configuration as downloadable file
  */
-export function downloadConfigFile(config: SimulationConfig, filename: string = 'airfoil-config.json') {
+export function downloadConfigFile(
+  config: SimulationConfig,
+  filename: string = "airfoil-config.json",
+) {
   const jsonString = exportAsJSON(config);
-  const blob = new Blob([jsonString], { type: 'application/json' });
+  const blob = new Blob([jsonString], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
+
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
@@ -141,14 +144,14 @@ export function downloadConfigFile(config: SimulationConfig, filename: string = 
  */
 export async function sendToBackendAPI(
   config: SimulationConfig,
-  endpoint: string = '/api/simulate'
+  endpoint: string = "/api/simulate",
 ): Promise<Response> {
   return fetch(endpoint, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
-    body: exportAsJSON(config)
+    body: exportAsJSON(config),
   });
 }
 
@@ -158,13 +161,13 @@ export async function sendToBackendAPI(
 export function generateMeshCoordinates(
   width: number,
   height: number,
-  meshQuality: 'coarse' | 'medium' | 'fine' | 'ultra'
+  meshQuality: "coarse" | "medium" | "fine" | "ultra",
 ): { x: number; y: number }[] {
   const spacing = {
     coarse: 40,
     medium: 25,
     fine: 15,
-    ultra: 10
+    ultra: 10,
   }[meshQuality];
 
   const points: { x: number; y: number }[] = [];
