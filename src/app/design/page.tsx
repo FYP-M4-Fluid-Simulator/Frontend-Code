@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { 
-  Wind, 
-  Settings, 
-  Download, 
-  Save, 
-  LogOut, 
+import { useState, useRef, useEffect } from "react";
+import {
+  Wind,
+  Settings,
+  Download,
+  Save,
+  LogOut,
   Plus,
   Trash2,
   ArrowRight,
@@ -17,31 +17,37 @@ import {
   Maximize,
   FilePlus,
   FolderOpen,
-  User
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { InteractiveAirfoilCanvas } from '../../components/InteractiveAirfoilCanvas';
-import { createSimulationConfig, downloadConfigFile } from '../../lib/exportData';
-import { useRouter } from 'next/navigation';
+  User,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
+import {
+  createSimulationConfig,
+  downloadConfigFile,
+} from "../../lib/exportData";
+import { useRouter } from "next/navigation";
 
 export default function DesignPage() {
   const router = useRouter();
   const [showSimDesignerDropdown, setShowSimDesignerDropdown] = useState(false);
-  const [showAirfoilDesignDropdown, setShowAirfoilDesignDropdown] = useState(false);
-  
+  const [showAirfoilDesignDropdown, setShowAirfoilDesignDropdown] =
+    useState(false);
+
   // CST Coefficients
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.15, 0.20, 0.18, 0.12, 0.08
-  ]);
-  
-  const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.10, -0.12, -0.09, -0.06, -0.04
+    0.15, 0.2, 0.18, 0.12, 0.08,
   ]);
 
-  // Flow parameters  
+  const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
+    -0.1, -0.12, -0.09, -0.06, -0.04,
+  ]);
+
+  // Flow parameters
   const [angleOfAttack, setAngleOfAttack] = useState(5);
   const [velocity, setVelocity] = useState(15);
-  const [meshDensity, setMeshDensity] = useState<'coarse' | 'medium' | 'fine' | 'ultra'>('medium');
+  const [meshDensity, setMeshDensity] = useState<
+    "coarse" | "medium" | "fine" | "ultra"
+  >("medium");
   const [showPressureField, setShowPressureField] = useState(false);
   const [showVectorField, setShowVectorField] = useState(true);
   const [showMeshOverlay, setShowMeshOverlay] = useState(true);
@@ -59,18 +65,22 @@ export default function DesignPage() {
       if (canvasRef.current) {
         setCanvasSize({
           width: canvasRef.current.offsetWidth,
-          height: canvasRef.current.offsetHeight
+          height: canvasRef.current.offsetHeight,
         });
       }
     };
-    
+
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
   }, []);
 
-  const updateCSTCoefficient = async (surface: 'upper' | 'lower', index: number, value: number) => {
-    if (surface === 'upper') {
+  const updateCSTCoefficient = async (
+    surface: "upper" | "lower",
+    index: number,
+    value: number,
+  ) => {
+    if (surface === "upper") {
       const newCoeffs = [...upperCoefficients];
       newCoeffs[index] = value;
       setUpperCoefficients(newCoeffs);
@@ -82,13 +92,13 @@ export default function DesignPage() {
 
     // Call API (dummy for now)
     try {
-      await fetch('/api/cst/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ surface, index, value })
+      await fetch("/api/cst/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ surface, index, value }),
       });
     } catch (error) {
-      console.log('API call would happen here:', { surface, index, value });
+      console.log("API call would happen here:", { surface, index, value });
     }
   };
 
@@ -98,46 +108,52 @@ export default function DesignPage() {
       lowerCoefficients,
       velocity,
       angleOfAttack,
-      meshDensity
+      meshDensity,
     );
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .slice(0, -5);
     downloadConfigFile(config, `airfoil-design-${timestamp}.json`);
   };
 
   const handleResetDesign = () => {
-    setUpperCoefficients([0.15, 0.20, 0.18, 0.12, 0.08]);
-    setLowerCoefficients([-0.10, -0.12, -0.09, -0.06, -0.04]);
+    setUpperCoefficients([0.15, 0.2, 0.18, 0.12, 0.08]);
+    setLowerCoefficients([-0.1, -0.12, -0.09, -0.06, -0.04]);
     setAngleOfAttack(5);
     setVelocity(15);
   };
 
-  const addCSTCoefficient = (surface: 'upper' | 'lower') => {
-    if (surface === 'upper') {
+  const addCSTCoefficient = (surface: "upper" | "lower") => {
+    if (surface === "upper") {
       setUpperCoefficients([...upperCoefficients, 0.05]);
     } else {
       setLowerCoefficients([...lowerCoefficients, -0.05]);
     }
   };
 
-  const removeCSTCoefficient = (surface: 'upper' | 'lower', index: number) => {
-    if (surface === 'upper' && upperCoefficients.length > 2) {
+  const removeCSTCoefficient = (surface: "upper" | "lower", index: number) => {
+    if (surface === "upper" && upperCoefficients.length > 2) {
       setUpperCoefficients(upperCoefficients.filter((_, i) => i !== index));
-    } else if (surface === 'lower' && lowerCoefficients.length > 2) {
+    } else if (surface === "lower" && lowerCoefficients.length > 2) {
       setLowerCoefficients(lowerCoefficients.filter((_, i) => i !== index));
     }
   };
 
-  const handleProceedToSimulator = () => {
+  const handleFinalizeDesign = () => {
     // Store state in sessionStorage for other pages
-    sessionStorage.setItem('cfdState', JSON.stringify({
-      upperCoefficients,
-      lowerCoefficients,
-      angleOfAttack,
-      velocity,
-      meshDensity
-    }));
-    router.push('/simulate');
+    sessionStorage.setItem(
+      "cfdState",
+      JSON.stringify({
+        upperCoefficients,
+        lowerCoefficients,
+        angleOfAttack,
+        velocity,
+        meshDensity,
+      }),
+    );
+    router.push("/finalize");
   };
 
   // Auto-open sidebar when control point is dragged
@@ -155,7 +171,7 @@ export default function DesignPage() {
       <div className="bg-white border-b border-gray-200 flex items-center justify-between px-4 py-2.5 shadow-sm z-40">
         {/* Left: File Operations */}
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={handleResetDesign}
             className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-700 transition-colors"
           >
@@ -163,9 +179,7 @@ export default function DesignPage() {
             New Simulation
           </button>
 
-          <button 
-            className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-700 transition-colors"
-          >
+          <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-700 transition-colors">
             <FolderOpen className="w-3.5 h-3.5" />
             Import .dat
           </button>
@@ -173,7 +187,7 @@ export default function DesignPage() {
 
         {/* Right: Save and User */}
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={handleSaveDesign}
             className="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
             title="Save"
@@ -181,8 +195,8 @@ export default function DesignPage() {
             <Save className="w-4 h-4" />
           </button>
 
-          <button 
-            onClick={() => router.push('/')}
+          <button
+            onClick={() => router.push("/")}
             className="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
             title="Account"
           >
@@ -205,19 +219,19 @@ export default function DesignPage() {
                 className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-20"
                 onClick={() => setShowSimDesignerDropdown(false)}
               />
-              
+
               {/* Sidebar - Semi-transparent with glassmorphism */}
               <motion.div
                 initial={{ x: -400, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -400, opacity: 0 }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                transition={{ type: "spring", damping: 30, stiffness: 300 }}
                 className="fixed left-0 top-[130px] bottom-0 w-96 shadow-2xl border-r-2 border-blue-400 z-30 flex flex-col"
-                style={{ 
-                  background: 'rgba(255, 255, 255, 0.92)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  boxShadow: '0 0 40px 12px rgba(59, 130, 246, 0.25)'
+                style={{
+                  background: "rgba(255, 255, 255, 0.92)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  boxShadow: "0 0 40px 12px rgba(59, 130, 246, 0.25)",
                 }}
               >
                 {/* Header */}
@@ -227,7 +241,9 @@ export default function DesignPage() {
                       <Settings className="w-5 h-5" />
                       Simulation Designer
                     </h3>
-                    <p className="text-xs text-blue-100 mt-0.5">Flow & simulation parameters</p>
+                    <p className="text-xs text-blue-100 mt-0.5">
+                      Flow & simulation parameters
+                    </p>
                   </div>
                   <button
                     onClick={() => setShowSimDesignerDropdown(false)}
@@ -241,7 +257,9 @@ export default function DesignPage() {
                 <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                   {/* Velocity */}
                   <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">Flow Velocity (m/s)</label>
+                    <label className="text-sm font-black text-gray-900 mb-3 block">
+                      Flow Velocity (m/s)
+                    </label>
                     <div className="flex items-center gap-3 mb-2">
                       <input
                         type="range"
@@ -258,12 +276,16 @@ export default function DesignPage() {
                         className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                       />
                     </div>
-                    <p className="text-xs text-gray-500">Current: {velocity} m/s</p>
+                    <p className="text-xs text-gray-500">
+                      Current: {velocity} m/s
+                    </p>
                   </div>
 
                   {/* Angle of Attack */}
                   <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">Angle of Attack (°)</label>
+                    <label className="text-sm font-black text-gray-900 mb-3 block">
+                      Angle of Attack (°)
+                    </label>
                     <div className="flex items-center gap-3 mb-2">
                       <input
                         type="range"
@@ -271,41 +293,75 @@ export default function DesignPage() {
                         max={25}
                         step={0.5}
                         value={angleOfAttack}
-                        onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                        onChange={(e) =>
+                          setAngleOfAttack(Number(e.target.value))
+                        }
                         className="flex-1 h-2 accent-purple-500"
                       />
                       <input
                         type="number"
                         value={angleOfAttack.toFixed(1)}
-                        onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                        onChange={(e) =>
+                          setAngleOfAttack(Number(e.target.value))
+                        }
                         className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                       />
                     </div>
-                    <p className="text-xs text-gray-500">Current: {angleOfAttack.toFixed(1)}°</p>
+                    <p className="text-xs text-gray-500">
+                      Current: {angleOfAttack.toFixed(1)}°
+                    </p>
                   </div>
 
                   <div className="border-t-2 border-gray-200 pt-6">
-                    <h4 className="text-sm font-black text-gray-900 mb-4">Time-Step Configuration</h4>
-                    
+                    <h4 className="text-sm font-black text-gray-900 mb-4">
+                      Time-Step Configuration
+                    </h4>
+
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-gray-700 mb-2 block">Start Time (s)</label>
-                        <input type="number" defaultValue={0} step={0.1} className="w-full px-3 py-2 text-sm border border-gray-300 rounded" />
+                        <label className="text-xs font-bold text-gray-700 mb-2 block">
+                          Start Time (s)
+                        </label>
+                        <input
+                          type="number"
+                          defaultValue={0}
+                          step={0.1}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                        />
                       </div>
-                      
+
                       <div>
-                        <label className="text-xs font-bold text-gray-700 mb-2 block">End Time (s)</label>
-                        <input type="number" defaultValue={10} step={0.5} className="w-full px-3 py-2 text-sm border border-gray-300 rounded" />
+                        <label className="text-xs font-bold text-gray-700 mb-2 block">
+                          End Time (s)
+                        </label>
+                        <input
+                          type="number"
+                          defaultValue={10}
+                          step={0.5}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                        />
                       </div>
-                      
+
                       <div>
-                        <label className="text-xs font-bold text-gray-700 mb-2 block">Time Step Δt (s)</label>
-                        <input type="number" defaultValue={0.001} step={0.0001} className="w-full px-3 py-2 text-sm border border-gray-300 rounded" />
+                        <label className="text-xs font-bold text-gray-700 mb-2 block">
+                          Time Step Δt (s)
+                        </label>
+                        <input
+                          type="number"
+                          defaultValue={0.001}
+                          step={0.0001}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                        />
                       </div>
-                      
+
                       <div>
-                        <label className="text-xs font-bold text-gray-700 mb-2 block">CPU Cores</label>
-                        <select defaultValue={4} className="w-full px-3 py-2 text-sm border border-gray-300 rounded">
+                        <label className="text-xs font-bold text-gray-700 mb-2 block">
+                          CPU Cores
+                        </label>
+                        <select
+                          defaultValue={4}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                        >
                           <option value={1}>1 Core</option>
                           <option value={2}>2 Cores</option>
                           <option value={4}>4 Cores</option>
@@ -316,7 +372,9 @@ export default function DesignPage() {
                   </div>
 
                   <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4">
-                    <h4 className="text-xs font-black text-blue-900 mb-2">ℹ️ Computational Estimate</h4>
+                    <h4 className="text-xs font-black text-blue-900 mb-2">
+                      ℹ️ Computational Estimate
+                    </h4>
                     <ul className="text-xs text-blue-800 space-y-1 font-medium">
                       <li>• Total Steps: ~10,000</li>
                       <li>• Est. Runtime: 2.5 minutes (4 cores)</li>
@@ -334,9 +392,15 @@ export default function DesignPage() {
           <button
             onClick={() => setShowSimDesignerDropdown(!showSimDesignerDropdown)}
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
-            style={{ boxShadow: '0 0 0 1px rgba(147, 51, 234, 0)' }}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 12px 3px rgba(147, 51, 234, 0.5)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 0 0 1px rgba(147, 51, 234, 0)'}
+            style={{ boxShadow: "0 0 0 1px rgba(147, 51, 234, 0)" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.boxShadow =
+                "0 0 12px 3px rgba(147, 51, 234, 0.5)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.boxShadow =
+                "0 0 0 1px rgba(147, 51, 234, 0)")
+            }
           >
             <Settings className="w-4 h-4" />
             <span>Simulation Designer</span>
@@ -349,19 +413,19 @@ export default function DesignPage() {
             {showAirfoilDesignDropdown && (
               <>
                 {/* No overlay - let user see through the sidebar */}
-                
+
                 {/* Sidebar - Semi-transparent with glassmorphism */}
                 <motion.div
                   initial={{ x: 400, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: 400, opacity: 0 }}
-                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
                   className="fixed right-0 top-[130px] bottom-0 w-96 shadow-2xl border-l-2 border-green-400 z-30 flex flex-col"
-                  style={{ 
-                    background: 'rgba(255, 255, 255, 0.85)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    boxShadow: '0 0 40px 12px rgba(16, 185, 129, 0.25)'
+                  style={{
+                    background: "rgba(255, 255, 255, 0.85)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    boxShadow: "0 0 40px 12px rgba(16, 185, 129, 0.25)",
                   }}
                 >
                   {/* Header */}
@@ -371,7 +435,9 @@ export default function DesignPage() {
                         <Wind className="w-5 h-5" />
                         Airfoil Design
                       </h3>
-                      <p className="text-xs text-green-100 mt-0.5">CST parametrization coefficients</p>
+                      <p className="text-xs text-green-100 mt-0.5">
+                        CST parametrization coefficients
+                      </p>
                     </div>
                     <button
                       onClick={() => setShowAirfoilDesignDropdown(false)}
@@ -386,37 +452,58 @@ export default function DesignPage() {
                     {/* Upper Surface */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-black text-blue-700">Upper Surface (A<sub>u</sub>)</h4>
+                        <h4 className="text-sm font-black text-blue-700">
+                          Upper Surface (A<sub>u</sub>)
+                        </h4>
                         <button
-                          onClick={() => addCSTCoefficient('upper')}
+                          onClick={() => addCSTCoefficient("upper")}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-all font-bold"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Add
                         </button>
                       </div>
-                      
+
                       <div className="space-y-3">
                         {upperCoefficients.map((coeff, index) => (
-                          <div key={`upper-${index}`} className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-700 w-14">A<sub>u,{index}</sub></span>
+                          <div
+                            key={`upper-${index}`}
+                            className="flex items-center gap-2"
+                          >
+                            <span className="text-sm font-bold text-gray-700 w-14">
+                              A<sub>u,{index}</sub>
+                            </span>
                             <input
                               type="range"
                               min={-0.5}
                               max={0.5}
                               step={0.01}
                               value={coeff}
-                              onChange={(e) => updateCSTCoefficient('upper', index, Number(e.target.value))}
+                              onChange={(e) =>
+                                updateCSTCoefficient(
+                                  "upper",
+                                  index,
+                                  Number(e.target.value),
+                                )
+                              }
                               className="flex-1 h-2 accent-blue-600"
                             />
                             <input
                               type="number"
                               value={coeff.toFixed(3)}
-                              onChange={(e) => updateCSTCoefficient('upper', index, Number(e.target.value))}
+                              onChange={(e) =>
+                                updateCSTCoefficient(
+                                  "upper",
+                                  index,
+                                  Number(e.target.value),
+                                )
+                              }
                               className="w-24 px-2 py-1.5 text-sm border border-blue-300 rounded font-mono"
                             />
                             <button
-                              onClick={() => removeCSTCoefficient('upper', index)}
+                              onClick={() =>
+                                removeCSTCoefficient("upper", index)
+                              }
                               disabled={upperCoefficients.length <= 2}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-30"
                             >
@@ -430,37 +517,58 @@ export default function DesignPage() {
                     {/* Lower Surface */}
                     <div className="border-t-2 border-gray-200 pt-6">
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-black text-green-700">Lower Surface (A<sub>l</sub>)</h4>
+                        <h4 className="text-sm font-black text-green-700">
+                          Lower Surface (A<sub>l</sub>)
+                        </h4>
                         <button
-                          onClick={() => addCSTCoefficient('lower')}
+                          onClick={() => addCSTCoefficient("lower")}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs bg-green-600 text-white hover:bg-green-700 rounded-lg transition-all font-bold"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Add
                         </button>
                       </div>
-                      
+
                       <div className="space-y-3">
                         {lowerCoefficients.map((coeff, index) => (
-                          <div key={`lower-${index}`} className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-700 w-14">A<sub>l,{index}</sub></span>
+                          <div
+                            key={`lower-${index}`}
+                            className="flex items-center gap-2"
+                          >
+                            <span className="text-sm font-bold text-gray-700 w-14">
+                              A<sub>l,{index}</sub>
+                            </span>
                             <input
                               type="range"
                               min={-0.5}
                               max={0.5}
                               step={0.01}
                               value={coeff}
-                              onChange={(e) => updateCSTCoefficient('lower', index, Number(e.target.value))}
+                              onChange={(e) =>
+                                updateCSTCoefficient(
+                                  "lower",
+                                  index,
+                                  Number(e.target.value),
+                                )
+                              }
                               className="flex-1 h-2 accent-green-600"
                             />
                             <input
                               type="number"
                               value={coeff.toFixed(3)}
-                              onChange={(e) => updateCSTCoefficient('lower', index, Number(e.target.value))}
+                              onChange={(e) =>
+                                updateCSTCoefficient(
+                                  "lower",
+                                  index,
+                                  Number(e.target.value),
+                                )
+                              }
                               className="w-24 px-2 py-1.5 text-sm border border-green-300 rounded font-mono"
                             />
                             <button
-                              onClick={() => removeCSTCoefficient('lower', index)}
+                              onClick={() =>
+                                removeCSTCoefficient("lower", index)
+                              }
                               disabled={lowerCoefficients.length <= 2}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-30"
                             >
@@ -469,13 +577,6 @@ export default function DesignPage() {
                           </div>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4">
-                      <h4 className="text-xs font-black text-green-900 mb-2">💡 CST Parameterization</h4>
-                      <p className="text-xs text-green-800 font-medium">
-                        Class Shape Transformation uses Bernstein polynomials to define airfoil geometry. Adjust coefficients to modify curvature.
-                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -486,11 +587,19 @@ export default function DesignPage() {
           {/* Right Sidebar Trigger Button */}
           <div className="absolute right-4 top-4 z-30">
             <button
-              onClick={() => setShowAirfoilDesignDropdown(!showAirfoilDesignDropdown)}
+              onClick={() =>
+                setShowAirfoilDesignDropdown(!showAirfoilDesignDropdown)
+              }
               className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
-              style={{ boxShadow: '0 0 0 1px rgba(16, 185, 129, 0)' }}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 12px 3px rgba(16, 185, 129, 0.5)'}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 0 0 1px rgba(16, 185, 129, 0)'}
+              style={{ boxShadow: "0 0 0 1px rgba(16, 185, 129, 0)" }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.boxShadow =
+                  "0 0 12px 3px rgba(16, 185, 129, 0.5)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.boxShadow =
+                  "0 0 0 1px rgba(16, 185, 129, 0)")
+              }
             >
               <Wind className="w-4 h-4" />
               <span>Airfoil Design</span>
@@ -498,15 +607,13 @@ export default function DesignPage() {
           </div>
         </>
 
-
-
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col p-6 gap-4">
           {/* Top Row: Zoom Controls */}
           <div className="flex justify-center">
             {/* Zoom Controls - Center */}
             <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
-              <button 
+              <button
                 onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
                 className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
                 title="Zoom In"
@@ -516,7 +623,7 @@ export default function DesignPage() {
               <span className="text-xs font-medium text-gray-700 px-2 min-w-[45px] text-center">
                 {zoomLevel}%
               </span>
-              <button 
+              <button
                 onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
                 className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
                 title="Zoom Out"
@@ -524,7 +631,7 @@ export default function DesignPage() {
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
               <div className="w-px h-4 bg-gray-300 mx-1" />
-              <button 
+              <button
                 onClick={() => setZoomLevel(100)}
                 className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
                 title="Reset View"
@@ -532,7 +639,7 @@ export default function DesignPage() {
                 <Maximize className="w-3.5 h-3.5" />
               </button>
               <div className="w-px h-4 bg-gray-300 mx-1" />
-              <select 
+              <select
                 value={meshDensity}
                 onChange={(e) => setMeshDensity(e.target.value as any)}
                 className="text-xs border-0 bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer pr-6"
@@ -547,10 +654,13 @@ export default function DesignPage() {
 
           {/* Canvas */}
           <div className="flex-1 relative" ref={canvasRef}>
-            <div className="absolute inset-0 rounded-xl shadow-2xl overflow-hidden" style={{
-              background: '#000000',
-              border: '2px solid rgba(100, 100, 100, 0.4)',
-            }}>
+            <div
+              className="absolute inset-0 rounded-xl shadow-2xl overflow-hidden"
+              style={{
+                background: "#000000",
+                border: "2px solid rgba(100, 100, 100, 0.4)",
+              }}
+            >
               <InteractiveAirfoilCanvas
                 width={canvasSize.width}
                 height={canvasSize.height}
@@ -576,45 +686,45 @@ export default function DesignPage() {
             {/* Visualization Controls - Left */}
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-gray-200">
               <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
-                <input 
-                  type="checkbox" 
-                  checked={showControlPoints} 
+                <input
+                  type="checkbox"
+                  checked={showControlPoints}
                   onChange={(e) => setShowControlPoints(e.target.checked)}
                   className="w-3 h-3 accent-blue-600"
                 />
                 Control Points
               </label>
-              
+
               <div className="w-px h-3 bg-gray-300" />
-              
+
               <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
-                <input 
-                  type="checkbox" 
-                  checked={showMeshOverlay} 
+                <input
+                  type="checkbox"
+                  checked={showMeshOverlay}
                   onChange={(e) => setShowMeshOverlay(e.target.checked)}
                   className="w-3 h-3 accent-green-600"
                 />
                 Grid Overlay
               </label>
-              
+
               <div className="w-px h-3 bg-gray-300" />
-              
+
               <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
-                <input 
-                  type="checkbox" 
-                  checked={showVectorField} 
+                <input
+                  type="checkbox"
+                  checked={showVectorField}
                   onChange={(e) => setShowVectorField(e.target.checked)}
                   className="w-3 h-3 accent-purple-600"
                 />
                 Wind Arrows
               </label>
-              
+
               <div className="w-px h-3 bg-gray-300" />
-              
+
               <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
-                <input 
-                  type="checkbox" 
-                  checked={showPressureField} 
+                <input
+                  type="checkbox"
+                  checked={showPressureField}
                   onChange={(e) => setShowPressureField(e.target.checked)}
                   className="w-3 h-3 accent-orange-600"
                 />
@@ -624,11 +734,11 @@ export default function DesignPage() {
 
             {/* Simulation Button - Right */}
             <button
-              onClick={handleProceedToSimulator}
+              onClick={handleFinalizeDesign}
               className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all font-semibold shadow-lg text-sm border border-cyan-400"
             >
               <ArrowRight className="w-4 h-4" />
-              Proceed to Simulation
+              Finalize Design
             </button>
           </div>
         </div>
