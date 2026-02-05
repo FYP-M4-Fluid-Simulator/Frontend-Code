@@ -151,12 +151,68 @@ export function InteractiveAirfoilCanvas({
     const render = () => {
       time += 0.016;
 
-      // Clear with BLACK background
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, width, height);
+      if (designMode) {
+        // Clean white background for design mode
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw subtle grid lines for technical drawing feel
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.1)";
+        ctx.lineWidth = 0.5;
+        
+        // Major grid lines every 4 units
+        const majorGridSpacing = 80;
+        for (let x = 0; x <= width; x += majorGridSpacing) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= height; y += majorGridSpacing) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+        
+        // Minor grid lines every unit  
+        const minorGridSpacing = 20;
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.lineWidth = 0.3;
+        for (let x = 0; x <= width; x += minorGridSpacing) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= height; y += minorGridSpacing) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+        
+        // Draw coordinate axes
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.lineWidth = 1;
+        // Horizontal axis through center
+        ctx.beginPath();
+        ctx.moveTo(0, height / 2);
+        ctx.lineTo(width, height / 2);
+        ctx.stroke();
+        // Vertical axis through center
+        ctx.beginPath();
+        ctx.moveTo(width / 2, 0);
+        ctx.lineTo(width / 2, height);
+        ctx.stroke();
+      } else {
+        // Clear with BLACK background for simulation mode
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, width, height);
+      }
 
-      // Draw pressure field heatmap (ANSYS-style smooth contours)
-      if (showPressureField) {
+      // Draw pressure field heatmap (ANSYS-style smooth contours) - only in simulation mode
+      if (showPressureField && !designMode) {
         const cellSize = gridSpacing / 2;
 
         for (let x = 0; x < width; x += cellSize) {
@@ -226,11 +282,9 @@ export function InteractiveAirfoilCanvas({
         ctx.globalAlpha = 1;
       }
 
-      // Draw mesh overlay (sharp Eulerian grid)
-      if (showMeshOverlay) {
-        ctx.strokeStyle = designMode
-          ? "rgba(255, 255, 255, 0.15)"
-          : "rgba(255, 255, 255, 0.2)";
+      // Draw mesh overlay (sharp Eulerian grid) - only in simulation mode
+      if (showMeshOverlay && !designMode) {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
         ctx.lineWidth = 1.0;
 
         for (let x = 0; x < width; x += gridSpacing) {
@@ -248,8 +302,8 @@ export function InteractiveAirfoilCanvas({
         }
       }
 
-      // Draw vector field with dynamic arrows
-      if (showVectorField) {
+      // Draw vector field with dynamic arrows - only in simulation mode
+      if (showVectorField && !designMode) {
         const arrowSpacing = gridSpacing * 1.5;
         const arrowScale = {
           coarse: 1.2,
@@ -362,11 +416,13 @@ export function InteractiveAirfoilCanvas({
       ];
 
       if (designMode) {
-        // In design mode: White airfoil with black grid cells
+        // Clean technical drawing style for design mode
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.98)";
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
-        ctx.lineWidth = 2;
+        
+        // Draw airfoil outline with clean black line
+        ctx.fillStyle = "rgba(240, 248, 255, 0.4)"; // Very light blue fill
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)"; // Strong black outline
+        ctx.lineWidth = 2.5;
 
         ctx.beginPath();
         ctx.moveTo(airfoilCanvasPoints[0].x, airfoilCanvasPoints[0].y);
@@ -376,65 +432,47 @@ export function InteractiveAirfoilCanvas({
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-
-        // Leading edge marker (black)
+        
+        // Draw chord line for reference
         const leadingEdge = transformPoint({ x: 0, y: 0 });
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-        ctx.beginPath();
-        ctx.arc(leadingEdge.x, leadingEdge.y, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Trailing edge marker (black)
         const trailingEdge = transformPoint({ x: 1, y: 0 });
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
         ctx.beginPath();
-        ctx.arc(trailingEdge.x, trailingEdge.y, 5, 0, Math.PI * 2);
+        ctx.moveTo(leadingEdge.x, leadingEdge.y);
+        ctx.lineTo(trailingEdge.x, trailingEdge.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Leading edge marker (larger, more visible)
+        ctx.fillStyle = "rgba(220, 38, 38, 0.8)"; // Red
+        ctx.beginPath();
+        ctx.arc(leadingEdge.x, leadingEdge.y, 6, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Add "LE" label
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("LE", leadingEdge.x, leadingEdge.y - 15);
 
-        // Small wind speed indicators (subtle black arrows)
-        if (showVectorField) {
-          const arrowSpacing = gridSpacing * 2.5;
-
-          for (
-            let x = arrowSpacing;
-            x < width - arrowSpacing;
-            x += arrowSpacing
-          ) {
-            const y = offsetY - 50; // Single horizontal line above airfoil
-
-            const angle = (angleOfAttack * Math.PI) / 180;
-            const arrowLength = 12 + (velocity / 100) * 8; // Small arrows
-
-            const endX = x + Math.cos(angle) * arrowLength;
-            const endY = y + Math.sin(angle) * arrowLength;
-
-            ctx.strokeStyle = "rgba(100, 180, 255, 0.5)"; // Light cyan/blue for visibility on black
-            ctx.lineWidth = 1.5;
-            ctx.shadowBlur = 0;
-
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(endX, endY);
-            ctx.stroke();
-
-            // Arrow head
-            const headLength = 4;
-            const headAngle = Math.PI / 6;
-
-            ctx.beginPath();
-            ctx.moveTo(endX, endY);
-            ctx.lineTo(
-              endX - headLength * Math.cos(angle - headAngle),
-              endY - headLength * Math.sin(angle - headAngle),
-            );
-            ctx.moveTo(endX, endY);
-            ctx.lineTo(
-              endX - headLength * Math.cos(angle + headAngle),
-              endY - headLength * Math.sin(angle + headAngle),
-            );
-            ctx.stroke();
-          }
-        }
+        // Trailing edge marker (larger, more visible)
+        ctx.fillStyle = "rgba(37, 99, 235, 0.8)"; // Blue
+        ctx.beginPath();
+        ctx.arc(trailingEdge.x, trailingEdge.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add "TE" label
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillText("TE", trailingEdge.x, trailingEdge.y - 15);
+        
+        // Add coordinate information
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("Chord: 1.0", 20, height - 40);
+        ctx.fillText(`AoA: ${angleOfAttack.toFixed(1)}°`, 20, height - 20);
       } else {
         // Simulator mode: Blue glow airfoil
         // Outer glow (Deep Blue)

@@ -158,7 +158,7 @@ export default function FinalizePage() {
             </div>
           </div>
 
-          {/* Zoom Controls */}
+          {/* Zoom Controls with Mesh Density */}
           <div className="flex justify-center">
             <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
               <button
@@ -186,6 +186,17 @@ export default function FinalizePage() {
               >
                 <Maximize className="w-3.5 h-3.5" />
               </button>
+              <div className="w-px h-4 bg-gray-300 mx-1" />
+              <select
+                value={meshDensity}
+                onChange={(e) => setMeshDensity(e.target.value as any)}
+                className="text-xs border-0 bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer pr-6"
+              >
+                <option value="coarse">Coarse Mesh</option>
+                <option value="medium">Medium Mesh</option>
+                <option value="fine">Fine Mesh</option>
+                <option value="ultra">Ultra Mesh</option>
+              </select>
             </div>
           </div>
 
@@ -216,6 +227,57 @@ export default function FinalizePage() {
                 onControlPointDragStart={() => {}}
                 onControlPointDragEnd={() => {}}
               />
+            </div>
+          </div>
+
+          {/* Visualization Controls */}
+          <div className="flex justify-center">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-gray-200">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={showControlPoints}
+                  onChange={(e) => setShowControlPoints(e.target.checked)}
+                  className="w-3 h-3 accent-blue-600"
+                />
+                Control Points
+              </label>
+
+              <div className="w-px h-3 bg-gray-300" />
+
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={showMeshOverlay}
+                  onChange={(e) => setShowMeshOverlay(e.target.checked)}
+                  className="w-3 h-3 accent-green-600"
+                />
+                Grid Overlay
+              </label>
+
+              <div className="w-px h-3 bg-gray-300" />
+
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={showVectorField}
+                  onChange={(e) => setShowVectorField(e.target.checked)}
+                  className="w-3 h-3 accent-purple-600"
+                />
+                Wind Arrows
+              </label>
+
+              <div className="w-px h-3 bg-gray-300" />
+
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={showPressureField}
+                  onChange={(e) => setShowPressureField(e.target.checked)}
+                  className="w-3 h-3 accent-orange-600"
+                />
+                Pressure Field
+              </label>
             </div>
           </div>
 
