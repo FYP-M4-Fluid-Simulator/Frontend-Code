@@ -2,6 +2,7 @@
 
 import { Play, Upload, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
+import { AirfoilVisualizer } from './AirfoilVisualizer';
 
 interface SimulationControlsProps {
   isSimulating: boolean;
@@ -19,7 +20,11 @@ export function SimulationControls({ isSimulating, onSimulate }: SimulationContr
   const [refinementLevel, setRefinementLevel] = useState('medium');
   const [airfoilSource, setAirfoilSource] = useState<'select' | 'upload'>('select');
   const [selectedAirfoil, setSelectedAirfoil] = useState('NACA 4412');
-  const [showControlPoints, setShowControlPoints] = useState(false);
+  const [showControlPoints, setShowControlPoints] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
+  const [fillAirfoil, setFillAirfoil] = useState(true);
+  const [editingPointId, setEditingPointId] = useState<number | null>(null);
+  const [editingSurface, setEditingSurface] = useState<'upper' | 'lower' | null>(null);
   
   const [upperControlPoints, setUpperControlPoints] = useState<ControlPoint[]>([
     { id: 1, value: 0.15 },
@@ -69,8 +74,63 @@ export function SimulationControls({ isSimulating, onSimulate }: SimulationContr
 
   return (
     <div className="p-4 space-y-6 max-h-screen overflow-y-auto">
-      {/* Airfoil Selection/Upload */}
+      {/* Welcome Message */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 mb-1">Welcome to Airfoil Design!</h3>
+        <p className="text-sm text-blue-700">
+          Your airfoil is loaded with CST parameterization. Drag control points on the chart or use sliders below to modify the shape in real-time.
+        </p>
+      </div>
+
+      {/* Airfoil Visualization */}
       <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-900">Airfoil Visualization</h2>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showControlPoints}
+                onChange={(e) => setShowControlPoints(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <span className="text-gray-700">Show Control Points</span>
+            </label>
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showLabels}
+                onChange={(e) => setShowLabels(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <span className="text-gray-700">Show Point Labels</span>
+            </label>
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={fillAirfoil}
+                onChange={(e) => setFillAirfoil(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <span className="text-gray-700">Fill Airfoil</span>
+            </label>
+          </div>
+        </div>
+        <AirfoilVisualizer
+          upperControlPoints={upperControlPoints}
+          lowerControlPoints={lowerControlPoints}
+          onUpdateControlPoint={updateControlPoint}
+          showControlPoints={showControlPoints}
+          showLabels={showLabels}
+          fillAirfoil={fillAirfoil}
+        />
+        <p className="text-xs text-gray-500 mt-2">
+          💡 Drag control points on the chart or use sliders below to modify the airfoil shape
+        </p>
+      </div>
+
+      {/* Airfoil Selection/Upload */}
+      <div className="border-t border-gray-200 pt-6">
         <h2 className="font-semibold text-gray-900 mb-4">Airfoil Configuration</h2>
         
         {/* Source Selection */}
