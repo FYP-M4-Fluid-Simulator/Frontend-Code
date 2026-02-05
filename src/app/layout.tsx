@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
 import '../styles/globals.css';
-import { AppProviders } from './providers';
-import { RootLayout as LayoutContent } from '../components/RootLayout';
 
 export const metadata: Metadata = {
-  title: 'CFD Airfoil Optimizer',
-  description: 'Wind turbine airfoil shape optimization with CFD simulation',
+  title: 'CFD Airfoil Analysis Platform',
+  description: 'Computational Fluid Dynamics simulation platform for wind turbine airfoil analysis and optimization',
 };
 
 export default function RootLayout({
@@ -15,11 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <AppProviders>
-          <LayoutContent>{children}</LayoutContent>
-        </AppProviders>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
