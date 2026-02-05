@@ -11,7 +11,13 @@ import {
   Trash2,
   ArrowRight,
   RotateCw,
-  X
+  X,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  FilePlus,
+  FolderOpen,
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { InteractiveAirfoilCanvas } from '../../components/InteractiveAirfoilCanvas';
@@ -40,6 +46,9 @@ export default function DesignPage() {
   const [showVectorField, setShowVectorField] = useState(true);
   const [showMeshOverlay, setShowMeshOverlay] = useState(true);
   const [showControlPoints, setShowControlPoints] = useState(true);
+
+  // Zoom level
+  const [zoomLevel, setZoomLevel] = useState(100);
 
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -131,65 +140,59 @@ export default function DesignPage() {
     router.push('/simulate');
   };
 
+  // Auto-open sidebar when control point is dragged
+  const handleControlPointDragStart = () => {
+    setShowAirfoilDesignDropdown(true);
+  };
+
+  const handleControlPointDragEnd = () => {
+    // Keep sidebar open when drag ends
+  };
+
   return (
     <div className="h-screen flex flex-col bg-white">
-      {/* Compact Top Ribbon */}
-      <div className="bg-white border-b border-gray-300 flex items-center justify-between px-4 py-2 shadow-sm z-40">
-        {/* Left: Project Controls */}
+      {/* SimScale-Style Top Toolbar */}
+      <div className="bg-white border-b border-gray-200 flex items-center justify-between px-4 py-2.5 shadow-sm z-40">
+        {/* Left: File Operations */}
         <div className="flex items-center gap-2">
           <button 
             onClick={handleResetDesign}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-blue-600 shadow-sm"
-            style={{ boxShadow: '0 0 0 1px rgba(59, 130, 246, 0)' }}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 8px 2px rgba(59, 130, 246, 0.3)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0)'}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-700 transition-colors"
           >
-            <RotateCw className="w-3.5 h-3.5" />
-            Reset
+            <FilePlus className="w-3.5 h-3.5" />
+            New Simulation
           </button>
 
+          <button 
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-700 transition-colors"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            Import .dat
+          </button>
+        </div>
+
+        {/* Right: Save and User */}
+        <div className="flex items-center gap-3">
           <button 
             onClick={handleSaveDesign}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-green-50 border border-gray-300 hover:border-green-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-green-600 shadow-sm"
-            style={{ boxShadow: '0 0 0 1px rgba(34, 197, 94, 0)' }}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 8px 2px rgba(34, 197, 94, 0.3)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 0 0 1px rgba(34, 197, 94, 0)'}
+            className="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
+            title="Save"
           >
-            <Save className="w-3.5 h-3.5" />
-            Save Design
+            <Save className="w-4 h-4" />
           </button>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-purple-50 border border-gray-300 hover:border-purple-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-purple-600 shadow-sm">
-            <Download className="w-3.5 h-3.5" />
-            Export
-          </button>
-        </div>
-
-        {/* Center: Branding */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-4 py-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
-            <Wind className="w-4 h-4 text-white" />
-            <span className="text-xs font-black text-white tracking-wide">CFD AIRFOIL PLATFORM</span>
-          </div>
-          <div className="px-3 py-1 bg-gray-100 rounded-lg border border-gray-300">
-            <span className="text-xs font-bold text-gray-600">Design Mode</span>
-          </div>
-        </div>
-
-        {/* Right: User Controls */}
-        <div className="flex items-center gap-2">
           <button 
             onClick={() => router.push('/')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-red-50 border border-gray-300 hover:border-red-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-red-600 shadow-sm"
+            className="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
+            title="Account"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            Logout
+            <User className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden relative bg-gradient-to-br from-gray-50 via-white to-blue-50">
+      <div className="flex-1 flex overflow-hidden relative bg-gray-50">
         {/* Left Full Sidebar - Simulation Designer */}
         <AnimatePresence>
           {showSimDesignerDropdown && (
@@ -345,14 +348,7 @@ export default function DesignPage() {
           <AnimatePresence>
             {showAirfoilDesignDropdown && (
               <>
-                {/* Overlay - more transparent to see through */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-20"
-                  onClick={() => setShowAirfoilDesignDropdown(false)}
-                />
+                {/* No overlay - let user see through the sidebar */}
                 
                 {/* Sidebar - Semi-transparent with glassmorphism */}
                 <motion.div
@@ -362,9 +358,9 @@ export default function DesignPage() {
                   transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                   className="fixed right-0 top-[130px] bottom-0 w-96 shadow-2xl border-l-2 border-green-400 z-30 flex flex-col"
                   style={{ 
-                    background: 'rgba(255, 255, 255, 0.92)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
+                    background: 'rgba(255, 255, 255, 0.85)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
                     boxShadow: '0 0 40px 12px rgba(16, 185, 129, 0.25)'
                   }}
                 >
@@ -502,132 +498,138 @@ export default function DesignPage() {
           </div>
         </>
 
-        {/* Visualization Controls - Top Center */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
-          <div className="flex items-center gap-3 px-4 py-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg border-2 border-gray-200">
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
-              <input 
-                type="checkbox" 
-                checked={showControlPoints} 
-                onChange={(e) => setShowControlPoints(e.target.checked)}
-                className="w-4 h-4 accent-blue-600"
-              />
-              Control Points
-            </label>
-            
-            <div className="w-px h-4 bg-gray-300" />
-            
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
-              <input 
-                type="checkbox" 
-                checked={showMeshOverlay} 
-                onChange={(e) => setShowMeshOverlay(e.target.checked)}
-                className="w-4 h-4 accent-green-600"
-              />
-              Grid Overlay
-            </label>
-            
-            <div className="w-px h-4 bg-gray-300" />
-            
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
-              <input 
-                type="checkbox" 
-                checked={showVectorField} 
-                onChange={(e) => setShowVectorField(e.target.checked)}
-                className="w-4 h-4 accent-purple-600"
-              />
-              Wind Arrows
-            </label>
-            
-            <div className="w-px h-4 bg-gray-300" />
-            
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
-              <input 
-                type="checkbox" 
-                checked={showPressureField} 
-                onChange={(e) => setShowPressureField(e.target.checked)}
-                className="w-4 h-4 accent-orange-600"
-              />
-              Pressure Field
-            </label>
-          </div>
-        </div>
+
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col p-6 gap-4">
-          <div className="flex-1 flex gap-4">
-            {/* Main Canvas */}
-            <div className="flex-1 relative" ref={canvasRef}>
-              <div className="absolute inset-0 rounded-xl shadow-2xl overflow-hidden" style={{
-                background: '#000000',
-                border: '2px solid rgba(100, 100, 100, 0.4)',
-              }}>
-                <InteractiveAirfoilCanvas
-                  width={canvasSize.width}
-                  height={canvasSize.height}
-                  upperCoefficients={upperCoefficients}
-                  lowerCoefficients={lowerCoefficients}
-                  angleOfAttack={angleOfAttack}
-                  velocity={velocity}
-                  meshQuality={meshDensity}
-                  showControlPoints={showControlPoints}
-                  showMeshOverlay={showMeshOverlay}
-                  showPressureField={showPressureField}
-                  showVectorField={showVectorField}
-                  onCoefficientChange={updateCSTCoefficient}
-                  allowFullScreen={true}
-                  designMode={true}
+          {/* Top Row: Zoom Controls */}
+          <div className="flex justify-center">
+            {/* Zoom Controls - Center */}
+            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+              <button 
+                onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
+                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-xs font-medium text-gray-700 px-2 min-w-[45px] text-center">
+                {zoomLevel}%
+              </span>
+              <button 
+                onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
+                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-px h-4 bg-gray-300 mx-1" />
+              <button 
+                onClick={() => setZoomLevel(100)}
+                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
+                title="Reset View"
+              >
+                <Maximize className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-px h-4 bg-gray-300 mx-1" />
+              <select 
+                value={meshDensity}
+                onChange={(e) => setMeshDensity(e.target.value as any)}
+                className="text-xs border-0 bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer pr-6"
+              >
+                <option value="coarse">Coarse Mesh</option>
+                <option value="medium">Medium Mesh</option>
+                <option value="fine">Fine Mesh</option>
+                <option value="ultra">Ultra Mesh</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Canvas */}
+          <div className="flex-1 relative" ref={canvasRef}>
+            <div className="absolute inset-0 rounded-xl shadow-2xl overflow-hidden" style={{
+              background: '#000000',
+              border: '2px solid rgba(100, 100, 100, 0.4)',
+            }}>
+              <InteractiveAirfoilCanvas
+                width={canvasSize.width}
+                height={canvasSize.height}
+                upperCoefficients={upperCoefficients}
+                lowerCoefficients={lowerCoefficients}
+                angleOfAttack={angleOfAttack}
+                velocity={velocity}
+                meshQuality={meshDensity}
+                showControlPoints={showControlPoints}
+                showMeshOverlay={showMeshOverlay}
+                showPressureField={showPressureField}
+                showVectorField={showVectorField}
+                onCoefficientChange={updateCSTCoefficient}
+                allowFullScreen={true}
+                designMode={true}
+                onControlPointDragStart={handleControlPointDragStart}
+                onControlPointDragEnd={handleControlPointDragEnd}
+              />
+            </div>
+          </div>
+          {/* Bottom Controls */}
+          <div className="flex items-center justify-between">
+            {/* Visualization Controls - Left */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-gray-200">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={showControlPoints} 
+                  onChange={(e) => setShowControlPoints(e.target.checked)}
+                  className="w-3 h-3 accent-blue-600"
                 />
-              </div>
+                Control Points
+              </label>
+              
+              <div className="w-px h-3 bg-gray-300" />
+              
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={showMeshOverlay} 
+                  onChange={(e) => setShowMeshOverlay(e.target.checked)}
+                  className="w-3 h-3 accent-green-600"
+                />
+                Grid Overlay
+              </label>
+              
+              <div className="w-px h-3 bg-gray-300" />
+              
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={showVectorField} 
+                  onChange={(e) => setShowVectorField(e.target.checked)}
+                  className="w-3 h-3 accent-purple-600"
+                />
+                Wind Arrows
+              </label>
+              
+              <div className="w-px h-3 bg-gray-300" />
+              
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={showPressureField} 
+                  onChange={(e) => setShowPressureField(e.target.checked)}
+                  className="w-3 h-3 accent-orange-600"
+                />
+                Pressure Field
+              </label>
             </div>
 
-            {/* Right Panel - Workflow Actions */}
-            <div className="w-80 flex flex-col gap-4">
-              {/* Workflow Stage Card */}
-              <div className="bg-white rounded-xl border-2 border-gray-200 shadow-lg p-6 space-y-4">
-                <div>
-                  <h3 className="text-base font-black text-gray-900 mb-1">Design Workflow</h3>
-                  <p className="text-xs text-gray-600 font-medium">Configure airfoil geometry and flow parameters</p>
-                </div>
-
-                <div className="space-y-4">
-                  <button
-                    onClick={handleProceedToSimulator}
-                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base border-2 border-cyan-400"
-                  >
-                    <ArrowRight className="w-5 h-5" />
-                    Proceed to Simulation
-                  </button>
-                </div>
-              </div>
-
-              {/* Info Panel */}
-              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 p-5 space-y-3">
-                <h4 className="text-sm font-black text-blue-900">📐 Current Configuration</h4>
-                <div className="space-y-2 text-xs font-medium text-blue-800">
-                  <div className="flex justify-between">
-                    <span>Upper Coefficients:</span>
-                    <span className="font-black">{upperCoefficients.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Lower Coefficients:</span>
-                    <span className="font-black">{lowerCoefficients.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Flow Velocity:</span>
-                    <span className="font-black">{velocity} m/s</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Angle of Attack:</span>
-                    <span className="font-black">{angleOfAttack}°</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Mesh Quality:</span>
-                    <span className="font-black capitalize">{meshDensity}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Simulation Button - Right */}
+            <button
+              onClick={handleProceedToSimulator}
+              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all font-semibold shadow-lg text-sm border border-cyan-400"
+            >
+              <ArrowRight className="w-4 h-4" />
+              Proceed to Simulation
+            </button>
           </div>
         </div>
       </div>
