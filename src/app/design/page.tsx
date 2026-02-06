@@ -26,6 +26,13 @@ import {
   downloadConfigFile,
 } from "../../lib/exportData";
 import { useRouter } from "next/navigation";
+import { PYTHON_BACKEND_URL } from "@/config";
+
+if (!PYTHON_BACKEND_URL) {
+  throw new Error("Python backend URL is not defined.");
+} else {
+  console.log("PYTHON_BACKEND_URL is set to:", PYTHON_BACKEND_URL);
+}
 
 export default function DesignPage() {
   const router = useRouter();
@@ -55,6 +62,18 @@ export default function DesignPage() {
 
   // Zoom level
   const [zoomLevel, setZoomLevel] = useState(100);
+
+  // Modal and file handling states
+  const [showNewDesignModal, setShowNewDesignModal] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+  // const [conversionProgress, setConversionProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Modal and file handling states
+  // const [showNewDesignModal, setShowNewDesignModal] = useState(false);
+  // const [isConverting, setIsConverting] = useState(false);
+  const [conversionProgress, setConversionProgress] = useState(0);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -100,6 +119,16 @@ export default function DesignPage() {
     } catch (error) {
       console.log("API call would happen here:", { surface, index, value });
     }
+    // try {
+
+    //     await fetch(PYTHON_BACKEND_URL + "/cst/get_cst_values" || "bhai_backend_url_tou_daalo??", {
+    //       method: "GET",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify({ surface, index, value }),
+    //     });
+    //   } catch (error) {
+    //     console.log("API call failed:", error);
+    //   }
   };
 
   const handleSaveDesign = () => {
@@ -123,6 +152,78 @@ export default function DesignPage() {
     setLowerCoefficients([-0.1, -0.12, -0.09, -0.06, -0.04]);
     setAngleOfAttack(5);
     setVelocity(15);
+  };
+
+  const handleStartWithDefault = () => {
+    handleResetDesign();
+    setShowNewDesignModal(false);
+  };
+
+  const handleImportFromFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.name.endsWith(".dat")) {
+      alert("Please select a valid .dat file");
+      return;
+    }
+
+    setIsConverting(true);
+    setConversionProgress(0);
+    setShowNewDesignModal(false);
+
+    try {
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setConversionProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + Math.random() * 20;
+        });
+      }, 200);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      console.log(
+        "sending reqest to url :" + PYTHON_BACKEND_URL + "cst/get_cst_values",
+      );
+      const response = await fetch(PYTHON_BACKEND_URL + "cst/get_cst_values", {
+        method: "GET",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Conversion failed");
+      }
+
+      const data = await response.json();
+
+      console.log("RESPONSE RECEIVED FROM BACKEND: ", data);
+
+      // Update coefficients with converted data
+      setUpperCoefficients(data.upperCoefficients);
+      setLowerCoefficients(data.lowerCoefficients);
+
+      setConversionProgress(100);
+      setTimeout(() => {
+        setIsConverting(false);
+        setConversionProgress(0);
+      }, 500);
+    } catch (error) {
+      console.error("Error converting file:", error);
+      alert("Failed to convert .dat file. Please try again.");
+      setIsConverting(false);
+      setConversionProgress(0);
+    }
+
+    // Reset file input
+    event.target.value = "";
   };
 
   const addCSTCoefficient = (surface: "upper" | "lower") => {
@@ -172,16 +273,19 @@ export default function DesignPage() {
         {/* Left: File Operations */}
         <div className="flex items-center gap-2">
           <button
-            onClick={handleResetDesign}
+            onClick={() => setShowNewDesignModal(true)}
             className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-700 transition-colors"
           >
             <FilePlus className="w-3.5 h-3.5" />
-            New Simulation
+            Start New Design
           </button>
 
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-700 transition-colors">
-            <FolderOpen className="w-3.5 h-3.5" />
-            Import .dat
+          <button
+            onClick={() => router.push("/turbine")}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border border-green-200 hover:border-green-300 rounded text-xs font-medium text-green-700 hover:text-green-800 transition-all"
+          >
+            <Wind className="w-3.5 h-3.5" />
+            View Turbine
           </button>
         </div>
 
@@ -743,6 +847,112 @@ export default function DesignPage() {
           </div>
         </div>
       </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".dat"
+        style={{ display: "none" }}
+        onChange={handleFileSelect}
+      />
+
+      {/* New Design Modal */}
+      {showNewDesignModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FilePlus className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Start New Design
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Choose how you'd like to begin your airfoil design
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <button
+                  onClick={handleStartWithDefault}
+                  className="w-full p-4 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-2 border-blue-200 hover:border-blue-300 rounded-xl transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Wind className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-semibold text-gray-900">
+                        Default Airfoil
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Start with NACA-like symmetric profile
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={handleImportFromFile}
+                  className="w-full p-4 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-2 border-green-200 hover:border-green-300 rounded-xl transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <FolderOpen className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-semibold text-gray-900">
+                        Import .dat File
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Load airfoil coordinates from file
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowNewDesignModal(false)}
+                className="w-full py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conversion Loading Overlay */}
+      {isConverting && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <Settings className="w-8 h-8 text-white animate-spin" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                Converting to CST
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Processing airfoil coordinates...
+              </p>
+
+              <div className="relative w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                <div
+                  className="bg-gradient-to-r from-blue-600 to-cyan-600 h-2.5 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${conversionProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-500">
+                {Math.round(conversionProgress)}% complete
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
