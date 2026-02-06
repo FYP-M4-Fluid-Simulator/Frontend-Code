@@ -194,7 +194,7 @@ export default function DesignPage() {
         "sending reqest to url :" + PYTHON_BACKEND_URL + "cst/get_cst_values",
       );
       const response = await fetch(PYTHON_BACKEND_URL + "cst/get_cst_values", {
-        method: "GET",
+        method: "POST",
         body: formData,
       });
 
