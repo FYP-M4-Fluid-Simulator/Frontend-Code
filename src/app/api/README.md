@@ -1,4 +1,34 @@
-# CFD Airfoil Platform - API Documentation
+after cloning this ensure you have .env.local file with the following content:
+
+```env
+NEXT_PUBLIC_PYTHON_BACKEND_URL=http://127.0.0.1:8000/
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- # CFD Airfoil Platform - API Documentation
 
 This directory contains Next.js API routes for the CFD Airfoil Analysis Platform. These are currently **dummy endpoints** that return simulated data. In production, these will connect to your backend CFD solver, database, and optimization engine.
 
@@ -223,4 +253,4 @@ curl -X POST http://localhost:3000/api/optimize/start \
 5. Implement rate limiting
 6. Add request validation with Zod or similar
 7. Set up database for storing results
-8. Implement SSE/WebSocket for real-time updates
+8. Implement SSE/WebSocket for real-time updates -->
