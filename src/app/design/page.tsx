@@ -18,6 +18,7 @@ import {
   FilePlus,
   FolderOpen,
   User,
+  ChevronRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
@@ -36,9 +37,8 @@ if (!PYTHON_BACKEND_URL) {
 
 export default function DesignPage() {
   const router = useRouter();
-  const [showSimDesignerDropdown, setShowSimDesignerDropdown] = useState(false);
-  const [showAirfoilDesignDropdown, setShowAirfoilDesignDropdown] =
-    useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<"cst" | "simulation">("cst");
 
   // CST Coefficients
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
@@ -259,7 +259,8 @@ export default function DesignPage() {
 
   // Auto-open sidebar when control point is dragged
   const handleControlPointDragStart = () => {
-    setShowAirfoilDesignDropdown(true);
+    setIsSidebarOpen(true);
+    setActiveTab("cst");
   };
 
   const handleControlPointDragEnd = () => {
@@ -311,247 +312,56 @@ export default function DesignPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative bg-gray-50">
-        {/* Left Full Sidebar - Simulation Designer */}
+        {/* Combined Left Sidebar */}
         <AnimatePresence>
-          {showSimDesignerDropdown && (
+          {isSidebarOpen && (
             <>
-              {/* Overlay - more transparent to see through */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-20"
-                onClick={() => setShowSimDesignerDropdown(false)}
-              />
-
               {/* Sidebar - Semi-transparent with glassmorphism */}
               <motion.div
                 initial={{ x: -400, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -400, opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="fixed left-0 top-[130px] bottom-0 w-96 shadow-2xl border-r-2 border-blue-400 z-30 flex flex-col"
-                style={{
-                  background: "rgba(255, 255, 255, 0.92)",
-                  backdropFilter: "blur(16px)",
-                  WebkitBackdropFilter: "blur(16px)",
-                  boxShadow: "0 0 40px 12px rgba(59, 130, 246, 0.25)",
-                }}
+                className="w-96 shadow-2xl border-r-2 border-blue-400 z-30 flex flex-col bg-white"
               >
-                {/* Header */}
-                <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-black text-white flex items-center gap-2">
-                      <Settings className="w-5 h-5" />
-                      Simulation Designer
-                    </h3>
-                    <p className="text-xs text-blue-100 mt-0.5">
-                      Flow & simulation parameters
-                    </p>
-                  </div>
+                {/* Tab Header */}
+                <div className="flex border-b border-gray-200">
                   <button
-                    onClick={() => setShowSimDesignerDropdown(false)}
-                    className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                    onClick={() => setActiveTab("cst")}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                      activeTab === "cst"
+                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
-                    <X className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-center gap-2">
+                      <Wind className="w-4 h-4" />
+                      <span>Airfoil Design</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("simulation")}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                      activeTab === "simulation"
+                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      <span>Simulation</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="px-3 hover:bg-red-50 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-600 hover:text-red-600" />
                   </button>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-                  {/* Velocity */}
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Flow Velocity (m/s)
-                    </label>
-                    <div className="flex items-center gap-3 mb-2">
-                      <input
-                        type="range"
-                        min={5}
-                        max={100}
-                        value={velocity}
-                        onChange={(e) => setVelocity(Number(e.target.value))}
-                        className="flex-1 h-2 accent-cyan-500"
-                      />
-                      <input
-                        type="number"
-                        value={velocity}
-                        onChange={(e) => setVelocity(Number(e.target.value))}
-                        className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Current: {velocity} m/s
-                    </p>
-                  </div>
-
-                  {/* Angle of Attack */}
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Angle of Attack (°)
-                    </label>
-                    <div className="flex items-center gap-3 mb-2">
-                      <input
-                        type="range"
-                        min={-15}
-                        max={25}
-                        step={0.5}
-                        value={angleOfAttack}
-                        onChange={(e) =>
-                          setAngleOfAttack(Number(e.target.value))
-                        }
-                        className="flex-1 h-2 accent-purple-500"
-                      />
-                      <input
-                        type="number"
-                        value={angleOfAttack.toFixed(1)}
-                        onChange={(e) =>
-                          setAngleOfAttack(Number(e.target.value))
-                        }
-                        className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Current: {angleOfAttack.toFixed(1)}°
-                    </p>
-                  </div>
-
-                  <div className="border-t-2 border-gray-200 pt-6">
-                    <h4 className="text-sm font-black text-gray-900 mb-4">
-                      Time-Step Configuration
-                    </h4>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-bold text-gray-700 mb-2 block">
-                          Start Time (s)
-                        </label>
-                        <input
-                          type="number"
-                          defaultValue={0}
-                          step={0.1}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-gray-700 mb-2 block">
-                          End Time (s)
-                        </label>
-                        <input
-                          type="number"
-                          defaultValue={10}
-                          step={0.5}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-gray-700 mb-2 block">
-                          Time Step Δt (s)
-                        </label>
-                        <input
-                          type="number"
-                          defaultValue={0.001}
-                          step={0.0001}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-gray-700 mb-2 block">
-                          CPU Cores
-                        </label>
-                        <select
-                          defaultValue={4}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
-                        >
-                          <option value={1}>1 Core</option>
-                          <option value={2}>2 Cores</option>
-                          <option value={4}>4 Cores</option>
-                          <option value={8}>8 Cores</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4">
-                    <h4 className="text-xs font-black text-blue-900 mb-2">
-                      ℹ️ Computational Estimate
-                    </h4>
-                    <ul className="text-xs text-blue-800 space-y-1 font-medium">
-                      <li>• Total Steps: ~10,000</li>
-                      <li>• Est. Runtime: 2.5 minutes (4 cores)</li>
-                      <li>• Output Size: ~850 MB</li>
-                    </ul>
-                  </div>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* Left Sidebar Trigger Button */}
-        <div className="absolute left-4 top-4 z-30">
-          <button
-            onClick={() => setShowSimDesignerDropdown(!showSimDesignerDropdown)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
-            style={{ boxShadow: "0 0 0 1px rgba(147, 51, 234, 0)" }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.boxShadow =
-                "0 0 12px 3px rgba(147, 51, 234, 0.5)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.boxShadow =
-                "0 0 0 1px rgba(147, 51, 234, 0)")
-            }
-          >
-            <Settings className="w-4 h-4" />
-            <span>Simulation Designer</span>
-          </button>
-        </div>
-
-        {/* Right Full Sidebar - Airfoil Design (CST Coefficients) */}
-        <>
-          <AnimatePresence>
-            {showAirfoilDesignDropdown && (
-              <>
-                {/* No overlay - let user see through the sidebar */}
-
-                {/* Sidebar - Semi-transparent with glassmorphism */}
-                <motion.div
-                  initial={{ x: 400, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 400, opacity: 0 }}
-                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                  className="fixed right-0 top-[130px] bottom-0 w-96 shadow-2xl border-l-2 border-green-400 z-30 flex flex-col"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.85)",
-                    backdropFilter: "blur(12px)",
-                    WebkitBackdropFilter: "blur(12px)",
-                    boxShadow: "0 0 40px 12px rgba(16, 185, 129, 0.25)",
-                  }}
-                >
-                  {/* Header */}
-                  <div className="p-4 bg-gradient-to-r from-green-600 to-emerald-600 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-base font-black text-white flex items-center gap-2">
-                        <Wind className="w-5 h-5" />
-                        Airfoil Design
-                      </h3>
-                      <p className="text-xs text-green-100 mt-0.5">
-                        CST parametrization coefficients
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setShowAirfoilDesignDropdown(false)}
-                      className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                    >
-                      <X className="w-5 h-5 text-white" />
-                    </button>
-                  </div>
-
-                  {/* Content */}
+                {/* Content - CST Parameters */}
+                {activeTab === "cst" && (
                   <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                     {/* Upper Surface */}
                     <div>
@@ -683,36 +493,174 @@ export default function DesignPage() {
                       </div>
                     </div>
                   </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+                )}
 
-          {/* Right Sidebar Trigger Button */}
-          <div className="absolute right-4 top-4 z-30">
+                {/* Content - Simulation Parameters */}
+                {activeTab === "simulation" && (
+                  <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                    {/* Velocity */}
+                    <div>
+                      <label className="text-sm font-black text-gray-900 mb-3 block">
+                        Flow Velocity (m/s)
+                      </label>
+                      <div className="flex items-center gap-3 mb-2">
+                        <input
+                          type="range"
+                          min={5}
+                          max={100}
+                          value={velocity}
+                          onChange={(e) => setVelocity(Number(e.target.value))}
+                          className="flex-1 h-2 accent-cyan-500"
+                        />
+                        <input
+                          type="number"
+                          value={velocity}
+                          onChange={(e) => setVelocity(Number(e.target.value))}
+                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Current: {velocity} m/s
+                      </p>
+                    </div>
+
+                    {/* Angle of Attack */}
+                    <div>
+                      <label className="text-sm font-black text-gray-900 mb-3 block">
+                        Angle of Attack (°)
+                      </label>
+                      <div className="flex items-center gap-3 mb-2">
+                        <input
+                          type="range"
+                          min={-15}
+                          max={25}
+                          step={0.5}
+                          value={angleOfAttack}
+                          onChange={(e) =>
+                            setAngleOfAttack(Number(e.target.value))
+                          }
+                          className="flex-1 h-2 accent-purple-500"
+                        />
+                        <input
+                          type="number"
+                          value={angleOfAttack.toFixed(1)}
+                          onChange={(e) =>
+                            setAngleOfAttack(Number(e.target.value))
+                          }
+                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Current: {angleOfAttack.toFixed(1)}°
+                      </p>
+                    </div>
+
+                    <div className="border-t-2 border-gray-200 pt-6">
+                      <h4 className="text-sm font-black text-gray-900 mb-4">
+                        Time-Step Configuration
+                      </h4>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-xs font-bold text-gray-700 mb-2 block">
+                            Start Time (s)
+                          </label>
+                          <input
+                            type="number"
+                            defaultValue={0}
+                            step={0.1}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-gray-700 mb-2 block">
+                            End Time (s)
+                          </label>
+                          <input
+                            type="number"
+                            defaultValue={10}
+                            step={0.5}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-gray-700 mb-2 block">
+                            Time Step Δt (s)
+                          </label>
+                          <input
+                            type="number"
+                            defaultValue={0.001}
+                            step={0.0001}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-gray-700 mb-2 block">
+                            CPU Cores
+                          </label>
+                          <select
+                            defaultValue={4}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                          >
+                            <option value={1}>1 Core</option>
+                            <option value={2}>2 Cores</option>
+                            <option value={4}>4 Cores</option>
+                            <option value={8}>8 Cores</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4">
+                      <h4 className="text-xs font-black text-blue-900 mb-2">
+                        ℹ️ Computational Estimate
+                      </h4>
+                      <ul className="text-xs text-blue-800 space-y-1 font-medium">
+                        <li>• Total Steps: ~10,000</li>
+                        <li>• Est. Runtime: 2.5 minutes (4 cores)</li>
+                        <li>• Output Size: ~850 MB</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+        {/* Sidebar Toggle Button (when closed) */}
+        {/* {!isSidebarOpen && (
+          <div className="absolute left-4 top-4 z-30">
             <button
-              onClick={() =>
-                setShowAirfoilDesignDropdown(!showAirfoilDesignDropdown)
-              }
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
-              style={{ boxShadow: "0 0 0 1px rgba(16, 185, 129, 0)" }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.boxShadow =
-                  "0 0 12px 3px rgba(16, 185, 129, 0.5)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.boxShadow =
-                  "0 0 0 1px rgba(16, 185, 129, 0)")
-              }
+              onClick={() => setIsSidebarOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-400 hover:to-blue-900 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
             >
               <Wind className="w-4 h-4" />
-              <span>Airfoil Design</span>
+              <span>Open Sidebar</span>
             </button>
           </div>
-        </>
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col p-6 gap-4">
+        )} */}
+        {/* Replace your !isSidebarOpen block with this */}`
+       {!isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute left-0 top-0 bottom-0 w-4 group cursor-pointer z-40 flex items-center shadow-inner"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            {/* The Visible Tab */}
+            <div className="bg-white border-y border-r border-gray-200 shadow-sm rounded-r-xl py-8 px-1 group-hover:bg-blue-600 group-hover:border-blue-600 transition-all duration-200 flex items-center justify-center">
+              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </div>
+            
+            {/* Subtle indicator line that runs the full height of the screen on hover */}
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </motion.div>
+        )}
+        `{/* Main Content Area */}
+        <div className="flex-1 flex flex-col p-6 gap-4 transition-all duration-300">
           {/* Top Row: Zoom Controls */}
           <div className="flex justify-center">
             {/* Zoom Controls - Center */}
@@ -761,8 +709,9 @@ export default function DesignPage() {
             <div
               className="absolute inset-0 rounded-xl shadow-2xl overflow-hidden"
               style={{
-                background: "#000000",
-                border: "2px solid rgba(100, 100, 100, 0.4)",
+                background:
+                  "linear-gradient(135deg, #0B1628 0%, #1a2942 50%, #0B1628 100%)",
+                border: "2px solid rgba(59, 130, 246, 0.3)",
               }}
             >
               <InteractiveAirfoilCanvas

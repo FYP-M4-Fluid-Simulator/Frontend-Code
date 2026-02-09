@@ -156,14 +156,14 @@ export function InteractiveAirfoilCanvas({
       time += 0.016;
 
       if (designMode) {
-        // Clean white background for design mode
-        ctx.fillStyle = "#ffffff";
+        // Dark background for design mode
+        ctx.fillStyle = "#111827";
         ctx.fillRect(0, 0, width, height);
-        
+
         // Draw subtle grid lines for technical drawing feel
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.1)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
         ctx.lineWidth = 0.5;
-        
+
         // Major grid lines every 4 units
         const majorGridSpacing = 80;
         for (let x = 0; x <= width; x += majorGridSpacing) {
@@ -178,10 +178,10 @@ export function InteractiveAirfoilCanvas({
           ctx.lineTo(width, y);
           ctx.stroke();
         }
-        
-        // Minor grid lines every unit  
+
+        // Minor grid lines every unit
         const minorGridSpacing = 20;
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
         ctx.lineWidth = 0.3;
         for (let x = 0; x <= width; x += minorGridSpacing) {
           ctx.beginPath();
@@ -195,9 +195,9 @@ export function InteractiveAirfoilCanvas({
           ctx.lineTo(width, y);
           ctx.stroke();
         }
-        
+
         // Draw coordinate axes
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
         ctx.lineWidth = 1;
         // Horizontal axis through center
         ctx.beginPath();
@@ -210,8 +210,12 @@ export function InteractiveAirfoilCanvas({
         ctx.lineTo(width / 2, height);
         ctx.stroke();
       } else {
-        // Clear with BLACK background for simulation mode
-        ctx.fillStyle = "#000000";
+        // Clear with dark blue background for simulation mode (matching the reference image)
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, "#0B1628");
+        gradient.addColorStop(0.5, "#1a2942");
+        gradient.addColorStop(1, "#0B1628");
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
       }
 
@@ -288,8 +292,8 @@ export function InteractiveAirfoilCanvas({
 
       // Draw mesh overlay (sharp Eulerian grid) - only in simulation mode
       if (showMeshOverlay && !designMode) {
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-        ctx.lineWidth = 1.0;
+        ctx.strokeStyle = "rgba(59, 130, 246, 0.25)"; // Blue grid lines to match theme
+        ctx.lineWidth = 0.8;
 
         for (let x = 0; x < width; x += gridSpacing) {
           ctx.beginPath();
@@ -422,10 +426,10 @@ export function InteractiveAirfoilCanvas({
       if (designMode) {
         // Clean technical drawing style for design mode
         ctx.shadowBlur = 0;
-        
-        // Draw airfoil outline with clean black line
-        ctx.fillStyle = "rgba(240, 248, 255, 0.4)"; // Very light blue fill
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)"; // Strong black outline
+
+        // Draw airfoil outline with blue fill
+        ctx.fillStyle = "rgba(30, 64, 175, 0.6)"; // #1E40AF with transparency
+        ctx.strokeStyle = "rgba(30, 64, 175, 0.9)"; // #1E40AF border
         ctx.lineWidth = 2.5;
 
         ctx.beginPath();
@@ -436,11 +440,11 @@ export function InteractiveAirfoilCanvas({
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        
+
         // Draw chord line for reference
         const leadingEdge = transformPoint({ x: 0, y: 0 });
         const trailingEdge = transformPoint({ x: 1, y: 0 });
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
         ctx.lineWidth = 1;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
@@ -449,41 +453,47 @@ export function InteractiveAirfoilCanvas({
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Leading edge marker (larger, more visible)
-        ctx.fillStyle = "rgba(220, 38, 38, 0.8)"; // Red
+        // Leading edge marker (yellow)
+        ctx.fillStyle = "#fbbf24"; // Yellow
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "rgba(251, 191, 36, 0.7)";
         ctx.beginPath();
         ctx.arc(leadingEdge.x, leadingEdge.y, 6, 0, Math.PI * 2);
         ctx.fill();
-        
+        ctx.shadowBlur = 0;
+
         // Add "LE" label
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
         ctx.font = "12px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("LE", leadingEdge.x, leadingEdge.y - 15);
 
-        // Trailing edge marker (larger, more visible)
-        ctx.fillStyle = "rgba(37, 99, 235, 0.8)"; // Blue
+        // Trailing edge marker (yellow)
+        ctx.fillStyle = "#fbbf24"; // Yellow
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "rgba(251, 191, 36, 0.7)";
         ctx.beginPath();
         ctx.arc(trailingEdge.x, trailingEdge.y, 6, 0, Math.PI * 2);
         ctx.fill();
-        
+        ctx.shadowBlur = 0;
+
         // Add "TE" label
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
         ctx.fillText("TE", trailingEdge.x, trailingEdge.y - 15);
-        
+
         // Add coordinate information
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
         ctx.font = "11px monospace";
         ctx.textAlign = "left";
         ctx.fillText("Chord: 1.0", 20, height - 40);
         ctx.fillText(`AoA: ${angleOfAttack.toFixed(1)}°`, 20, height - 20);
       } else {
-        // Simulator mode: Blue glow airfoil
+        // Simulator mode: Blue airfoil matching the reference image
         // Outer glow (Deep Blue)
         ctx.shadowBlur = 25;
-        ctx.shadowColor = "rgba(59, 130, 246, 0.6)";
+        ctx.shadowColor = "rgba(59, 130, 246, 0.7)";
         ctx.lineWidth = 8;
-        ctx.strokeStyle = "rgba(59, 130, 246, 0.3)";
+        ctx.strokeStyle = "rgba(59, 130, 246, 0.4)";
 
         ctx.beginPath();
         ctx.moveTo(airfoilCanvasPoints[0].x, airfoilCanvasPoints[0].y);
@@ -493,12 +503,12 @@ export function InteractiveAirfoilCanvas({
         ctx.closePath();
         ctx.stroke();
 
-        // Main airfoil body
+        // Main airfoil body - vibrant blue fill
         ctx.shadowBlur = 15;
-        ctx.shadowColor = "rgba(59, 130, 246, 0.5)";
-        ctx.fillStyle = "rgba(255, 255, 255, 0.97)";
-        ctx.strokeStyle = "#2563eb";
-        ctx.lineWidth = 3;
+        ctx.shadowColor = "rgba(59, 130, 246, 0.6)";
+        ctx.fillStyle = "rgba(59, 130, 246, 0.85)"; // Solid blue fill like reference image
+        ctx.strokeStyle = "rgba(96, 165, 250, 0.9)"; // Lighter blue border
+        ctx.lineWidth = 2;
 
         ctx.beginPath();
         ctx.moveTo(airfoilCanvasPoints[0].x, airfoilCanvasPoints[0].y);
@@ -511,21 +521,90 @@ export function InteractiveAirfoilCanvas({
 
         ctx.shadowBlur = 0;
 
-        // Leading edge (red stagnation point)
-        const leadingEdge = transformPoint({ x: 0, y: 0 });
-        ctx.fillStyle = "#ef4444";
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "rgba(239, 68, 68, 0.7)";
+        // Draw coordinate axes
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+        ctx.lineWidth = 1;
+        // Horizontal axis
         ctx.beginPath();
-        ctx.arc(leadingEdge.x, leadingEdge.y, 8, 0, Math.PI * 2);
+        ctx.moveTo(0, height / 2);
+        ctx.lineTo(width, height / 2);
+        ctx.stroke();
+        // Vertical axis
+        ctx.beginPath();
+        ctx.moveTo(width / 2, 0);
+        ctx.lineTo(width / 2, height);
+        ctx.stroke();
+
+        // Draw chord line for reference
+        const leadingEdge = transformPoint({ x: 0, y: 0 });
+        const trailingEdge = transformPoint({ x: 1, y: 0 });
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(leadingEdge.x, leadingEdge.y);
+        ctx.lineTo(trailingEdge.x, trailingEdge.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw thickness indicator
+        let maxThickness = 0;
+        let maxThicknessX = 0;
+        for (let i = 0; i < rotated.upper.length; i++) {
+          const thickness = rotated.upper[i].y - rotated.lower[i].y;
+          if (thickness > maxThickness) {
+            maxThickness = thickness;
+            maxThicknessX = rotated.upper[i].x;
+          }
+        }
+        const thicknessPt1 = transformPoint({
+          x: maxThicknessX,
+          y: rotated.upper.find((p) => p.x === maxThicknessX)!.y,
+        });
+        const thicknessPt2 = transformPoint({
+          x: maxThicknessX,
+          y: rotated.lower.find((p) => p.x === maxThicknessX)!.y,
+        });
+
+        ctx.strokeStyle = "#ef4444"; // Red
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(thicknessPt1.x, thicknessPt1.y);
+        ctx.lineTo(thicknessPt2.x, thicknessPt2.y);
+        ctx.stroke();
+
+        ctx.fillStyle = "#ef4444";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(
+          `t = ${(maxThickness * 100).toFixed(0)}%`,
+          thicknessPt1.x + 8,
+          thicknessPt1.y + (thicknessPt2.y - thicknessPt1.y) / 2 + 4,
+        );
+
+        // Add Chord length label
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          "Chord = 1.0 m",
+          (leadingEdge.x + trailingEdge.x) / 2,
+          leadingEdge.y + 20,
+        );
+
+        // Leading edge (orange/yellow control point)
+        ctx.fillStyle = "#f59e0b"; // Amber/Orange
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
+        ctx.beginPath();
+        ctx.arc(leadingEdge.x, leadingEdge.y, 7, 0, Math.PI * 2);
         ctx.fill();
 
-        // Trailing edge (cyan)
-        const trailingEdge = transformPoint({ x: 1, y: 0 });
-        ctx.fillStyle = "#06b6d4";
-        ctx.shadowColor = "rgba(6, 182, 212, 0.7)";
+        // Trailing edge (orange/yellow control point)
+        ctx.fillStyle = "#f59e0b"; // Amber/Orange
+        ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
         ctx.beginPath();
-        ctx.arc(trailingEdge.x, trailingEdge.y, 8, 0, Math.PI * 2);
+        ctx.arc(trailingEdge.x, trailingEdge.y, 7, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.shadowBlur = 0;
@@ -706,13 +785,7 @@ export function InteractiveAirfoilCanvas({
                 cy={pt.y}
                 r="10"
                 fill="none"
-                stroke={
-                  designMode
-                    ? pt.surface === "upper"
-                      ? "#2563eb"
-                      : "#059669"
-                    : "#3b82f6"
-                }
+                stroke={designMode ? "#fbbf24" : "#f59e0b"}
                 strokeWidth="1.5"
                 opacity="0.3"
                 className={draggedPoint?.id === pt.id ? "animate-pulse" : ""}
@@ -726,15 +799,11 @@ export function InteractiveAirfoilCanvas({
                 fill={
                   draggedPoint?.id === pt.id
                     ? designMode
-                      ? pt.surface === "upper"
-                        ? "#60a5fa"
-                        : "#10b981"
-                      : "#60a5fa"
+                      ? "#fcd34d"
+                      : "#fbbf24"
                     : designMode
-                      ? pt.surface === "upper"
-                        ? "#2563eb"
-                        : "#059669"
-                      : "#3b82f6"
+                      ? "#fbbf24"
+                      : "#f59e0b"
                 }
                 stroke="white"
                 strokeWidth="2"
@@ -763,14 +832,8 @@ export function InteractiveAirfoilCanvas({
                 width="40"
                 height="16"
                 rx="6"
-                fill="rgba(255, 255, 255, 0.95)"
-                stroke={
-                  designMode
-                    ? pt.surface === "upper"
-                      ? "#2563eb"
-                      : "#059669"
-                    : "#3b82f6"
-                }
+                fill="rgba(30, 64, 175, 0.95)"
+                stroke={designMode ? "#fbbf24" : "#3b82f6"}
                 strokeWidth="1"
                 filter={designMode ? "none" : "url(#blueGlow)"}
                 pointerEvents="none"
@@ -781,7 +844,7 @@ export function InteractiveAirfoilCanvas({
                 y={pt.y - 18}
                 fontSize="10"
                 fontWeight="600"
-                fill={designMode ? "#374151" : "#1e40af"}
+                fill={designMode ? "#fbbf24" : "#1e40af"}
                 textAnchor="middle"
                 pointerEvents="none"
                 style={{ fontFamily: "Inter, system-ui, sans-serif" }}
@@ -789,7 +852,13 @@ export function InteractiveAirfoilCanvas({
                 {pt.surface === "upper" ? "A" : "A"}
                 <tspan
                   fontWeight="800"
-                  fill={pt.surface === "upper" ? "#2563eb" : "#059669"}
+                  fill={
+                    designMode
+                      ? "#fcd34d"
+                      : pt.surface === "upper"
+                        ? "#2563eb"
+                        : "#059669"
+                  }
                 >
                   {pt.surface === "upper" ? "ᵤ" : "ₗ"}
                 </tspan>
@@ -805,13 +874,7 @@ export function InteractiveAirfoilCanvas({
                   y1={pt.y}
                   x2={pt.x}
                   y2={height / 2}
-                  stroke={
-                    designMode
-                      ? pt.surface === "upper"
-                        ? "#2563eb"
-                        : "#059669"
-                      : "#3b82f6"
-                  }
+                  stroke={designMode ? "#fbbf24" : "#3b82f6"}
                   strokeWidth="2"
                   strokeDasharray="4 4"
                   opacity="0.4"
