@@ -97,7 +97,6 @@ export default function SimulatePage() {
     setIsSimulating(true);
     setSimulationProgress(0);
     setShowResults(false);
-    setShowTurbine(false); // Hide turbine during simulation
 
     // Simulate progress (dummy API call)
     try {
@@ -131,10 +130,6 @@ export default function SimulatePage() {
           computationTime: 2.1,
         }),
       );
-      // Automatically show turbine after a short delay
-      setTimeout(() => {
-        setShowTurbine(true);
-      }, 1000);
     } catch (error) {
       console.log("Simulation would run here with API");
       // Simulate progress even if API fails
@@ -154,10 +149,6 @@ export default function SimulatePage() {
           computationTime: 2.1,
         }),
       );
-      // Automatically show turbine after a short delay
-      setTimeout(() => {
-        setShowTurbine(true);
-      }, 1000);
     } finally {
       setIsSimulating(false);
     }
