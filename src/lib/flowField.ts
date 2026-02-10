@@ -75,6 +75,7 @@ export function distanceToAirfoil(
 /**
  * Calculate potential flow around the airfoil (simplified)
  * Returns velocity components (vx, vy) and pressure coefficient
+ * TO BE DONE BY THE SIMULATOR TEAM - currently demo version
  */
 export function calculatePotentialFlow(
   x: number,

@@ -155,6 +155,8 @@ export function InteractiveAirfoilCanvas({
     const render = () => {
       time += 0.016;
 
+
+      // this means we are on the design page (first page) and not the simulator page (second page)
       if (designMode) {
         // Dark background for design mode
         ctx.fillStyle = "#111827";
@@ -209,7 +211,10 @@ export function InteractiveAirfoilCanvas({
         ctx.moveTo(width / 2, 0);
         ctx.lineTo(width / 2, height);
         ctx.stroke();
-      } else {
+      } 
+      
+      // this means we are on finalize design page
+      else {
         // Clear with dark blue background for simulation mode (matching the reference image)
         const gradient = ctx.createLinearGradient(0, 0, width, height);
         gradient.addColorStop(0, "#0B1628");
@@ -235,6 +240,7 @@ export function InteractiveAirfoilCanvas({
               angleOfAttack,
               velocity,
             );
+
 
             // ANSYS-style color mapping: Red/Orange (high) → Cyan/Blue (low)
             let color;
@@ -423,6 +429,7 @@ export function InteractiveAirfoilCanvas({
         ...rotated.lower.reverse().map(transformPoint),
       ];
 
+      
       if (designMode) {
         // Clean technical drawing style for design mode
         ctx.shadowBlur = 0;
@@ -487,7 +494,10 @@ export function InteractiveAirfoilCanvas({
         ctx.textAlign = "left";
         ctx.fillText("Chord: 1.0", 20, height - 40);
         ctx.fillText(`AoA: ${angleOfAttack.toFixed(1)}°`, 20, height - 20);
-      } else {
+      } 
+      
+      
+      else {
         // Simulator mode: Blue airfoil matching the reference image
         // Outer glow (Deep Blue)
         ctx.shadowBlur = 25;
@@ -549,21 +559,21 @@ export function InteractiveAirfoilCanvas({
 
         // Draw thickness indicator
         let maxThickness = 0;
-        let maxThicknessX = 0;
+        let maxThicknessIndex = 0;
         for (let i = 0; i < rotated.upper.length; i++) {
           const thickness = rotated.upper[i].y - rotated.lower[i].y;
           if (thickness > maxThickness) {
             maxThickness = thickness;
-            maxThicknessX = rotated.upper[i].x;
+            maxThicknessIndex = i;
           }
         }
         const thicknessPt1 = transformPoint({
-          x: maxThicknessX,
-          y: rotated.upper.find((p) => p.x === maxThicknessX)!.y,
+          x: rotated.upper[maxThicknessIndex].x,
+          y: rotated.upper[maxThicknessIndex].y,
         });
         const thicknessPt2 = transformPoint({
-          x: maxThicknessX,
-          y: rotated.lower.find((p) => p.x === maxThicknessX)!.y,
+          x: rotated.lower[maxThicknessIndex].x,
+          y: rotated.lower[maxThicknessIndex].y,
         });
 
         ctx.strokeStyle = "#ef4444"; // Red

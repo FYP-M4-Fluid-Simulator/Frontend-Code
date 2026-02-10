@@ -64,9 +64,12 @@ export default function FinalizePage() {
   useEffect(() => {
     const updateSize = () => {
       if (canvasRef.current) {
+        // Account for zoom level when calculating canvas size
+        const baseWidth = canvasRef.current.offsetWidth;
+        const baseHeight = canvasRef.current.offsetHeight;
         setCanvasSize({
-          width: canvasRef.current.offsetWidth,
-          height: canvasRef.current.offsetHeight,
+          width: baseWidth,
+          height: Math.max(baseHeight, 600), // Ensure minimum height
         });
       }
     };
@@ -74,7 +77,7 @@ export default function FinalizePage() {
     updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, []);
+  }, [zoomLevel]);
 
   const handleProceedToSimulation = () => {
     // Data is already in sessionStorage from design page
@@ -126,183 +129,208 @@ export default function FinalizePage() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative bg-gray-50">
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col p-6 gap-4">
-          {/* Configuration Summary */}
-          <div className="flex justify-center">
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-4 max-w-2xl">
-              <h3 className="text-sm font-bold text-blue-900 mb-3 text-center">
+        <div className="flex-1 flex p-3 gap-3">
+          {/* Left Side - Canvas (Increased Height) */}
+          <div className="flex-1 flex flex-col gap-2">
+            {/* Zoom Controls with Mesh Density */}
+            <div className="flex justify-center">
+              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+                <button
+                  onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
+                  className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-xs font-medium text-gray-700 px-2 min-w-[45px] text-center">
+                  {zoomLevel}%
+                </span>
+                <button
+                  onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
+                  className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-px h-4 bg-gray-300 mx-1" />
+                <button
+                  onClick={() => setZoomLevel(100)}
+                  className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
+                  title="Reset View"
+                >
+                  <Maximize className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-px h-4 bg-gray-300 mx-1" />
+                <select
+                  value={meshDensity}
+                  onChange={(e) => setMeshDensity(e.target.value as any)}
+                  className="text-xs border-0 bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer pr-6"
+                >
+                  <option value="coarse">Coarse Mesh</option>
+                  <option value="medium">Medium Mesh</option>
+                  <option value="fine">Fine Mesh</option>
+                  <option value="ultra">Ultra Mesh</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Canvas - Increased Height */}
+            <div className="flex-1 relative min-h-[600px]" ref={canvasRef}>
+              <div
+                className="absolute inset-0 rounded-xl shadow-2xl overflow-hidden"
+                style={{
+                  background: "#000000",
+                  border: "2px solid rgba(100, 100, 100, 0.4)",
+                  transform: `scale(${zoomLevel / 100})`,
+                  transformOrigin: "center center",
+                }}
+              >
+                <InteractiveAirfoilCanvas
+                  width={canvasSize.width}
+                  height={canvasSize.height}
+                  upperCoefficients={upperCoefficients}
+                  lowerCoefficients={lowerCoefficients}
+                  angleOfAttack={angleOfAttack}
+                  velocity={velocity}
+                  meshQuality={meshDensity}
+                  showControlPoints={showControlPoints}
+                  showMeshOverlay={showMeshOverlay}
+                  showPressureField={showPressureField}
+                  showVectorField={showVectorField}
+                  onCoefficientChange={() => {}} // No editing allowed
+                  allowFullScreen={true}
+                  designMode={false} // Read-only mode (means we are not on design page (first page) )
+                  onControlPointDragStart={() => {}}
+                  onControlPointDragEnd={() => {}}
+                />
+              </div>
+            </div>
+
+            {/* Visualization Controls */}
+            <div className="flex justify-center">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-gray-200">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showControlPoints}
+                    onChange={(e) => setShowControlPoints(e.target.checked)}
+                    className="w-3 h-3 accent-blue-600"
+                  />
+                  Control Points
+                </label>
+
+                <div className="w-px h-3 bg-gray-300" />
+
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showMeshOverlay}
+                    onChange={(e) => setShowMeshOverlay(e.target.checked)}
+                    className="w-3 h-3 accent-green-600"
+                  />
+                  Grid Overlay
+                </label>
+
+                <div className="w-px h-3 bg-gray-300" />
+
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showVectorField}
+                    onChange={(e) => setShowVectorField(e.target.checked)}
+                    className="w-3 h-3 accent-purple-600"
+                  />
+                  Wind Arrows
+                </label>
+
+                <div className="w-px h-3 bg-gray-300" />
+
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showPressureField}
+                    onChange={(e) => setShowPressureField(e.target.checked)}
+                    className="w-3 h-3 accent-orange-600"
+                  />
+                  Pressure Field
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side - Configuration Summary and Actions */}
+          <div className="w-80 flex flex-col gap-3">
+            {/* Configuration Summary - Moved to sidebar */}
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-3">
+              <h3 className="text-xs font-bold text-blue-900 mb-2">
                 Final Design Configuration
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-blue-800">
-                <div className="text-center">
-                  <span className="block font-semibold">Coefficients</span>
-                  <span className="text-blue-600">
+              <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
+                <div className="text-left">
+                  <span className="block font-semibold text-[10px]">Coefficients</span>
+                  <span className="text-blue-600 text-[11px]">
                     {upperCoefficients.length + lowerCoefficients.length} total
                   </span>
                 </div>
-                <div className="text-center">
-                  <span className="block font-semibold">Velocity</span>
-                  <span className="text-blue-600">{velocity} m/s</span>
+                <div className="text-left">
+                  <span className="block font-semibold text-[10px]">Velocity</span>
+                  <span className="text-blue-600 text-[11px]">{velocity} m/s</span>
                 </div>
-                <div className="text-center">
-                  <span className="block font-semibold">Angle of Attack</span>
-                  <span className="text-blue-600">{angleOfAttack}°</span>
+                <div className="text-left">
+                  <span className="block font-semibold text-[10px]">Angle of Attack</span>
+                  <span className="text-blue-600 text-[11px]">{angleOfAttack}°</span>
                 </div>
-                <div className="text-center">
-                  <span className="block font-semibold">Mesh Quality</span>
-                  <span className="text-blue-600 capitalize">
+                <div className="text-left">
+                  <span className="block font-semibold text-[10px]">Mesh Quality</span>
+                  <span className="text-blue-600 capitalize text-[11px]">
                     {meshDensity}
                   </span>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Zoom Controls with Mesh Density */}
-          <div className="flex justify-center">
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+            {/* Detailed Parameters Display */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3 flex-1">
+              <h4 className="text-xs font-bold text-gray-700 mb-2">Design Parameters</h4>
+              
+              <div className="space-y-2">
+                <div>
+                  <span className="text-[10px] font-semibold text-gray-600 block">Upper Surface Coefficients:</span>
+                  <div className="text-[10px] text-gray-500 font-mono bg-gray-50 p-1 rounded">
+                    [{upperCoefficients.map(c => c.toFixed(3)).join(', ')}]
+                  </div>
+                </div>
+                
+                <div>
+                  <span className="text-[10px] font-semibold text-gray-600 block">Lower Surface Coefficients:</span>
+                  <div className="text-[10px] text-gray-500 font-mono bg-gray-50 p-1 rounded">
+                    [{lowerCoefficients.map(c => c.toFixed(3)).join(', ')}]
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+              {/* Simulation Button */}
               <button
-                onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
-                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-                title="Zoom In"
+                onClick={handleProceedToSimulation}
+                className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-4 py-3 rounded-xl flex items-center gap-2 transition-all font-bold shadow-xl text-sm border-2 border-cyan-400 justify-center"
               >
-                <ZoomIn className="w-3.5 h-3.5" />
+                <Settings className="w-4 h-4" />
+                Start Simulation
               </button>
-              <span className="text-xs font-medium text-gray-700 px-2 min-w-[45px] text-center">
-                {zoomLevel}%
-              </span>
+
+              {/* Optimization Button */}
               <button
-                onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
-                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-                title="Zoom Out"
+                onClick={handleProceedToOptimization}
+                className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-4 py-3 rounded-xl flex items-center gap-2 transition-all font-bold shadow-xl text-sm border-2 border-pink-400 justify-center"
               >
-                <ZoomOut className="w-3.5 h-3.5" />
+                <ArrowRight className="w-4 h-4" />
+                Optimize Design
               </button>
-              <div className="w-px h-4 bg-gray-300 mx-1" />
-              <button
-                onClick={() => setZoomLevel(100)}
-                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-                title="Reset View"
-              >
-                <Maximize className="w-3.5 h-3.5" />
-              </button>
-              <div className="w-px h-4 bg-gray-300 mx-1" />
-              <select
-                value={meshDensity}
-                onChange={(e) => setMeshDensity(e.target.value as any)}
-                className="text-xs border-0 bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer pr-6"
-              >
-                <option value="coarse">Coarse Mesh</option>
-                <option value="medium">Medium Mesh</option>
-                <option value="fine">Fine Mesh</option>
-                <option value="ultra">Ultra Mesh</option>
-              </select>
             </div>
           </div>
-
-          {/* Canvas */}
-          <div className="flex-1 relative" ref={canvasRef}>
-            <div
-              className="absolute inset-0 rounded-xl shadow-2xl overflow-hidden"
-              style={{
-                background: "#000000",
-                border: "2px solid rgba(100, 100, 100, 0.4)",
-              }}
-            >
-              <InteractiveAirfoilCanvas
-                width={canvasSize.width}
-                height={canvasSize.height}
-                upperCoefficients={upperCoefficients}
-                lowerCoefficients={lowerCoefficients}
-                angleOfAttack={angleOfAttack}
-                velocity={velocity}
-                meshQuality={meshDensity}
-                showControlPoints={showControlPoints}
-                showMeshOverlay={showMeshOverlay}
-                showPressureField={showPressureField}
-                showVectorField={showVectorField}
-                onCoefficientChange={() => {}} // No editing allowed
-                allowFullScreen={false} // Disable full screen
-                designMode={false} // Read-only mode
-                onControlPointDragStart={() => {}}
-                onControlPointDragEnd={() => {}}
-              />
-            </div>
-          </div>
-
-          {/* Visualization Controls */}
-          <div className="flex justify-center">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-gray-200">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={showControlPoints}
-                  onChange={(e) => setShowControlPoints(e.target.checked)}
-                  className="w-3 h-3 accent-blue-600"
-                />
-                Control Points
-              </label>
-
-              <div className="w-px h-3 bg-gray-300" />
-
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={showMeshOverlay}
-                  onChange={(e) => setShowMeshOverlay(e.target.checked)}
-                  className="w-3 h-3 accent-green-600"
-                />
-                Grid Overlay
-              </label>
-
-              <div className="w-px h-3 bg-gray-300" />
-
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={showVectorField}
-                  onChange={(e) => setShowVectorField(e.target.checked)}
-                  className="w-3 h-3 accent-purple-600"
-                />
-                Wind Arrows
-              </label>
-
-              <div className="w-px h-3 bg-gray-300" />
-
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={showPressureField}
-                  onChange={(e) => setShowPressureField(e.target.checked)}
-                  className="w-3 h-3 accent-orange-600"
-                />
-                Pressure Field
-              </label>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-center gap-6">
-            {/* Simulation Button */}
-            <button
-              onClick={handleProceedToSimulation}
-              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-8 py-3 rounded-xl flex items-center gap-3 transition-all font-bold shadow-xl text-base border-2 border-cyan-400"
-            >
-              <Settings className="w-5 h-5" />
-              Start Simulation
-            </button>
-
-            {/* Optimization Button */}
-            <button
-              onClick={handleProceedToOptimization}
-              className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-8 py-3 rounded-xl flex items-center gap-3 transition-all font-bold shadow-xl text-base border-2 border-pink-400"
-            >
-              <ArrowRight className="w-5 h-5" />
-              Optimize Design
-            </button>
-          </div>
-
-
         </div>
       </div>
     </div>
