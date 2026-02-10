@@ -445,17 +445,9 @@ export function InteractiveAirfoilCanvas({
         ctx.fill();
         ctx.stroke();
 
-        // Draw chord line for reference (static, no flashing)
+        // Define leading and trailing edge points for reference
         const leadingEdge = transformPoint({ x: 0, y: 0 });
         const trailingEdge = transformPoint({ x: 1, y: 0 });
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([8, 4]);
-        ctx.beginPath();
-        ctx.moveTo(leadingEdge.x, leadingEdge.y);
-        ctx.lineTo(trailingEdge.x, trailingEdge.y);
-        ctx.stroke();
-        ctx.setLineDash([]);
 
         // Leading edge marker (yellow)
         ctx.fillStyle = "#fbbf24"; // Yellow
@@ -485,12 +477,16 @@ export function InteractiveAirfoilCanvas({
         ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
         ctx.fillText("TE", trailingEdge.x, trailingEdge.y - 15);
 
-        // Add coordinate information
-        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-        ctx.font = "11px monospace";
+        // Display airfoil information as text only
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.font = "12px sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText("Chord: 1.0", 20, height - 40);
-        ctx.fillText(`AoA: ${angleOfAttack.toFixed(1)}°`, 20, height - 20);
+        ctx.fillText("Chord: 1.0 m", 20, height - 40);
+        ctx.fillText(
+          `Angle of Attack: ${angleOfAttack.toFixed(1)}°`,
+          20,
+          height - 20,
+        );
       } else {
         // Simulator mode: Blue airfoil matching the reference image
         // Outer glow (Deep Blue)
@@ -525,75 +521,41 @@ export function InteractiveAirfoilCanvas({
 
         ctx.shadowBlur = 0;
 
-        // Draw coordinate axes
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
-        ctx.lineWidth = 1;
-        // Horizontal axis
-        ctx.beginPath();
-        ctx.moveTo(0, height / 2);
-        ctx.lineTo(width, height / 2);
-        ctx.stroke();
-        // Vertical axis
-        ctx.beginPath();
-        ctx.moveTo(width / 2, 0);
-        ctx.lineTo(width / 2, height);
-        ctx.stroke();
-
-        // Draw chord line for reference (static, no flashing)
+        // Define leading and trailing edge points for reference
         const leadingEdge = transformPoint({ x: 0, y: 0 });
         const trailingEdge = transformPoint({ x: 1, y: 0 });
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([6, 3]);
-        ctx.beginPath();
-        ctx.moveTo(leadingEdge.x, leadingEdge.y);
-        ctx.lineTo(trailingEdge.x, trailingEdge.y);
-        ctx.stroke();
-        ctx.setLineDash([]);
 
-        // // Draw thickness indicator
-        // let maxThickness = 0;
-        // let maxThicknessIndex = 0;
-        // for (let i = 0; i < rotated.upper.length; i++) {
-        //   const thickness = rotated.upper[i].y - rotated.lower[i].y;
-        //   if (thickness > maxThickness) {
-        //     maxThickness = thickness;
-        //     maxThicknessIndex = i;
-        //   }
-        // }
-        const thicknessPt1 = transformPoint({
-          x: rotated.upper[maxThicknessIndex].x,
-          y: rotated.upper[maxThicknessIndex].y,
-        });
-        const thicknessPt2 = transformPoint({
-          x: rotated.lower[maxThicknessIndex].x,
-          y: rotated.lower[maxThicknessIndex].y,
-        });
+        // Calculate thickness for display
+        let maxThickness = 0;
+        let maxThicknessX = 0;
+        for (let i = 0; i < rotated.upper.length; i++) {
+          const thickness = rotated.upper[i].y - rotated.lower[i].y;
+          if (thickness > maxThickness) {
+            maxThickness = thickness;
+            maxThicknessX = rotated.upper[i].x;
+          }
+        }
 
-        // ctx.strokeStyle = "#ef4444"; // Red
-        // ctx.lineWidth = 2;
-        // ctx.beginPath();
-        // ctx.moveTo(thicknessPt1.x, thicknessPt1.y);
-        // ctx.lineTo(thicknessPt2.x, thicknessPt2.y);
-        // ctx.stroke();
+        // Display airfoil information as text only
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.font = "14px sans-serif";
+        ctx.textAlign = "left";
 
-        // ctx.fillStyle = "#ef4444";
-        // ctx.font = "bold 12px sans-serif";
-        // ctx.textAlign = "left";
-        // ctx.fillText(
-        //   `t = ${(maxThickness * 100).toFixed(0)}%`,
-        //   thicknessPt1.x + 8,
-        //   thicknessPt1.y + (thicknessPt2.y - thicknessPt1.y) / 2 + 4,
-        // );
+        // Chord length
+        ctx.fillText("Chord: 1.0 m", 20, height - 60);
 
-        // Add Chord length label
-        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-        ctx.font = "12px sans-serif";
-        ctx.textAlign = "center";
+        // Maximum thickness
         ctx.fillText(
-          "Chord = 1.0 m",
-          (leadingEdge.x + trailingEdge.x) / 2,
-          leadingEdge.y + 20,
+          `Max Thickness: ${(maxThickness * 100).toFixed(1)}%`,
+          20,
+          height - 40,
+        );
+
+        // Thickness location
+        ctx.fillText(
+          `Thickness at: ${(maxThicknessX * 100).toFixed(1)}% chord`,
+          20,
+          height - 20,
         );
 
         // Leading edge (orange/yellow control point)
