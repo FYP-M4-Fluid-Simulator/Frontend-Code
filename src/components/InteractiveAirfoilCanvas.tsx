@@ -155,7 +155,6 @@ export function InteractiveAirfoilCanvas({
     const render = () => {
       time += 0.016;
 
-
       // this means we are on the design page (first page) and not the simulator page (second page)
       if (designMode) {
         // Dark background for design mode
@@ -211,8 +210,8 @@ export function InteractiveAirfoilCanvas({
         ctx.moveTo(width / 2, 0);
         ctx.lineTo(width / 2, height);
         ctx.stroke();
-      } 
-      
+      }
+
       // this means we are on finalize design page
       else {
         // Clear with dark blue background for simulation mode (matching the reference image)
@@ -240,7 +239,6 @@ export function InteractiveAirfoilCanvas({
               angleOfAttack,
               velocity,
             );
-
 
             // ANSYS-style color mapping: Red/Orange (high) → Cyan/Blue (low)
             let color;
@@ -429,7 +427,6 @@ export function InteractiveAirfoilCanvas({
         ...rotated.lower.reverse().map(transformPoint),
       ];
 
-      
       if (designMode) {
         // Clean technical drawing style for design mode
         ctx.shadowBlur = 0;
@@ -448,12 +445,12 @@ export function InteractiveAirfoilCanvas({
         ctx.fill();
         ctx.stroke();
 
-        // Draw chord line for reference
+        // Draw chord line for reference (static, no flashing)
         const leadingEdge = transformPoint({ x: 0, y: 0 });
         const trailingEdge = transformPoint({ x: 1, y: 0 });
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
         ctx.lineWidth = 1;
-        ctx.setLineDash([5, 5]);
+        ctx.setLineDash([8, 4]);
         ctx.beginPath();
         ctx.moveTo(leadingEdge.x, leadingEdge.y);
         ctx.lineTo(trailingEdge.x, trailingEdge.y);
@@ -494,10 +491,7 @@ export function InteractiveAirfoilCanvas({
         ctx.textAlign = "left";
         ctx.fillText("Chord: 1.0", 20, height - 40);
         ctx.fillText(`AoA: ${angleOfAttack.toFixed(1)}°`, 20, height - 20);
-      } 
-      
-      
-      else {
+      } else {
         // Simulator mode: Blue airfoil matching the reference image
         // Outer glow (Deep Blue)
         ctx.shadowBlur = 25;
@@ -545,28 +539,28 @@ export function InteractiveAirfoilCanvas({
         ctx.lineTo(width / 2, height);
         ctx.stroke();
 
-        // Draw chord line for reference
+        // Draw chord line for reference (static, no flashing)
         const leadingEdge = transformPoint({ x: 0, y: 0 });
         const trailingEdge = transformPoint({ x: 1, y: 0 });
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
         ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
+        ctx.setLineDash([6, 3]);
         ctx.beginPath();
         ctx.moveTo(leadingEdge.x, leadingEdge.y);
         ctx.lineTo(trailingEdge.x, trailingEdge.y);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Draw thickness indicator
-        let maxThickness = 0;
-        let maxThicknessIndex = 0;
-        for (let i = 0; i < rotated.upper.length; i++) {
-          const thickness = rotated.upper[i].y - rotated.lower[i].y;
-          if (thickness > maxThickness) {
-            maxThickness = thickness;
-            maxThicknessIndex = i;
-          }
-        }
+        // // Draw thickness indicator
+        // let maxThickness = 0;
+        // let maxThicknessIndex = 0;
+        // for (let i = 0; i < rotated.upper.length; i++) {
+        //   const thickness = rotated.upper[i].y - rotated.lower[i].y;
+        //   if (thickness > maxThickness) {
+        //     maxThickness = thickness;
+        //     maxThicknessIndex = i;
+        //   }
+        // }
         const thicknessPt1 = transformPoint({
           x: rotated.upper[maxThicknessIndex].x,
           y: rotated.upper[maxThicknessIndex].y,
@@ -576,21 +570,21 @@ export function InteractiveAirfoilCanvas({
           y: rotated.lower[maxThicknessIndex].y,
         });
 
-        ctx.strokeStyle = "#ef4444"; // Red
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(thicknessPt1.x, thicknessPt1.y);
-        ctx.lineTo(thicknessPt2.x, thicknessPt2.y);
-        ctx.stroke();
+        // ctx.strokeStyle = "#ef4444"; // Red
+        // ctx.lineWidth = 2;
+        // ctx.beginPath();
+        // ctx.moveTo(thicknessPt1.x, thicknessPt1.y);
+        // ctx.lineTo(thicknessPt2.x, thicknessPt2.y);
+        // ctx.stroke();
 
-        ctx.fillStyle = "#ef4444";
-        ctx.font = "bold 12px sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(
-          `t = ${(maxThickness * 100).toFixed(0)}%`,
-          thicknessPt1.x + 8,
-          thicknessPt1.y + (thicknessPt2.y - thicknessPt1.y) / 2 + 4,
-        );
+        // ctx.fillStyle = "#ef4444";
+        // ctx.font = "bold 12px sans-serif";
+        // ctx.textAlign = "left";
+        // ctx.fillText(
+        //   `t = ${(maxThickness * 100).toFixed(0)}%`,
+        //   thicknessPt1.x + 8,
+        //   thicknessPt1.y + (thicknessPt2.y - thicknessPt1.y) / 2 + 4,
+        // );
 
         // Add Chord length label
         ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
@@ -698,13 +692,17 @@ export function InteractiveAirfoilCanvas({
 
     try {
       if (!isFullScreen) {
-        // Request fullscreen
-        if (containerRef.current.requestFullscreen) {
-          containerRef.current.requestFullscreen().catch((err) => {
-            console.warn("Fullscreen request failed:", err);
-            // Fallback: Just maximize the container visually
-            setIsFullScreen(true);
-          });
+        // Request fullscreen on document body for better compatibility
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement
+            .requestFullscreen()
+            .then(() => {
+              setIsFullScreen(true);
+            })
+            .catch((err) => {
+              console.warn("Fullscreen request failed:", err);
+              setIsFullScreen(true); // Fallback visual state
+            });
         } else {
           // Fallback for browsers without fullscreen API
           setIsFullScreen(true);
@@ -712,17 +710,21 @@ export function InteractiveAirfoilCanvas({
       } else {
         // Exit fullscreen
         if (document.fullscreenElement) {
-          document.exitFullscreen().catch((err) => {
-            console.warn("Exit fullscreen failed:", err);
-            setIsFullScreen(false);
-          });
+          document
+            .exitFullscreen()
+            .then(() => {
+              setIsFullScreen(false);
+            })
+            .catch((err) => {
+              console.warn("Exit fullscreen failed:", err);
+              setIsFullScreen(false);
+            });
         } else {
           setIsFullScreen(false);
         }
       }
     } catch (error) {
       console.warn("Fullscreen not supported or blocked:", error);
-      // Toggle visual state even if native fullscreen fails
       setIsFullScreen(!isFullScreen);
     }
   };
@@ -740,7 +742,13 @@ export function InteractiveAirfoilCanvas({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full ${isFullScreen && !document.fullscreenElement ? "fixed inset-0 z-50 bg-black" : ""}`}
+      className={`relative w-full h-full ${isFullScreen && !document.fullscreenElement ? "fixed inset-0 z-[9999] bg-gray-900" : ""}`}
+      style={{
+        backgroundColor:
+          isFullScreen && !document.fullscreenElement
+            ? "#0B1628"
+            : "transparent",
+      }}
     >
       {/* Canvas layer */}
       <canvas ref={canvasRef} className="absolute inset-0" />

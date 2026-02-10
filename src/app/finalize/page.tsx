@@ -28,7 +28,7 @@ export default function FinalizePage() {
   >("medium");
 
   // Display options - fixed values for final view
-  const [showPressureField, setShowPressureField] = useState(true);
+  const [showPressureField, setShowPressureField] = useState(false); // Disabled pressure field
   const [showVectorField, setShowVectorField] = useState(true);
   const [showMeshOverlay, setShowMeshOverlay] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(false);
@@ -133,8 +133,8 @@ export default function FinalizePage() {
           {/* Left Side - Canvas (Increased Height) */}
           <div className="flex-1 flex flex-col gap-2">
             {/* Zoom Controls with Mesh Density */}
-            <div className="flex justify-center">
-              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+            <div className="flex justify-center relative z-50">
+              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5 relative z-50">
                 <button
                   onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
                   className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
@@ -208,7 +208,7 @@ export default function FinalizePage() {
 
             {/* Visualization Controls */}
             <div className="flex justify-center">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-gray-200 relative z-50">
                 <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
                   <input
                     type="checkbox"
@@ -242,18 +242,6 @@ export default function FinalizePage() {
                   />
                   Wind Arrows
                 </label>
-
-                <div className="w-px h-3 bg-gray-300" />
-
-                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showPressureField}
-                    onChange={(e) => setShowPressureField(e.target.checked)}
-                    className="w-3 h-3 accent-orange-600"
-                  />
-                  Pressure Field
-                </label>
               </div>
             </div>
           </div>
@@ -267,21 +255,33 @@ export default function FinalizePage() {
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
                 <div className="text-left">
-                  <span className="block font-semibold text-[10px]">Coefficients</span>
+                  <span className="block font-semibold text-[10px]">
+                    Coefficients
+                  </span>
                   <span className="text-blue-600 text-[11px]">
                     {upperCoefficients.length + lowerCoefficients.length} total
                   </span>
                 </div>
                 <div className="text-left">
-                  <span className="block font-semibold text-[10px]">Velocity</span>
-                  <span className="text-blue-600 text-[11px]">{velocity} m/s</span>
+                  <span className="block font-semibold text-[10px]">
+                    Velocity
+                  </span>
+                  <span className="text-blue-600 text-[11px]">
+                    {velocity} m/s
+                  </span>
                 </div>
                 <div className="text-left">
-                  <span className="block font-semibold text-[10px]">Angle of Attack</span>
-                  <span className="text-blue-600 text-[11px]">{angleOfAttack}°</span>
+                  <span className="block font-semibold text-[10px]">
+                    Angle of Attack
+                  </span>
+                  <span className="text-blue-600 text-[11px]">
+                    {angleOfAttack}°
+                  </span>
                 </div>
                 <div className="text-left">
-                  <span className="block font-semibold text-[10px]">Mesh Quality</span>
+                  <span className="block font-semibold text-[10px]">
+                    Mesh Quality
+                  </span>
                   <span className="text-blue-600 capitalize text-[11px]">
                     {meshDensity}
                   </span>
@@ -291,20 +291,26 @@ export default function FinalizePage() {
 
             {/* Detailed Parameters Display */}
             <div className="bg-white rounded-lg border border-gray-200 p-3 flex-1">
-              <h4 className="text-xs font-bold text-gray-700 mb-2">Design Parameters</h4>
-              
+              <h4 className="text-xs font-bold text-gray-700 mb-2">
+                Design Parameters
+              </h4>
+
               <div className="space-y-2">
                 <div>
-                  <span className="text-[10px] font-semibold text-gray-600 block">Upper Surface Coefficients:</span>
+                  <span className="text-[10px] font-semibold text-gray-600 block">
+                    Upper Surface Coefficients:
+                  </span>
                   <div className="text-[10px] text-gray-500 font-mono bg-gray-50 p-1 rounded">
-                    [{upperCoefficients.map(c => c.toFixed(3)).join(', ')}]
+                    [{upperCoefficients.map((c) => c.toFixed(3)).join(", ")}]
                   </div>
                 </div>
-                
+
                 <div>
-                  <span className="text-[10px] font-semibold text-gray-600 block">Lower Surface Coefficients:</span>
+                  <span className="text-[10px] font-semibold text-gray-600 block">
+                    Lower Surface Coefficients:
+                  </span>
                   <div className="text-[10px] text-gray-500 font-mono bg-gray-50 p-1 rounded">
-                    [{lowerCoefficients.map(c => c.toFixed(3)).join(', ')}]
+                    [{lowerCoefficients.map((c) => c.toFixed(3)).join(", ")}]
                   </div>
                 </div>
               </div>
