@@ -364,6 +364,41 @@ export default function DesignPage() {
                 {/* Content - CST Parameters */}
                 {activeTab === "cst" && (
                   <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+
+                      {/* Chord Length Control */}
+                    <div className="border-t-2 border-gray-200 pt-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-black text-purple-700">
+                          Chord Length (c)
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-700 w-14">
+                          c
+                        </span>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={2.0}
+                          step={0.1}
+                          value={chordLength}
+                          onChange={(e) =>
+                            setChordLength(Number(e.target.value))
+                          }
+                          className="flex-1 h-2 accent-purple-600"
+                        />
+                        <input
+                          type="number"
+                          value={chordLength.toFixed(1)}
+                          onChange={(e) =>
+                            setChordLength(Number(e.target.value))
+                          }
+                          className="w-24 px-2 py-1.5 text-sm border border-purple-300 rounded font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    
                     {/* Upper Surface */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
@@ -494,39 +529,11 @@ export default function DesignPage() {
                       </div>
                     </div>
 
-                    {/* Chord Length Control */}
-                    <div className="border-t-2 border-gray-200 pt-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-black text-purple-700">
-                          Chord Length (c)
-                        </h4>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-gray-700 w-14">
-                          c
-                        </span>
-                        <input
-                          type="range"
-                          min={0.5}
-                          max={2.0}
-                          step={0.1}
-                          value={chordLength}
-                          onChange={(e) => setChordLength(Number(e.target.value))}
-                          className="flex-1 h-2 accent-purple-600"
-                        />
-                        <input
-                          type="number"
-                          value={chordLength.toFixed(1)}
-                          onChange={(e) => setChordLength(Number(e.target.value))}
-                          className="w-24 px-2 py-1.5 text-sm border border-purple-300 rounded font-mono"
-                        />
-                      </div>
-                    </div>
+                  
                   </div>
                 )}
 
                 {/* Content - Simulation Parameters */}
-              
               </motion.div>
             </>
           )}
@@ -544,7 +551,7 @@ export default function DesignPage() {
           </div>
         )} */}
         {/* Replace your !isSidebarOpen block with this */}`
-       {!isSidebarOpen && (
+        {!isSidebarOpen && (
           <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -555,7 +562,7 @@ export default function DesignPage() {
             <div className="bg-white border-y border-r border-gray-200 shadow-sm rounded-r-xl py-8 px-1 group-hover:bg-blue-600 group-hover:border-blue-600 transition-all duration-200 flex items-center justify-center">
               <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
             </div>
-            
+
             {/* Subtle indicator line that runs the full height of the screen on hover */}
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
           </motion.div>
@@ -591,7 +598,6 @@ export default function DesignPage() {
               >
                 <Maximize className="w-3.5 h-3.5" />
               </button>
-             
             </div>
           </div>
 

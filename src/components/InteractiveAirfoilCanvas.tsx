@@ -119,7 +119,15 @@ export function InteractiveAirfoilCanvas({
     });
 
     setControlPoints(points);
-  }, [upperCoefficients, lowerCoefficients, angleOfAttack, width, height, zoomLevel, chordLength]);
+  }, [
+    upperCoefficients,
+    lowerCoefficients,
+    angleOfAttack,
+    width,
+    height,
+    zoomLevel,
+    chordLength,
+  ]);
 
   // Render CFD background
   useEffect(() => {
