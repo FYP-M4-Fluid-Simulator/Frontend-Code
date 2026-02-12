@@ -160,17 +160,6 @@ export default function FinalizePage() {
                 >
                   <Maximize className="w-3.5 h-3.5" />
                 </button>
-                <div className="w-px h-4 bg-gray-300 mx-1" />
-                <select
-                  value={meshDensity}
-                  onChange={(e) => setMeshDensity(e.target.value as any)}
-                  className="text-xs border-0 bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer pr-6"
-                >
-                  <option value="coarse">Coarse Mesh</option>
-                  <option value="medium">Medium Mesh</option>
-                  <option value="fine">Fine Mesh</option>
-                  <option value="ultra">Ultra Mesh</option>
-                </select>
               </div>
             </div>
 

@@ -340,19 +340,7 @@ export default function DesignPage() {
                       <span>Airfoil Design</span>
                     </div>
                   </button>
-                  <button
-                    onClick={() => setActiveTab("simulation")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                      activeTab === "simulation"
-                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      <span>Simulation</span>
-                    </div>
-                  </button>
+
                   <button
                     onClick={() => setIsSidebarOpen(false)}
                     className="px-3 hover:bg-red-50 transition-colors"
@@ -364,8 +352,7 @@ export default function DesignPage() {
                 {/* Content - CST Parameters */}
                 {activeTab === "cst" && (
                   <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-
-                      {/* Chord Length Control */}
+                    {/* Chord Length Control */}
                     <div className="border-t-2 border-gray-200 pt-6">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-black text-purple-700">
@@ -398,7 +385,6 @@ export default function DesignPage() {
                       </div>
                     </div>
 
-                    
                     {/* Upper Surface */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
@@ -528,8 +514,6 @@ export default function DesignPage() {
                         ))}
                       </div>
                     </div>
-
-                  
                   </div>
                 )}
 
@@ -539,18 +523,6 @@ export default function DesignPage() {
           )}
         </AnimatePresence>
         {/* Sidebar Toggle Button (when closed) */}
-        {/* {!isSidebarOpen && (
-          <div className="absolute left-4 top-4 z-30">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-400 hover:to-blue-900 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
-            >
-              <Wind className="w-4 h-4" />
-              <span>Open Sidebar</span>
-            </button>
-          </div>
-        )} */}
-        {/* Replace your !isSidebarOpen block with this */}`
         {!isSidebarOpen && (
           <motion.div
             initial={{ opacity: 0, x: -10 }}
@@ -647,16 +619,15 @@ export default function DesignPage() {
                 Show Control Points
               </label>
             </div>
-
-            {/* Finalize Button */}
-            <button
-              onClick={handleFinalizeDesign}
-              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all font-semibold shadow-lg text-sm border border-cyan-400"
-            >
-              <ArrowRight className="w-4 h-4" />
-              Finalize Design
-            </button>
           </div>
+          {/* Finalize Button */}
+          <button
+            onClick={handleFinalizeDesign}
+            className="flex justify-center items-center bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-cyan-400"
+          >
+            <ArrowRight className="w-5 h-5 mr-2" />
+            Finalize Design
+          </button>
         </div>
       </div>
 

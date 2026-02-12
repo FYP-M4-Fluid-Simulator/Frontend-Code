@@ -39,7 +39,7 @@ export default function SimulatePage() {
   const [velocity, setVelocity] = useState(15);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
-  >("medium");
+  >("medium"); // Default mesh density
   const [showPressureField, setShowPressureField] = useState(true);
   const [showVectorField, setShowVectorField] = useState(true);
   const [showMeshOverlay, setShowMeshOverlay] = useState(true);
