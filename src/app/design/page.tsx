@@ -60,8 +60,9 @@ export default function DesignPage() {
   const [showMeshOverlay, setShowMeshOverlay] = useState(true);
   const [showControlPoints, setShowControlPoints] = useState(true);
 
-  // Zoom level
+  // Zoom level and chord length
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [chordLength, setChordLength] = useState(1.0);
 
   // Modal and file handling states
   const [showNewDesignModal, setShowNewDesignModal] = useState(false);
@@ -492,140 +493,40 @@ export default function DesignPage() {
                         ))}
                       </div>
                     </div>
+
+                    {/* Chord Length Control */}
+                    <div className="border-t-2 border-gray-200 pt-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-black text-purple-700">
+                          Chord Length (c)
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-700 w-14">
+                          c
+                        </span>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={2.0}
+                          step={0.1}
+                          value={chordLength}
+                          onChange={(e) => setChordLength(Number(e.target.value))}
+                          className="flex-1 h-2 accent-purple-600"
+                        />
+                        <input
+                          type="number"
+                          value={chordLength.toFixed(1)}
+                          onChange={(e) => setChordLength(Number(e.target.value))}
+                          className="w-24 px-2 py-1.5 text-sm border border-purple-300 rounded font-mono"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {/* Content - Simulation Parameters */}
-                {activeTab === "simulation" && (
-                  <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-                    {/* Velocity */}
-                    <div>
-                      <label className="text-sm font-black text-gray-900 mb-3 block">
-                        Flow Velocity (m/s)
-                      </label>
-                      <div className="flex items-center gap-3 mb-2">
-                        <input
-                          type="range"
-                          min={5}
-                          max={100}
-                          value={velocity}
-                          onChange={(e) => setVelocity(Number(e.target.value))}
-                          className="flex-1 h-2 accent-cyan-500"
-                        />
-                        <input
-                          type="number"
-                          value={velocity}
-                          onChange={(e) => setVelocity(Number(e.target.value))}
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        Current: {velocity} m/s
-                      </p>
-                    </div>
-
-                    {/* Angle of Attack */}
-                    <div>
-                      <label className="text-sm font-black text-gray-900 mb-3 block">
-                        Angle of Attack (°)
-                      </label>
-                      <div className="flex items-center gap-3 mb-2">
-                        <input
-                          type="range"
-                          min={-15}
-                          max={25}
-                          step={0.5}
-                          value={angleOfAttack}
-                          onChange={(e) =>
-                            setAngleOfAttack(Number(e.target.value))
-                          }
-                          className="flex-1 h-2 accent-purple-500"
-                        />
-                        <input
-                          type="number"
-                          value={angleOfAttack.toFixed(1)}
-                          onChange={(e) =>
-                            setAngleOfAttack(Number(e.target.value))
-                          }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        Current: {angleOfAttack.toFixed(1)}°
-                      </p>
-                    </div>
-
-                    <div className="border-t-2 border-gray-200 pt-6">
-                      <h4 className="text-sm font-black text-gray-900 mb-4">
-                        Time-Step Configuration
-                      </h4>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-xs font-bold text-gray-700 mb-2 block">
-                            Start Time (s)
-                          </label>
-                          <input
-                            type="number"
-                            defaultValue={0}
-                            step={0.1}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-bold text-gray-700 mb-2 block">
-                            End Time (s)
-                          </label>
-                          <input
-                            type="number"
-                            defaultValue={10}
-                            step={0.5}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-bold text-gray-700 mb-2 block">
-                            Time Step Δt (s)
-                          </label>
-                          <input
-                            type="number"
-                            defaultValue={0.001}
-                            step={0.0001}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-bold text-gray-700 mb-2 block">
-                            CPU Cores
-                          </label>
-                          <select
-                            defaultValue={4}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
-                          >
-                            <option value={1}>1 Core</option>
-                            <option value={2}>2 Cores</option>
-                            <option value={4}>4 Cores</option>
-                            <option value={8}>8 Cores</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4">
-                      <h4 className="text-xs font-black text-blue-900 mb-2">
-                        ℹ️ Computational Estimate
-                      </h4>
-                      <ul className="text-xs text-blue-800 space-y-1 font-medium">
-                        <li>• Total Steps: ~10,000</li>
-                        <li>• Est. Runtime: 2.5 minutes (4 cores)</li>
-                        <li>• Output Size: ~850 MB</li>
-                      </ul>
-                    </div>
-                  </div>
-                )}
+              
               </motion.div>
             </>
           )}
@@ -690,17 +591,7 @@ export default function DesignPage() {
               >
                 <Maximize className="w-3.5 h-3.5" />
               </button>
-              <div className="w-px h-4 bg-gray-300 mx-1" />
-              <select
-                value={meshDensity}
-                onChange={(e) => setMeshDensity(e.target.value as any)}
-                className="text-xs border-0 bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer pr-6"
-              >
-                <option value="coarse">Coarse Mesh</option>
-                <option value="medium">Medium Mesh</option>
-                <option value="fine">Fine Mesh</option>
-                <option value="ultra">Ultra Mesh</option>
-              </select>
+             
             </div>
           </div>
 
@@ -731,61 +622,27 @@ export default function DesignPage() {
                 designMode={true}
                 onControlPointDragStart={handleControlPointDragStart}
                 onControlPointDragEnd={handleControlPointDragEnd}
+                zoomLevel={zoomLevel}
+                chordLength={chordLength}
               />
             </div>
           </div>
           {/* Bottom Controls */}
-          <div className="flex items-center justify-between">
-            {/* Visualization Controls - Left */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-gray-200">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
+          <div className="flex items-center justify-center gap-4">
+            {/* Control Points Toggle - Center Below Canvas */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-md rounded-lg shadow-md border border-gray-300">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
                 <input
                   type="checkbox"
                   checked={showControlPoints}
                   onChange={(e) => setShowControlPoints(e.target.checked)}
-                  className="w-3 h-3 accent-blue-600"
+                  className="w-4 h-4 accent-blue-600"
                 />
-                Control Points
-              </label>
-
-              <div className="w-px h-3 bg-gray-300" />
-
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={showMeshOverlay}
-                  onChange={(e) => setShowMeshOverlay(e.target.checked)}
-                  className="w-3 h-3 accent-green-600"
-                />
-                Grid Overlay
-              </label>
-
-              <div className="w-px h-3 bg-gray-300" />
-
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={showVectorField}
-                  onChange={(e) => setShowVectorField(e.target.checked)}
-                  className="w-3 h-3 accent-purple-600"
-                />
-                Wind Arrows
-              </label>
-
-              <div className="w-px h-3 bg-gray-300" />
-
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={showPressureField}
-                  onChange={(e) => setShowPressureField(e.target.checked)}
-                  className="w-3 h-3 accent-orange-600"
-                />
-                Pressure Field
+                Show Control Points
               </label>
             </div>
 
-            {/* Simulation Button - Right */}
+            {/* Finalize Button */}
             <button
               onClick={handleFinalizeDesign}
               className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all font-semibold shadow-lg text-sm border border-cyan-400"

@@ -42,7 +42,7 @@ export default function OptimizePage() {
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
   >("medium");
-  const [showPressureField, setShowPressureField] = useState(true);
+  const [showPressureField, setShowPressureField] = useState(false);
   const [showVectorField, setShowVectorField] = useState(true);
   const [showMeshOverlay, setShowMeshOverlay] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(false);
@@ -289,7 +289,7 @@ export default function OptimizePage() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative bg-gradient-to-br from-gray-50 via-white to-orange-50">
         {/* Left Full Sidebar - Optimization Parameters */}
-        <AnimatePresence>
+        {/* <AnimatePresence>
           {showOptimizationPanel && (
             <>
               <motion.div
@@ -476,7 +476,7 @@ export default function OptimizePage() {
             <Settings className="w-4 h-4" />
             <span>Optimization Settings</span>
           </button>
-        </div>
+        </div> */}
 
         {/* Visualization Controls */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">

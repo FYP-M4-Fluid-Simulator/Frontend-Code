@@ -36,6 +36,8 @@ interface InteractiveAirfoilCanvasProps {
   designMode?: boolean; // NEW: flag for design mode
   onControlPointDragStart?: () => void;
   onControlPointDragEnd?: () => void;
+  zoomLevel?: number; // NEW: zoom level (100 = 100%)
+  chordLength?: number; // NEW: chord length multiplier
 }
 
 export function InteractiveAirfoilCanvas({
@@ -55,6 +57,8 @@ export function InteractiveAirfoilCanvas({
   designMode = false,
   onControlPointDragStart,
   onControlPointDragEnd,
+  zoomLevel = 100,
+  chordLength = 1.0,
 }: InteractiveAirfoilCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -73,7 +77,8 @@ export function InteractiveAirfoilCanvas({
     );
     const rotated = rotateAirfoil(upper, lower, angleOfAttack, 0.25);
 
-    const scale = Math.min(width, height) * 0.7;
+    const baseScale = Math.min(width, height) * 0.7;
+    const scale = baseScale * (zoomLevel / 100) * chordLength;
     const offsetX = width / 2;
     const offsetY = height / 2;
 
@@ -114,7 +119,7 @@ export function InteractiveAirfoilCanvas({
     });
 
     setControlPoints(points);
-  }, [upperCoefficients, lowerCoefficients, angleOfAttack, width, height]);
+  }, [upperCoefficients, lowerCoefficients, angleOfAttack, width, height, zoomLevel, chordLength]);
 
   // Render CFD background
   useEffect(() => {
@@ -139,7 +144,8 @@ export function InteractiveAirfoilCanvas({
     const rotated = rotateAirfoil(upper, lower, angleOfAttack, 0.25);
     const airfoilPoints = [...rotated.upper, ...rotated.lower.reverse()];
 
-    const scale = Math.min(width, height) * 0.7;
+    const baseScale = Math.min(width, height) * 0.7;
+    const scale = baseScale * (zoomLevel / 100) * chordLength;
     const offsetX = width / 2;
     const offsetY = height / 2;
 
@@ -542,7 +548,7 @@ export function InteractiveAirfoilCanvas({
         ctx.textAlign = "left";
 
         // Chord length
-        ctx.fillText("Chord: 1.0 m", 20, height - 60);
+        ctx.fillText(`Chord: ${chordLength.toFixed(2)} m`, 20, height - 60);
 
         // Maximum thickness
         ctx.fillText(
@@ -598,6 +604,8 @@ export function InteractiveAirfoilCanvas({
     showVectorField,
     showMeshOverlay,
     designMode,
+    zoomLevel,
+    chordLength,
   ]);
 
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -631,7 +639,8 @@ export function InteractiveAirfoilCanvas({
     const y = e.clientY - rect.top;
 
     // Calculate new coefficient based on vertical position
-    const scale = Math.min(width, height) * 0.5;
+    const baseScale = Math.min(width, height) * 0.5;
+    const scale = baseScale * (zoomLevel / 100) * chordLength;
     const offsetY = height / 2;
     const newCoefficient = (offsetY - y) / scale;
 
