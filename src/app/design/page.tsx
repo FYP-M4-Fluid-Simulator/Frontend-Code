@@ -50,7 +50,7 @@ export default function DesignPage() {
   ]);
 
   // Flow parameters
-  const [angleOfAttack, setAngleOfAttack] = useState(5);
+  const [angleOfAttack, setAngleOfAttack] = useState(0);
   const [velocity, setVelocity] = useState(15);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"

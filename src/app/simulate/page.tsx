@@ -12,6 +12,7 @@ import {
   Download,
   Sparkles,
   X,
+  ChevronRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
@@ -40,10 +41,12 @@ export default function SimulatePage() {
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
   >("medium"); // Default mesh density
-  const [showPressureField, setShowPressureField] = useState(true);
+  const [visualizationType, setVisualizationType] = useState<
+    "curl" | "pressure" | "tracer"
+  >("pressure");
   const [showVectorField, setShowVectorField] = useState(true);
-  const [showMeshOverlay, setShowMeshOverlay] = useState(true);
-  const [showControlPoints, setShowControlPoints] = useState(false);
+  const [timeStepSize, setTimeStepSize] = useState(0.001);
+  const [simulationDuration, setSimulationDuration] = useState(5);
 
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -236,7 +239,9 @@ export default function SimulatePage() {
                 <div className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600">
                   <div className="flex items-center gap-2 text-white">
                     <Settings className="w-5 h-5" />
-                    <span className="text-sm font-bold">Simulation Parameters</span>
+                    <span className="text-sm font-bold">
+                      Simulation Parameters
+                    </span>
                   </div>
                 </div>
                 <button
@@ -249,121 +254,151 @@ export default function SimulatePage() {
 
               {/* Content */}
               <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Flow Velocity (m/s)
-                    </label>
-                    <div className="flex items-center gap-3 mb-2">
-                      <input
-                        type="range"
-                        min={5}
-                        max={100}
-                        value={velocity}
-                        onChange={(e) => setVelocity(Number(e.target.value))}
-                        className="flex-1 h-2 accent-cyan-500"
-                      />
-                      <input
-                        type="number"
-                        value={velocity}
-                        onChange={(e) => setVelocity(Number(e.target.value))}
-                        className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Current: {velocity} m/s
-                    </p>
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Inflow Velocity (m/s)
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={5}
+                      max={100}
+                      value={velocity}
+                      onChange={(e) => setVelocity(Number(e.target.value))}
+                      className="flex-1 h-2 accent-cyan-500"
+                    />
+                    <input
+                      type="number"
+                      value={velocity}
+                      onChange={(e) => setVelocity(Number(e.target.value))}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
                   </div>
-
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Angle of Attack (°)
-                    </label>
-                    <div className="flex items-center gap-3 mb-2">
-                      <input
-                        type="range"
-                        min={-15}
-                        max={25}
-                        step={0.5}
-                        value={angleOfAttack}
-                        onChange={(e) =>
-                          setAngleOfAttack(Number(e.target.value))
-                        }
-                        className="flex-1 h-2 accent-purple-500"
-                      />
-                      <input
-                        type="number"
-                        value={angleOfAttack.toFixed(1)}
-                        onChange={(e) =>
-                          setAngleOfAttack(Number(e.target.value))
-                        }
-                        className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Current: {angleOfAttack.toFixed(1)}°
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Mesh Quality
-                    </label>
-                    <select
-                      value={meshDensity}
-                      onChange={(e) => setMeshDensity(e.target.value as any)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                    >
-                      <option value="coarse">Coarse (Fast)</option>
-                      <option value="medium">Medium (Balanced)</option>
-                      <option value="fine">Fine (Detailed)</option>
-                      <option value="ultra">Ultra (Precise)</option>
-                    </select>
-                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {velocity} m/s
+                  </p>
                 </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Angle of Attack (°)
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={-15}
+                      max={25}
+                      step={0.5}
+                      value={angleOfAttack}
+                      onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                      className="flex-1 h-2 accent-purple-500"
+                    />
+                    <input
+                      type="number"
+                      value={angleOfAttack.toFixed(1)}
+                      onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {angleOfAttack.toFixed(1)}°
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Grid Granularity
+                  </label>
+                  <select
+                    value={meshDensity}
+                    onChange={(e) => setMeshDensity(e.target.value as any)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                  >
+                    <option value="coarse">Coarse (Fast)</option>
+                    <option value="medium">Medium (Balanced)</option>
+                    <option value="fine">Fine (Detailed)</option>
+                    <option value="ultra">Ultra (Precise)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Time Step Size (s)
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={0.0001}
+                      max={0.01}
+                      step={0.0001}
+                      value={timeStepSize}
+                      onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                      className="flex-1 h-2 accent-green-500"
+                    />
+                    <input
+                      type="number"
+                      value={timeStepSize}
+                      onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                      step={0.0001}
+                      className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {timeStepSize.toFixed(4)} s
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Simulation Duration (s)
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={1}
+                      max={60}
+                      step={1}
+                      value={simulationDuration}
+                      onChange={(e) => setSimulationDuration(Number(e.target.value))}
+                      className="flex-1 h-2 accent-orange-500"
+                    />
+                    <input
+                      type="number"
+                      value={simulationDuration}
+                      onChange={(e) => setSimulationDuration(Number(e.target.value))}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {simulationDuration} s
+                  </p>
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Toggle Button - Only show when sidebar is closed */}
+        {/* Sidebar Edge Tab - Always visible when sidebar is closed */}
         {!isSidebarOpen && (
-          <div className="absolute left-4 top-4 z-30">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Show Parameters</span>
-            </button>
-          </div>
+          <motion.div
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -50, opacity: 0 }}
+            className="fixed left-0 top-1/2 -translate-y-1/2 z-20 cursor-pointer group"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            {/* The Visible Tab */}
+            <div className="bg-white border-y border-r border-gray-200 shadow-sm rounded-r-xl py-8 px-1 group-hover:bg-blue-600 group-hover:border-blue-600 transition-all duration-200 flex items-center justify-center">
+              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </div>
+
+            {/* Subtle indicator line that runs the full height of the screen on hover */}
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </motion.div>
         )}
 
         {/* Visualization Controls */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
           <div className="flex items-center gap-3 px-4 py-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg border-2 border-gray-200">
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
-              <input
-                type="checkbox"
-                checked={showControlPoints}
-                onChange={(e) => setShowControlPoints(e.target.checked)}
-                className="w-4 h-4 accent-blue-600"
-              />
-              Control Points
-            </label>
-
-            <div className="w-px h-4 bg-gray-300" />
-
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
-              <input
-                type="checkbox"
-                checked={showMeshOverlay}
-                onChange={(e) => setShowMeshOverlay(e.target.checked)}
-                className="w-4 h-4 accent-green-600"
-              />
-              Grid Overlay
-            </label>
-
-            <div className="w-px h-4 bg-gray-300" />
-
             <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
               <input
                 type="checkbox"
@@ -376,15 +411,24 @@ export default function SimulatePage() {
 
             <div className="w-px h-4 bg-gray-300" />
 
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
-              <input
-                type="checkbox"
-                checked={showPressureField}
-                onChange={(e) => setShowPressureField(e.target.checked)}
-                className="w-4 h-4 accent-orange-600"
-              />
-              Pressure Field
-            </label>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-gray-700">
+                Visualize:
+              </label>
+              <select
+                value={visualizationType}
+                onChange={(e) =>
+                  setVisualizationType(
+                    e.target.value as "curl" | "pressure" | "tracer",
+                  )
+                }
+                className="px-3 py-1 text-xs font-semibold border border-gray-300 rounded bg-white hover:border-orange-400 transition-colors"
+              >
+                <option value="curl">Curl</option>
+                <option value="pressure">Pressure</option>
+                <option value="tracer">Tracer (Density)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -407,9 +451,7 @@ export default function SimulatePage() {
                   angleOfAttack={angleOfAttack}
                   velocity={velocity}
                   meshQuality={meshDensity}
-                  showControlPoints={showControlPoints}
-                  showMeshOverlay={showMeshOverlay}
-                  showPressureField={showPressureField}
+                  showPressureField={visualizationType === "pressure"}
                   showVectorField={showVectorField}
                   onCoefficientChange={updateCSTCoefficient}
                   allowFullScreen={true}
@@ -494,10 +536,12 @@ export default function SimulatePage() {
 
               {/* Results Panel */}
               {showResults && (
-                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border-2 border-cyan-200 p-5 space-y-3">
+                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border-2 border-cyan-200 p-5 space-y-4 overflow-y-auto">
                   <h4 className="text-sm font-black text-cyan-900">
                     📊 Simulation Results
                   </h4>
+                  
+                  {/* Key Metrics */}
                   <div className="space-y-2 text-xs font-medium text-cyan-800">
                     <div className="flex justify-between">
                       <span>
@@ -515,6 +559,63 @@ export default function SimulatePage() {
                       <span>L/D Ratio:</span>
                       <span className="font-black">36.5</span>
                     </div>
+                  </div>
+
+                  {/* Coefficient Graphs */}
+                  <div className="space-y-3 pt-2 border-t border-cyan-200">
+                    <h5 className="text-xs font-black text-cyan-900">Coefficient Analysis</h5>
+                    
+                    {/* Lift Coefficient Bar */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-bold text-cyan-700">C<sub>L</sub></span>
+                        <span className="font-black text-cyan-900">0.8542</span>
+                      </div>
+                      <div className="w-full bg-cyan-100 rounded-full h-4 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full flex items-center justify-end pr-2"
+                          style={{ width: `${(0.8542 / 1.2) * 100}%` }}
+                        >
+                          <span className="text-[10px] font-bold text-white">Lift</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Drag Coefficient Bar */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-bold text-cyan-700">C<sub>D</sub></span>
+                        <span className="font-black text-cyan-900">0.0234</span>
+                      </div>
+                      <div className="w-full bg-red-100 rounded-full h-4 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-red-500 to-red-600 h-full rounded-full flex items-center justify-end pr-2"
+                          style={{ width: `${(0.0234 / 0.1) * 100}%` }}
+                        >
+                          <span className="text-[10px] font-bold text-white">Drag</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* L/D Ratio Bar */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-bold text-cyan-700">L/D Ratio</span>
+                        <span className="font-black text-cyan-900">36.5</span>
+                      </div>
+                      <div className="w-full bg-green-100 rounded-full h-4 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-green-500 to-green-600 h-full rounded-full flex items-center justify-end pr-2"
+                          style={{ width: `${(36.5 / 50) * 100}%` }}
+                        >
+                          <span className="text-[10px] font-bold text-white">Efficiency</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Metrics */}
+                  <div className="space-y-2 pt-2 border-t border-cyan-200 text-xs font-medium text-cyan-800">
                     <div className="flex justify-between">
                       <span>Max Pressure:</span>
                       <span className="font-black">1.45 atm</span>
