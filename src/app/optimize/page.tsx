@@ -13,6 +13,7 @@ import {
   Sparkles,
   X,
   TrendingUp,
+  ChevronRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
@@ -20,7 +21,7 @@ import { useRouter } from "next/navigation";
 
 export default function OptimizePage() {
   const router = useRouter();
-  const [showOptimizationPanel, setShowOptimizationPanel] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Optimization state
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -48,9 +49,12 @@ export default function OptimizePage() {
   const [showControlPoints, setShowControlPoints] = useState(false);
 
   // Optimization parameters
-  const [targetLiftDrag, setTargetLiftDrag] = useState(70);
-  const [populationSize, setPopulationSize] = useState(30);
-  const [mutationRate, setMutationRate] = useState(0.1);
+  const [timeStepSize, setTimeStepSize] = useState(0.001);
+  const [simulationDuration, setSimulationDuration] = useState(5);
+  const [numIterations, setNumIterations] = useState(50);
+  const [minThickness, setMinThickness] = useState(0.05);
+  const [maxThickness, setMaxThickness] = useState(0.25);
+  const [learningRate, setLearningRate] = useState(0.01);
 
   // Optimization results
   const [bestLiftCoeff, setBestLiftCoeff] = useState(0);
@@ -120,17 +124,19 @@ export default function OptimizePage() {
           lowerCoefficients,
           velocity,
           angleOfAttack,
-          targetLiftDrag,
-          populationSize,
-          mutationRate,
-          maxIterations,
+          timeStepSize,
+          simulationDuration,
+          numIterations,
+          minThickness,
+          maxThickness,
+          learningRate,
         }),
       });
 
       // Simulate optimization progress with morphing airfoil
       const interval = setInterval(() => {
         setOptimizationIteration((prev) => {
-          if (prev >= maxIterations) {
+          if (prev >= numIterations) {
             clearInterval(interval);
             setIsOptimizing(false);
             setShowResults(true);
@@ -147,8 +153,8 @@ export default function OptimizePage() {
                 bestLiftToDragRatio: 66.6,
                 bestLiftCoefficient: 1.245,
                 bestDragCoefficient: 0.0187,
-                generations: maxIterations,
-                populationSize: populationSize,
+                generations: numIterations,
+                numIterations: numIterations,
                 convergenceRate: 95.8,
                 improvementPercent: 66.5,
               }),
@@ -174,7 +180,7 @@ export default function OptimizePage() {
       // Run simulation even if API fails
       const interval = setInterval(() => {
         setOptimizationIteration((prev) => {
-          if (prev >= maxIterations) {
+          if (prev >= numIterations) {
             clearInterval(interval);
             setIsOptimizing(false);
             setShowResults(true);
@@ -190,8 +196,8 @@ export default function OptimizePage() {
                 bestLiftToDragRatio: 66.6,
                 bestLiftCoefficient: 1.245,
                 bestDragCoefficient: 0.0187,
-                generations: maxIterations,
-                populationSize: populationSize,
+                generations: numIterations,
+                numIterations: numIterations,
                 convergenceRate: 95.8,
                 improvementPercent: 66.5,
               }),
@@ -288,195 +294,289 @@ export default function OptimizePage() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative bg-gradient-to-br from-gray-50 via-white to-orange-50">
-        {/* Left Full Sidebar - Optimization Parameters */}
-        {/* <AnimatePresence>
-          {showOptimizationPanel && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-20"
-                onClick={() => setShowOptimizationPanel(false)}
-              />
-
-              <motion.div
-                initial={{ x: -400, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -400, opacity: 0 }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="fixed left-0 top-[130px] bottom-0 w-96 shadow-2xl border-r-2 border-orange-400 z-30 flex flex-col"
-                style={{
-                  background: "rgba(255, 255, 255, 0.92)",
-                  backdropFilter: "blur(16px)",
-                  WebkitBackdropFilter: "blur(16px)",
-                  boxShadow: "0 0 40px 12px rgba(249, 115, 22, 0.25)",
-                }}
-              >
-                <div className="p-4 bg-gradient-to-r from-orange-600 to-pink-600 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-black text-white flex items-center gap-2">
-                      <Settings className="w-5 h-5" />
-                      Optimization Settings
-                    </h3>
-                    <p className="text-xs text-orange-100 mt-0.5">
-                      Genetic algorithm parameters
-                    </p>
+        {/* Left Sidebar - Optimization Parameters */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ x: -400, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -400, opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="w-96 shadow-2xl border-r-2 border-orange-400 z-30 flex flex-col bg-white"
+            >
+              {/* Header */}
+              <div className="flex border-b border-gray-200">
+                <div className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-600 to-pink-600">
+                  <div className="flex items-center gap-2 text-white">
+                    <Settings className="w-5 h-5" />
+                    <span className="text-sm font-bold">
+                      Optimization Parameters
+                    </span>
                   </div>
-                  <button
-                    onClick={() => setShowOptimizationPanel(false)}
-                    className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                </div>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="px-3 hover:bg-red-50 transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-600 hover:text-red-600" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Grid Granularity
+                  </label>
+                  <select
+                    value={meshDensity}
+                    onChange={(e) => setMeshDensity(e.target.value as any)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                   >
-                    <X className="w-5 h-5 text-white" />
-                  </button>
+                    <option value="coarse">Coarse (Fast)</option>
+                    <option value="medium">Medium (Balanced)</option>
+                    <option value="fine">Fine (Detailed)</option>
+                    <option value="ultra">Ultra (Precise)</option>
+                  </select>
                 </div>
 
-                <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Target L/D Ratio
-                    </label>
-                    <div className="flex items-center gap-3 mb-2">
-                      <input
-                        type="range"
-                        min={20}
-                        max={100}
-                        value={targetLiftDrag}
-                        onChange={(e) =>
-                          setTargetLiftDrag(Number(e.target.value))
-                        }
-                        className="flex-1 h-2 accent-orange-500"
-                      />
-                      <input
-                        type="number"
-                        value={targetLiftDrag}
-                        onChange={(e) =>
-                          setTargetLiftDrag(Number(e.target.value))
-                        }
-                        className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Target: {targetLiftDrag}
-                    </p>
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Inflow Velocity (m/s)
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={5}
+                      max={100}
+                      value={velocity}
+                      onChange={(e) => setVelocity(Number(e.target.value))}
+                      className="flex-1 h-2 accent-cyan-500"
+                    />
+                    <input
+                      type="number"
+                      value={velocity}
+                      onChange={(e) => setVelocity(Number(e.target.value))}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
                   </div>
-
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Population Size
-                    </label>
-                    <div className="flex items-center gap-3 mb-2">
-                      <input
-                        type="range"
-                        min={10}
-                        max={100}
-                        step={5}
-                        value={populationSize}
-                        onChange={(e) =>
-                          setPopulationSize(Number(e.target.value))
-                        }
-                        className="flex-1 h-2 accent-pink-500"
-                      />
-                      <input
-                        type="number"
-                        value={populationSize}
-                        onChange={(e) =>
-                          setPopulationSize(Number(e.target.value))
-                        }
-                        className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Individuals per generation: {populationSize}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Max Iterations
-                    </label>
-                    <div className="flex items-center gap-3 mb-2">
-                      <input
-                        type="range"
-                        min={10}
-                        max={200}
-                        step={10}
-                        value={maxIterations}
-                        onChange={(e) =>
-                          setMaxIterations(Number(e.target.value))
-                        }
-                        className="flex-1 h-2 accent-purple-500"
-                      />
-                      <input
-                        type="number"
-                        value={maxIterations}
-                        onChange={(e) =>
-                          setMaxIterations(Number(e.target.value))
-                        }
-                        className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Generations: {maxIterations}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-black text-gray-900 mb-3 block">
-                      Mutation Rate
-                    </label>
-                    <div className="flex items-center gap-3 mb-2">
-                      <input
-                        type="range"
-                        min={0}
-                        max={0.5}
-                        step={0.01}
-                        value={mutationRate}
-                        onChange={(e) =>
-                          setMutationRate(Number(e.target.value))
-                        }
-                        className="flex-1 h-2 accent-red-500"
-                      />
-                      <input
-                        type="number"
-                        value={mutationRate.toFixed(2)}
-                        onChange={(e) =>
-                          setMutationRate(Number(e.target.value))
-                        }
-                        className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Probability: {(mutationRate * 100).toFixed(0)}%
-                    </p>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-orange-50 to-pink-50 border-2 border-orange-200 rounded-xl p-4">
-                    <h4 className="text-xs font-black text-orange-900 mb-2">
-                      🧬 Genetic Algorithm
-                    </h4>
-                    <ul className="text-xs text-orange-800 space-y-1 font-medium">
-                      <li>• Evolves CST coefficients</li>
-                      <li>• Selects fittest airfoils</li>
-                      <li>• Crossover & mutation operators</li>
-                      <li>• Converges to optimal shape</li>
-                    </ul>
-                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {velocity} m/s
+                  </p>
                 </div>
-              </motion.div>
-            </>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Angle of Attack (°)
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={-15}
+                      max={25}
+                      step={0.5}
+                      value={angleOfAttack}
+                      onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                      className="flex-1 h-2 accent-purple-500"
+                    />
+                    <input
+                      type="number"
+                      value={angleOfAttack.toFixed(1)}
+                      onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {angleOfAttack.toFixed(1)}°
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Time Step Size (s)
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={0.0001}
+                      max={0.01}
+                      step={0.0001}
+                      value={timeStepSize}
+                      onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                      className="flex-1 h-2 accent-green-500"
+                    />
+                    <input
+                      type="number"
+                      value={timeStepSize}
+                      onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                      step={0.0001}
+                      className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {timeStepSize.toFixed(4)} s
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Time Duration of Simulation (s)
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={1}
+                      max={60}
+                      step={1}
+                      value={simulationDuration}
+                      onChange={(e) =>
+                        setSimulationDuration(Number(e.target.value))
+                      }
+                      className="flex-1 h-2 accent-orange-500"
+                    />
+                    <input
+                      type="number"
+                      value={simulationDuration}
+                      onChange={(e) =>
+                        setSimulationDuration(Number(e.target.value))
+                      }
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {simulationDuration} s
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Num Iterations
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={10}
+                      max={200}
+                      step={10}
+                      value={numIterations}
+                      onChange={(e) => setNumIterations(Number(e.target.value))}
+                      className="flex-1 h-2 accent-blue-500"
+                    />
+                    <input
+                      type="number"
+                      value={numIterations}
+                      onChange={(e) => setNumIterations(Number(e.target.value))}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Iterations: {numIterations}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Min Thickness
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={0.01}
+                      max={0.15}
+                      step={0.01}
+                      value={minThickness}
+                      onChange={(e) => setMinThickness(Number(e.target.value))}
+                      className="flex-1 h-2 accent-red-500"
+                    />
+                    <input
+                      type="number"
+                      value={minThickness.toFixed(2)}
+                      onChange={(e) => setMinThickness(Number(e.target.value))}
+                      step={0.01}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {minThickness.toFixed(2)}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Max Thickness
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={0.15}
+                      max={0.35}
+                      step={0.01}
+                      value={maxThickness}
+                      onChange={(e) => setMaxThickness(Number(e.target.value))}
+                      className="flex-1 h-2 accent-pink-500"
+                    />
+                    <input
+                      type="number"
+                      value={maxThickness.toFixed(2)}
+                      onChange={(e) => setMaxThickness(Number(e.target.value))}
+                      step={0.01}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {maxThickness.toFixed(2)}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-gray-900 mb-3 block">
+                    Learning Rate
+                  </label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="range"
+                      min={0.001}
+                      max={0.1}
+                      step={0.001}
+                      value={learningRate}
+                      onChange={(e) => setLearningRate(Number(e.target.value))}
+                      className="flex-1 h-2 accent-indigo-500"
+                    />
+                    <input
+                      type="number"
+                      value={learningRate.toFixed(3)}
+                      onChange={(e) => setLearningRate(Number(e.target.value))}
+                      step={0.001}
+                      className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Current: {learningRate.toFixed(3)}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="absolute left-4 top-4 z-30">
-          <button
-            onClick={() => setShowOptimizationPanel(!showOptimizationPanel)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-700 hover:to-pink-700 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
+        {/* Sidebar Edge Tab - Always visible when sidebar is closed */}
+        {!isSidebarOpen && (
+          <motion.div
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -50, opacity: 0 }}
+            className="fixed left-0 top-1/2 -translate-y-1/2 z-20 cursor-pointer group"
+            onClick={() => setIsSidebarOpen(true)}
           >
-            <Settings className="w-4 h-4" />
-            <span>Optimization Settings</span>
-          </button>
-        </div> */}
+            {/* The Visible Tab */}
+            <div className="bg-white border-y border-r border-gray-200 shadow-sm rounded-r-xl py-8 px-1 group-hover:bg-orange-600 group-hover:border-orange-600 transition-all duration-200 flex items-center justify-center">
+              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </div>
+
+            {/* Subtle indicator line that runs the full height of the screen on hover */}
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </motion.div>
+        )}
 
         {/* Visualization Controls */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
@@ -566,13 +666,13 @@ export default function OptimizePage() {
                     Optimizing...
                   </div>
                   <div className="text-2xl font-black text-orange-600">
-                    Gen: {optimizationIteration} / {maxIterations}
+                    Gen: {optimizationIteration} / {numIterations}
                   </div>
                   <div className="mt-2 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-orange-500 to-pink-600 h-full transition-all duration-300"
                       style={{
-                        width: `${(optimizationIteration / maxIterations) * 100}%`,
+                        width: `${(optimizationIteration / numIterations) * 100}%`,
                       }}
                     />
                   </div>
@@ -695,26 +795,26 @@ export default function OptimizePage() {
                   </h4>
                   <div className="space-y-2 text-xs font-medium text-blue-800">
                     <div className="flex justify-between">
-                      <span>Current Generation:</span>
+                      <span>Current Iteration:</span>
                       <span className="font-black">
                         {optimizationIteration}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Population Size:</span>
-                      <span className="font-black">{populationSize}</span>
+                      <span>Max Iterations:</span>
+                      <span className="font-black">{numIterations}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Mutation Rate:</span>
+                      <span>Learning Rate:</span>
                       <span className="font-black">
-                        {(mutationRate * 100).toFixed(0)}%
+                        {learningRate.toFixed(3)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Progress:</span>
                       <span className="font-black">
                         {(
-                          (optimizationIteration / maxIterations) *
+                          (optimizationIteration / numIterations) *
                           100
                         ).toFixed(1)}
                         %

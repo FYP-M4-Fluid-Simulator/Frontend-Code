@@ -358,13 +358,17 @@ export default function SimulatePage() {
                       max={60}
                       step={1}
                       value={simulationDuration}
-                      onChange={(e) => setSimulationDuration(Number(e.target.value))}
+                      onChange={(e) =>
+                        setSimulationDuration(Number(e.target.value))
+                      }
                       className="flex-1 h-2 accent-orange-500"
                     />
                     <input
                       type="number"
                       value={simulationDuration}
-                      onChange={(e) => setSimulationDuration(Number(e.target.value))}
+                      onChange={(e) =>
+                        setSimulationDuration(Number(e.target.value))
+                      }
                       className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                     />
                   </div>
@@ -540,7 +544,7 @@ export default function SimulatePage() {
                   <h4 className="text-sm font-black text-cyan-900">
                     📊 Simulation Results
                   </h4>
-                  
+
                   {/* Key Metrics */}
                   <div className="space-y-2 text-xs font-medium text-cyan-800">
                     <div className="flex justify-between">
@@ -563,12 +567,16 @@ export default function SimulatePage() {
 
                   {/* Coefficient Graphs */}
                   <div className="space-y-3 pt-2 border-t border-cyan-200">
-                    <h5 className="text-xs font-black text-cyan-900">Coefficient Analysis</h5>
-                    
+                    <h5 className="text-xs font-black text-cyan-900">
+                      Coefficient Analysis
+                    </h5>
+
                     {/* Lift Coefficient Bar */}
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="font-bold text-cyan-700">C<sub>L</sub></span>
+                        <span className="font-bold text-cyan-700">
+                          C<sub>L</sub>
+                        </span>
                         <span className="font-black text-cyan-900">0.8542</span>
                       </div>
                       <div className="w-full bg-cyan-100 rounded-full h-4 overflow-hidden">
@@ -576,7 +584,9 @@ export default function SimulatePage() {
                           className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full flex items-center justify-end pr-2"
                           style={{ width: `${(0.8542 / 1.2) * 100}%` }}
                         >
-                          <span className="text-[10px] font-bold text-white">Lift</span>
+                          <span className="text-[10px] font-bold text-white">
+                            Lift
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -584,7 +594,9 @@ export default function SimulatePage() {
                     {/* Drag Coefficient Bar */}
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="font-bold text-cyan-700">C<sub>D</sub></span>
+                        <span className="font-bold text-cyan-700">
+                          C<sub>D</sub>
+                        </span>
                         <span className="font-black text-cyan-900">0.0234</span>
                       </div>
                       <div className="w-full bg-red-100 rounded-full h-4 overflow-hidden">
@@ -592,7 +604,9 @@ export default function SimulatePage() {
                           className="bg-gradient-to-r from-red-500 to-red-600 h-full rounded-full flex items-center justify-end pr-2"
                           style={{ width: `${(0.0234 / 0.1) * 100}%` }}
                         >
-                          <span className="text-[10px] font-bold text-white">Drag</span>
+                          <span className="text-[10px] font-bold text-white">
+                            Drag
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -600,7 +614,9 @@ export default function SimulatePage() {
                     {/* L/D Ratio Bar */}
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="font-bold text-cyan-700">L/D Ratio</span>
+                        <span className="font-bold text-cyan-700">
+                          L/D Ratio
+                        </span>
                         <span className="font-black text-cyan-900">36.5</span>
                       </div>
                       <div className="w-full bg-green-100 rounded-full h-4 overflow-hidden">
@@ -608,7 +624,9 @@ export default function SimulatePage() {
                           className="bg-gradient-to-r from-green-500 to-green-600 h-full rounded-full flex items-center justify-end pr-2"
                           style={{ width: `${(36.5 / 50) * 100}%` }}
                         >
-                          <span className="text-[10px] font-bold text-white">Efficiency</span>
+                          <span className="text-[10px] font-bold text-white">
+                            Efficiency
+                          </span>
                         </div>
                       </div>
                     </div>
