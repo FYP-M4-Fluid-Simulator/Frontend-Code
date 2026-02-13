@@ -235,12 +235,22 @@ export default function DesignPage() {
     }
   };
 
+  const addCSTCoefficient2 = () => {
+    addCSTCoefficient("upper");
+    addCSTCoefficient("lower");
+  };
+
   const removeCSTCoefficient = (surface: "upper" | "lower", index: number) => {
     if (surface === "upper" && upperCoefficients.length > 2) {
       setUpperCoefficients(upperCoefficients.filter((_, i) => i !== index));
     } else if (surface === "lower" && lowerCoefficients.length > 2) {
       setLowerCoefficients(lowerCoefficients.filter((_, i) => i !== index));
     }
+  };
+
+  const removeCSTCoefficient2 = (index: number) => {
+    removeCSTCoefficient("upper", index);
+    removeCSTCoefficient("lower", index);
   };
 
   const handleFinalizeDesign = () => {
@@ -323,17 +333,16 @@ export default function DesignPage() {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -400, opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="w-96 shadow-2xl border-r-2 border-blue-400 z-30 flex flex-col bg-white"
+                className="shadow-2xl border-r-2 border-blue-400 z-30 flex flex-col bg-white"
               >
                 {/* Tab Header */}
                 <div className="flex border-b border-gray-200">
                   <button
                     onClick={() => setActiveTab("cst")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                      activeTab === "cst"
-                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeTab === "cst"
+                      ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <Wind className="w-4 h-4" />
@@ -376,6 +385,7 @@ export default function DesignPage() {
                         />
                         <input
                           type="number"
+                          step="0.1"
                           value={chordLength.toFixed(1)}
                           onChange={(e) =>
                             setChordLength(Number(e.target.value))
@@ -392,7 +402,7 @@ export default function DesignPage() {
                           Upper Surface (A<sub>u</sub>)
                         </h4>
                         <button
-                          onClick={() => addCSTCoefficient("upper")}
+                          onClick={() => addCSTCoefficient2()}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-all font-bold"
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -426,6 +436,7 @@ export default function DesignPage() {
                             />
                             <input
                               type="number"
+                              step="0.01"
                               value={coeff.toFixed(3)}
                               onChange={(e) =>
                                 updateCSTCoefficient(
@@ -438,7 +449,7 @@ export default function DesignPage() {
                             />
                             <button
                               onClick={() =>
-                                removeCSTCoefficient("upper", index)
+                                removeCSTCoefficient2(index)
                               }
                               disabled={upperCoefficients.length <= 2}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-30"
@@ -457,7 +468,7 @@ export default function DesignPage() {
                           Lower Surface (A<sub>l</sub>)
                         </h4>
                         <button
-                          onClick={() => addCSTCoefficient("lower")}
+                          onClick={() => addCSTCoefficient2()}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs bg-green-600 text-white hover:bg-green-700 rounded-lg transition-all font-bold"
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -491,6 +502,7 @@ export default function DesignPage() {
                             />
                             <input
                               type="number"
+                              step="0.01"
                               value={coeff.toFixed(3)}
                               onChange={(e) =>
                                 updateCSTCoefficient(
@@ -503,7 +515,7 @@ export default function DesignPage() {
                             />
                             <button
                               onClick={() =>
-                                removeCSTCoefficient("lower", index)
+                                removeCSTCoefficient2(index)
                               }
                               disabled={lowerCoefficients.length <= 2}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-30"

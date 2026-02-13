@@ -36,7 +36,7 @@ export default function SimulatePage() {
     -0.1, -0.12, -0.09, -0.06, -0.04,
   ]);
 
-  const [angleOfAttack, setAngleOfAttack] = useState(5);
+  const [angleOfAttack, setAngleOfAttack] = useState(0);
   const [velocity, setVelocity] = useState(15);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"

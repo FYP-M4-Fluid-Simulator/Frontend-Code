@@ -92,8 +92,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
             <p className="text-lg md:text-xl text-gray-300 mb-8 leading-relaxed">
               Advanced computational fluid dynamics simulations and optimization
-              for wind turbine airfoils. Harness the power of CST
-              parameterization and genetic algorithms to achieve peak
+              for wind turbine airfoils. Harness the power of Gradient-based optimization to achieve peak
               aerodynamic performance.
             </p>
 
@@ -156,7 +155,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               />
 
               {/* Floating Stats Cards */}
-              <motion.div
+              {/* <motion.div
                 className="absolute -bottom-6 -left-6 bg-slate-900/90 backdrop-blur-md border border-blue-500/30 rounded-xl p-4 shadow-xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -171,9 +170,9 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                     <div className="text-xs text-gray-400">Accuracy</div>
                   </div>
                 </div>
-              </motion.div>
+              </motion.div> */}
 
-              <motion.div
+              {/* <motion.div
                 className="absolute -top-6 -right-6 bg-slate-900/90 backdrop-blur-md border border-purple-500/30 rounded-xl p-4 shadow-xl"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -188,7 +187,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                     <div className="text-xs text-gray-400">Faster</div>
                   </div>
                 </div>
-              </motion.div>
+              </motion.div> */}
             </div>
           </motion.div>
         </div>
@@ -210,9 +209,9 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             },
             {
               icon: TrendingUp,
-              title: "Genetic Optimization",
+              title: "Gradient-Based Optimization",
               description:
-                "Evolutionary algorithms to find optimal airfoil shapes for your conditions",
+                "Gradient-based adjoints to find optimal airfoil shapes for your conditions",
               color: "purple",
             },
             {

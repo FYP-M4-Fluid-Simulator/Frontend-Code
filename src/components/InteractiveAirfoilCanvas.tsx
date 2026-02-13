@@ -68,6 +68,9 @@ export function InteractiveAirfoilCanvas({
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const animationFrameRef = useRef<number>();
 
+  let maxThickness = 0;
+  let maxThicknessX = 0;
+
   // Generate airfoil and control points
   useEffect(() => {
     const { upper, lower } = generateAirfoil(
@@ -103,6 +106,7 @@ export function InteractiveAirfoilCanvas({
         index: idx,
       });
     });
+    console.log(rotated.upper[1], points[1].x);
 
     lowerCoefficients.forEach((coeff, idx) => {
       const t = idx / Math.max(lowerCoefficients.length - 1, 1);
@@ -117,7 +121,6 @@ export function InteractiveAirfoilCanvas({
         index: idx,
       });
     });
-
     setControlPoints(points);
   }, [
     upperCoefficients,
@@ -407,7 +410,7 @@ export function InteractiveAirfoilCanvas({
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(endX, endY);
-            ctx.stroke();
+            // ctx.stroke();
 
             const headLength = 5 * arrowScale;
             const headAngle = Math.PI / 7;
@@ -423,7 +426,7 @@ export function InteractiveAirfoilCanvas({
               endX - headLength * Math.cos(angle + headAngle),
               endY - headLength * Math.sin(angle + headAngle),
             );
-            ctx.stroke();
+            // ctx.stroke();
 
             ctx.shadowBlur = 0;
           }
@@ -438,7 +441,7 @@ export function InteractiveAirfoilCanvas({
 
       const airfoilCanvasPoints = [
         ...rotated.upper.map(transformPoint),
-        ...rotated.lower.reverse().map(transformPoint),
+        ...rotated.lower.map(transformPoint),
       ];
 
       if (designMode) {
@@ -496,11 +499,11 @@ export function InteractiveAirfoilCanvas({
         ctx.font = "12px sans-serif";
         ctx.textAlign = "left";
         ctx.fillText("Chord: 1.0 m", 20, height - 40);
-        ctx.fillText(
-          `Angle of Attack: ${angleOfAttack.toFixed(1)}°`,
-          20,
-          height - 20,
-        );
+        // ctx.fillText(
+        //   `Angle of Attack: ${angleOfAttack.toFixed(1)}°`,
+        //   20,
+        //   height - 20,
+        // );
       } else {
         // Simulator mode: Blue airfoil matching the reference image
         // Outer glow (Deep Blue)
@@ -540,8 +543,6 @@ export function InteractiveAirfoilCanvas({
         const trailingEdge = transformPoint({ x: 1, y: 0 });
 
         // Calculate thickness for display
-        let maxThickness = 0;
-        let maxThicknessX = 0;
         for (let i = 0; i < rotated.upper.length; i++) {
           const thickness = rotated.upper[i].y - rotated.lower[i].y;
           if (thickness > maxThickness) {
@@ -577,8 +578,11 @@ export function InteractiveAirfoilCanvas({
         ctx.shadowBlur = 12;
         ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
         ctx.beginPath();
-        ctx.arc(leadingEdge.x, leadingEdge.y, 7, 0, Math.PI * 2);
-        ctx.fill();
+
+        if (controlPoints.length) {
+          ctx.arc(controlPoints[0].x, controlPoints[0].y, 7, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
         // Trailing edge (orange/yellow control point)
         ctx.fillStyle = "#f59e0b"; // Amber/Orange

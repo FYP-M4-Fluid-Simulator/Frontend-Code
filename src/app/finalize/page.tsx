@@ -51,7 +51,7 @@ export default function FinalizePage() {
       setLowerCoefficients(
         state.lowerCoefficients || [-0.1, -0.12, -0.09, -0.06, -0.04],
       );
-      setAngleOfAttack(state.angleOfAttack || 5);
+      setAngleOfAttack(state.angleOfAttack);
       setVelocity(state.velocity || 15);
       setMeshDensity(state.meshDensity || "medium");
     } else {
@@ -186,11 +186,11 @@ export default function FinalizePage() {
                   showMeshOverlay={showMeshOverlay}
                   showPressureField={showPressureField}
                   showVectorField={showVectorField}
-                  onCoefficientChange={() => {}} // No editing allowed
+                  onCoefficientChange={() => { }} // No editing allowed
                   allowFullScreen={true}
                   designMode={false} // Read-only mode (means we are not on design page (first page) )
-                  onControlPointDragStart={() => {}}
-                  onControlPointDragEnd={() => {}}
+                  onControlPointDragStart={() => { }}
+                  onControlPointDragEnd={() => { }}
                 />
               </div>
             </div>
@@ -238,7 +238,7 @@ export default function FinalizePage() {
           {/* Right Side - Configuration Summary and Actions */}
           <div className="w-80 flex flex-col gap-3">
             {/* Configuration Summary - Moved to sidebar */}
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-3">
+            {/* <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-3">
               <h3 className="text-xs font-bold text-blue-900 mb-2">
                 Final Design Configuration
               </h3>
@@ -276,7 +276,7 @@ export default function FinalizePage() {
                   </span>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Detailed Parameters Display */}
             <div className="bg-white rounded-lg border border-gray-200 p-3 flex-1">
