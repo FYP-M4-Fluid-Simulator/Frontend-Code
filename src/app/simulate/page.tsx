@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 
 export default function SimulatePage() {
   const router = useRouter();
-  const [showSimDesignerDropdown, setShowSimDesignerDropdown] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Simulation state
   const [isSimulating, setIsSimulating] = useState(false);
@@ -220,51 +220,35 @@ export default function SimulatePage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden relative bg-gradient-to-br from-gray-50 via-white to-cyan-50">
-        {/* Left Full Sidebar - Simulation Designer */}
+      <div className="flex-1 flex overflow-hidden relative bg-gray-50">
+        {/* Left Sidebar - Simulation Parameters */}
         <AnimatePresence>
-          {showSimDesignerDropdown && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-20"
-                onClick={() => setShowSimDesignerDropdown(false)}
-              />
-
-              <motion.div
-                initial={{ x: -400, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -400, opacity: 0 }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="fixed left-0 top-[130px] bottom-0 w-96 shadow-2xl border-r-2 border-blue-400 z-30 flex flex-col"
-                style={{
-                  background: "rgba(255, 255, 255, 0.92)",
-                  backdropFilter: "blur(16px)",
-                  WebkitBackdropFilter: "blur(16px)",
-                  boxShadow: "0 0 40px 12px rgba(59, 130, 246, 0.25)",
-                }}
-              >
-                <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-black text-white flex items-center gap-2">
-                      <Settings className="w-5 h-5" />
-                      Simulation Parameters
-                    </h3>
-                    <p className="text-xs text-blue-100 mt-0.5">
-                      Adjust flow conditions
-                    </p>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ x: -400, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -400, opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="w-96 shadow-2xl border-r-2 border-blue-400 z-30 flex flex-col bg-white"
+            >
+              {/* Header */}
+              <div className="flex border-b border-gray-200">
+                <div className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600">
+                  <div className="flex items-center gap-2 text-white">
+                    <Settings className="w-5 h-5" />
+                    <span className="text-sm font-bold">Simulation Parameters</span>
                   </div>
-                  <button
-                    onClick={() => setShowSimDesignerDropdown(false)}
-                    className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5 text-white" />
-                  </button>
                 </div>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="px-3 hover:bg-red-50 transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-600 hover:text-red-600" />
+                </button>
+              </div>
 
-                <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+              {/* Content */}
+              <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                   <div>
                     <label className="text-sm font-black text-gray-900 mb-3 block">
                       Flow Velocity (m/s)
@@ -336,20 +320,22 @@ export default function SimulatePage() {
                     </select>
                   </div>
                 </div>
-              </motion.div>
-            </>
+            </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="absolute left-4 top-4 z-30">
-          <button
-            onClick={() => setShowSimDesignerDropdown(!showSimDesignerDropdown)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
-          >
-            <Settings className="w-4 h-4" />
-            <span>Simulation Parameters</span>
-          </button>
-        </div>
+        {/* Toggle Button - Only show when sidebar is closed */}
+        {!isSidebarOpen && (
+          <div className="absolute left-4 top-4 z-30">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all text-xs font-bold shadow-lg"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Show Parameters</span>
+            </button>
+          </div>
+        )}
 
         {/* Visualization Controls */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">

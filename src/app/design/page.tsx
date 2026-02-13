@@ -313,7 +313,7 @@ export default function DesignPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative bg-gray-50">
-        {/* Combined Left Sidebar */}
+        {/*  Left Sidebar */}
         <AnimatePresence>
           {isSidebarOpen && (
             <>
