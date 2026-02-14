@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     // Simulate optimization algorithm
     // In production, this would call your actual optimization backend
-    
+
     // Simple gradient-based adjustment simulation
     const optimizedUpperCoefficients = currentUpperCoefficients.map(
       (coeff: number, idx: number) => {
@@ -22,12 +22,12 @@ export async function POST(request: Request) {
         const adjustment = (Math.random() - 0.5) * learningRate * 0.5;
         const trend = idx === 0 ? 0.001 : idx === 1 ? 0.002 : -0.001; // Simulate convergence
         let newCoeff = coeff + adjustment + trend;
-        
+
         // Apply constraints
         newCoeff = Math.max(-0.3, Math.min(0.3, newCoeff));
-        
+
         return newCoeff;
-      }
+      },
     );
 
     const optimizedLowerCoefficients = currentLowerCoefficients.map(
@@ -35,12 +35,12 @@ export async function POST(request: Request) {
         const adjustment = (Math.random() - 0.5) * learningRate * 0.5;
         const trend = idx === 0 ? -0.001 : idx === 1 ? -0.002 : 0.001;
         let newCoeff = coeff + adjustment + trend;
-        
+
         // Apply constraints
         newCoeff = Math.max(-0.3, Math.min(0.1, newCoeff));
-        
+
         return newCoeff;
-      }
+      },
     );
 
     // Calculate simulated L/D ratio (improves over iterations)
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     console.error("Optimization iteration error:", error);
     return NextResponse.json(
       { success: false, error: "Optimization iteration failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -333,7 +333,7 @@ export default function ResultsModal({
                       <Download className="w-4 h-4" />
                       Download Metrics
                     </button>
-                    
+
                     {/* Dropdown options */}
                     <div className="absolute bottom-full left-0 right-0 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                       <div className="bg-slate-800 rounded-lg shadow-xl border border-blue-500/30 overflow-hidden">
@@ -363,7 +363,7 @@ export default function ResultsModal({
                 )}
               </div>
             )}
-            
+
             <div className="flex justify-center">
               <button
                 onClick={onClose}

@@ -100,7 +100,7 @@ export default function OptimizePage() {
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
-  
+
   // Optimization interval ref for cleanup
   const optimizationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -202,16 +202,20 @@ export default function OptimizePage() {
         liftCoefficient: optimizationMetrics.cl,
         dragCoefficient: optimizationMetrics.cd,
         momentCoefficient: optimizationMetrics.cm,
-        liftToDragRatio: optimizationMetrics.liftToDragRatio || optimizationMetrics.cl / optimizationMetrics.cd,
+        liftToDragRatio:
+          optimizationMetrics.liftToDragRatio ||
+          optimizationMetrics.cl / optimizationMetrics.cd,
       },
     };
-    
+
     try {
-      await saveExperimentToBackend(experimentData);
-      alert('Experiment saved successfully!');
+      // Backend URL - can be moved to env variable
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      await saveExperimentToBackend(experimentData, backendUrl);
+      alert("Experiment saved successfully!");
     } catch (error) {
-      console.error('Failed to save experiment:', error);
-      alert('Failed to save experiment. Please try again.');
+      console.error("Failed to save experiment:", error);
+      alert("Failed to save experiment. Please try again.");
     }
   };
 
@@ -220,7 +224,9 @@ export default function OptimizePage() {
       liftCoefficient: optimizationMetrics.cl,
       dragCoefficient: optimizationMetrics.cd,
       momentCoefficient: optimizationMetrics.cm,
-      liftToDragRatio: optimizationMetrics.liftToDragRatio || optimizationMetrics.cl / optimizationMetrics.cd,
+      liftToDragRatio:
+        optimizationMetrics.liftToDragRatio ||
+        optimizationMetrics.cl / optimizationMetrics.cd,
       angleOfAttack: angleOfAttack,
       velocity: velocity,
       reynoldsNumber: velocity * 10000,
@@ -256,7 +262,7 @@ export default function OptimizePage() {
       clearInterval(optimizationIntervalRef.current);
       optimizationIntervalRef.current = null;
     }
-    
+
     setIsOptimizing(true);
     setOptimizationIteration(0);
     setShowResults(false);
@@ -343,9 +349,11 @@ export default function OptimizePage() {
                 setUpperCoefficients(data.upperCoefficients);
                 setLowerCoefficients(data.lowerCoefficients);
               }
-              
+
               // Update L/D ratio from API or calculate
-              const ldRatio = data.ldRatio || 30 + (prev / numIterations) * 36.6 + Math.random() * 2;
+              const ldRatio =
+                data.ldRatio ||
+                30 + (prev / numIterations) * 36.6 + Math.random() * 2;
               setLdRatioHistory((history) => [
                 ...history,
                 { iteration: prev + 1, ldRatio },
@@ -362,7 +370,8 @@ export default function OptimizePage() {
               );
 
               // Update L/D ratio history
-              const currentLDRatio = 30 + (prev / numIterations) * 36.6 + Math.random() * 2;
+              const currentLDRatio =
+                30 + (prev / numIterations) * 36.6 + Math.random() * 2;
               setLdRatioHistory((history) => [
                 ...history,
                 { iteration: prev + 1, ldRatio: currentLDRatio },
@@ -372,7 +381,7 @@ export default function OptimizePage() {
           return prev + 1;
         });
       }, 200); // Update every 200ms
-      
+
       // Store interval ref for cleanup
       optimizationIntervalRef.current = interval;
     } catch (error) {
@@ -438,8 +447,10 @@ export default function OptimizePage() {
                 setUpperCoefficients(data.upperCoefficients);
                 setLowerCoefficients(data.lowerCoefficients);
               }
-              
-              const ldRatio = data.ldRatio || 30 + (prev / numIterations) * 36.6 + Math.random() * 2;
+
+              const ldRatio =
+                data.ldRatio ||
+                30 + (prev / numIterations) * 36.6 + Math.random() * 2;
               setLdRatioHistory((history) => [
                 ...history,
                 { iteration: prev + 1, ldRatio },
@@ -454,7 +465,8 @@ export default function OptimizePage() {
                 coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
               );
 
-              const currentLDRatio = 30 + (prev / numIterations) * 36.6 + Math.random() * 2;
+              const currentLDRatio =
+                30 + (prev / numIterations) * 36.6 + Math.random() * 2;
               setLdRatioHistory((history) => [
                 ...history,
                 { iteration: prev + 1, ldRatio: currentLDRatio },
@@ -464,7 +476,7 @@ export default function OptimizePage() {
           return prev + 1;
         });
       }, 200);
-      
+
       // Store interval ref for cleanup
       optimizationIntervalRef.current = interval;
     }
@@ -476,12 +488,12 @@ export default function OptimizePage() {
       clearInterval(optimizationIntervalRef.current);
       optimizationIntervalRef.current = null;
     }
-    
+
     setIsOptimizing(false);
     setOptimizationIteration(0);
     setShowResults(false);
     setLdRatioHistory([]);
-    
+
     // Optionally reload initial coefficients from session storage
     const savedState = sessionStorage.getItem("cfdState");
     if (savedState) {
@@ -623,7 +635,6 @@ export default function OptimizePage() {
               CFD AIRFOIL PLATFORM
             </span>
           </div>
-        
         </div>
 
         {/* Right: User Controls */}
@@ -939,8 +950,6 @@ export default function OptimizePage() {
           </motion.div>
         )}
 
-
-
         {/* Main Content */}
         <div className="flex-1 flex flex-col p-6 gap-4">
           <div className="flex-1 flex gap-4">
@@ -993,7 +1002,9 @@ export default function OptimizePage() {
             </div>
 
             {/* Right Panel */}
-            <div className={`${isOptimizing || showResults ? 'w-[32rem]' : 'w-80'} flex flex-col gap-4 transition-all duration-300`}>
+            <div
+              className={`${isOptimizing || showResults ? "w-[32rem]" : "w-80"} flex flex-col gap-4 transition-all duration-300`}
+            >
               <div className="bg-white rounded-xl border-2 border-orange-300 shadow-lg p-6 space-y-4">
                 <div>
                   <h3 className="text-base font-black text-gray-900 mb-1">
@@ -1154,24 +1165,34 @@ export default function OptimizePage() {
                   <ResponsiveContainer width="100%" height={400}>
                     <LineChart data={ldRatioHistory}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
-                      <XAxis 
-                        dataKey="iteration" 
+                      <XAxis
+                        dataKey="iteration"
                         stroke="#6b7280"
-                        style={{ fontSize: '11px' }}
-                        label={{ value: 'Iteration', position: 'insideBottom', offset: -5, style: { fontSize: '10px' } }}
+                        style={{ fontSize: "11px" }}
+                        label={{
+                          value: "Iteration",
+                          position: "insideBottom",
+                          offset: -5,
+                          style: { fontSize: "10px" },
+                        }}
                       />
-                      <YAxis 
+                      <YAxis
                         stroke="#6b7280"
-                        style={{ fontSize: '11px' }}
-                        domain={['auto', 'auto']}
-                        label={{ value: 'L/D', angle: -90, position: 'insideLeft', style: { fontSize: '10px' } }}
+                        style={{ fontSize: "11px" }}
+                        domain={["auto", "auto"]}
+                        label={{
+                          value: "L/D",
+                          angle: -90,
+                          position: "insideLeft",
+                          style: { fontSize: "10px" },
+                        }}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #10b981',
-                          borderRadius: '8px',
-                          fontSize: '11px',
+                          backgroundColor: "#ffffff",
+                          border: "1px solid #10b981",
+                          borderRadius: "8px",
+                          fontSize: "11px",
                         }}
                       />
                       <Line
@@ -1186,7 +1207,10 @@ export default function OptimizePage() {
                   </ResponsiveContainer>
                   {showResults && (
                     <div className="text-xs font-bold text-green-800 text-center">
-                      Final L/D: {ldRatioHistory[ldRatioHistory.length - 1]?.ldRatio.toFixed(2)}
+                      Final L/D:{" "}
+                      {ldRatioHistory[
+                        ldRatioHistory.length - 1
+                      ]?.ldRatio.toFixed(2)}
                     </div>
                   )}
                 </div>
