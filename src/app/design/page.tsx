@@ -19,13 +19,25 @@ import {
   FolderOpen,
   User,
   ChevronRight,
+  Database,
+  FileDown,
+  FileText,
+  BarChart3,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
 import {
   createSimulationConfig,
   downloadConfigFile,
+  downloadDatFile,
+  downloadCSTParameters,
+  downloadMetricsCSV,
+  downloadMetricsJSON,
+  saveExperimentToBackend,
+  type OptimizationMetrics,
+  type ExperimentData,
 } from "../../lib/exportData";
+import { generateAirfoil } from "../../lib/cst";
 import { useRouter } from "next/navigation";
 import { PYTHON_BACKEND_URL } from "@/config";
 
@@ -70,6 +82,13 @@ export default function DesignPage() {
   // const [conversionProgress, setConversionProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Export menu state
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Metrics state (can be populated from simulation results)
+  const [metrics, setMetrics] = useState<OptimizationMetrics | null>(null);
+
   // Modal and file handling states
   // const [showNewDesignModal, setShowNewDesignModal] = useState(false);
   // const [isConverting, setIsConverting] = useState(false);
@@ -94,6 +113,19 @@ export default function DesignPage() {
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
   }, []);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showExportMenu && !target.closest(".export-menu-container")) {
+        setShowExportMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showExportMenu]);
 
   const updateCSTCoefficient = async (
     surface: "upper" | "lower",
@@ -146,6 +178,83 @@ export default function DesignPage() {
       .replace(/[:.]/g, "-")
       .slice(0, -5);
     downloadConfigFile(config, `airfoil-design-${timestamp}.json`);
+  };
+
+  const handleDownloadDatFile = () => {
+    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadDatFile(airfoil.upper, airfoil.lower, `airfoil-${timestamp}`);
+    setShowExportMenu(false);
+  };
+
+  const handleDownloadCSTParams = () => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadCSTParameters(
+      upperCoefficients,
+      lowerCoefficients,
+      `cst-params-${timestamp}.json`,
+    );
+    setShowExportMenu(false);
+  };
+
+  const handleDownloadMetrics = (format: "csv" | "json") => {
+    if (!metrics) {
+      alert("No metrics available. Please run a simulation first.");
+      return;
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    if (format === "csv") {
+      downloadMetricsCSV(metrics, `metrics-${timestamp}.csv`);
+    } else {
+      downloadMetricsJSON(metrics, `metrics-${timestamp}.json`);
+    }
+    setShowExportMenu(false);
+  };
+
+  const handleSaveToBackend = async () => {
+    setIsSaving(true);
+    try {
+      const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+      
+      const experimentData: ExperimentData = {
+        name: `Airfoil Experiment ${new Date().toLocaleString()}`,
+        description: "Airfoil design from TurboDiff Designer",
+        cstParameters: {
+          upperCoefficients,
+          lowerCoefficients,
+        },
+        flowConditions: {
+          velocity,
+          angleOfAttack,
+        },
+        meshQuality: meshDensity,
+        results: {
+          metrics: metrics || undefined,
+          airfoilCoordinates: {
+            upper: airfoil.upper,
+            lower: airfoil.lower,
+          },
+        },
+      };
+
+      const response = await saveExperimentToBackend(
+        experimentData,
+        PYTHON_BACKEND_URL || "",
+      );
+
+      if (response.ok) {
+        alert("Experiment saved successfully!");
+      } else {
+        throw new Error("Failed to save experiment");
+      }
+    } catch (error) {
+      console.error("Error saving experiment:", error);
+      alert("Failed to save experiment to backend. Please try again.");
+    } finally {
+      setIsSaving(false);
+      setShowExportMenu(false);
+    }
   };
 
   const handleResetDesign = () => {
@@ -303,13 +412,126 @@ export default function DesignPage() {
 
         {/* Right: Save and User */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleSaveDesign}
-            className="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-            title="Save"
-          >
-            <Save className="w-4 h-4" />
-          </button>
+          {/* Export/Download Dropdown */}
+          <div className="relative export-menu-container">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-medium text-blue-700 transition-colors"
+              title="Export Options"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+                <div className="py-2">
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                    Download Files
+                  </div>
+                  
+                  <button
+                    onClick={handleDownloadDatFile}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <FileDown className="w-4 h-4 text-blue-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Download .dat File
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Airfoil coordinates (Selig format)
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadCSTParams}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-purple-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        CST Parameters
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Export CST coefficients (JSON)
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleSaveDesign}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <Settings className="w-4 h-4 text-green-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Full Configuration
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Complete design & settings (JSON)
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-gray-200 my-2"></div>
+
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                    Metrics
+                  </div>
+
+                  <button
+                    onClick={() => handleDownloadMetrics("csv")}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4 text-orange-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Metrics (CSV)
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        L/D, C_L, C_D, C_M
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleDownloadMetrics("json")}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4 text-orange-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Metrics (JSON)
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        L/D, C_L, C_D, C_M
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-gray-200 my-2"></div>
+
+                  <button
+                    onClick={handleSaveToBackend}
+                    disabled={isSaving}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 text-left transition-colors disabled:opacity-50"
+                  >
+                    <Database className="w-4 h-4 text-indigo-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Save to Backend
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {isSaving ? "Saving..." : "Store experiment for later"}
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => router.push("/")}
@@ -703,6 +925,25 @@ export default function DesignPage() {
                       </div>
                       <div className="text-xs text-gray-600">
                         Load airfoil coordinates from file
+                      </div>
+                    </div>
+                  </div>
+                </button>
+                  {/* see all the airfoils */}
+                <button
+                  onClick={() => router.push("/airfoils")}
+                  className="w-full p-4 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-2 border-green-200 hover:border-green-300 rounded-xl transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Database className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-semibold text-gray-900">
+                        View All Airfoils
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Browse and select existing airfoils
                       </div>
                     </div>
                   </div>

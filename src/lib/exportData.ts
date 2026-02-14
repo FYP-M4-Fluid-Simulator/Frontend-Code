@@ -180,3 +180,179 @@ export function generateMeshCoordinates(
 
   return points;
 }
+
+/**
+ * Export airfoil coordinates as .dat file (Selig format)
+ */
+export function downloadDatFile(
+  upperCoords: { x: number; y: number }[],
+  lowerCoords: { x: number; y: number }[],
+  airfoilName: string = "Custom Airfoil",
+) {
+  let datContent = `${airfoilName}\n`;
+
+  // Combine upper and lower surfaces (upper from trailing edge to leading edge, then lower from leading edge to trailing edge)
+  const upperReversed = [...upperCoords].reverse();
+  const allCoords = [...upperReversed, ...lowerCoords];
+
+  // Write coordinates in Selig format (x y on each line)
+  allCoords.forEach((coord) => {
+    datContent += `  ${coord.x.toFixed(6)}  ${coord.y.toFixed(6)}\n`;
+  });
+
+  const blob = new Blob([datContent], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${airfoilName.replace(/\s+/g, "_")}.dat`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Export CST parameters as downloadable file
+ */
+export function downloadCSTParameters(
+  upperCoefficients: number[],
+  lowerCoefficients: number[],
+  filename: string = "cst-parameters.json",
+) {
+  const cstData = {
+    timestamp: new Date().toISOString(),
+    parameterization: "CST",
+    classParameters: {
+      N1: 0.5,
+      N2: 1.0,
+    },
+    upperCoefficients,
+    lowerCoefficients,
+    numCoefficients: {
+      upper: upperCoefficients.length,
+      lower: lowerCoefficients.length,
+    },
+  };
+
+  const jsonString = JSON.stringify(cstData, null, 2);
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Export optimization metrics as CSV file
+ */
+export interface OptimizationMetrics {
+  liftCoefficient: number;
+  dragCoefficient: number;
+  momentCoefficient: number;
+  liftToDragRatio: number;
+  angleOfAttack: number;
+  velocity: number;
+  reynoldsNumber?: number;
+}
+
+export function downloadMetricsCSV(
+  metrics: OptimizationMetrics | OptimizationMetrics[],
+  filename: string = "optimization-metrics.csv",
+) {
+  const metricsArray = Array.isArray(metrics) ? metrics : [metrics];
+
+  let csvContent = "Angle of Attack (deg),Velocity (m/s),Lift Coefficient (C_L),Drag Coefficient (C_D),Moment Coefficient (C_M),Lift-to-Drag Ratio (L/D),Reynolds Number\n";
+
+  metricsArray.forEach((m) => {
+    csvContent += `${m.angleOfAttack},${m.velocity},${m.liftCoefficient.toFixed(6)},${m.dragCoefficient.toFixed(6)},${m.momentCoefficient.toFixed(6)},${m.liftToDragRatio.toFixed(3)},${m.reynoldsNumber || "N/A"}\n`;
+  });
+
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Export optimization metrics as JSON file
+ */
+export function downloadMetricsJSON(
+  metrics: OptimizationMetrics | OptimizationMetrics[],
+  filename: string = "optimization-metrics.json",
+) {
+  const data = {
+    timestamp: new Date().toISOString(),
+    metrics: Array.isArray(metrics) ? metrics : [metrics],
+  };
+
+  const jsonString = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Save experiment to backend
+ */
+export interface ExperimentData {
+  name: string;
+  description?: string;
+  cstParameters: {
+    upperCoefficients: number[];
+    lowerCoefficients: number[];
+  };
+  flowConditions: {
+    velocity: number;
+    angleOfAttack: number;
+  };
+  meshQuality: "coarse" | "medium" | "fine" | "ultra";
+  results?: {
+    metrics?: OptimizationMetrics;
+    airfoilCoordinates?: {
+      upper: { x: number; y: number }[];
+      lower: { x: number; y: number }[];
+    };
+  };
+}
+
+export async function saveExperimentToBackend(
+  experimentData: ExperimentData,
+  backendUrl: string,
+): Promise<Response> {
+  return fetch(`${backendUrl}/experiments/save`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(experimentData),
+  });
+}
+
+/**
+ * Load experiment from backend
+ */
+export async function loadExperimentFromBackend(
+  experimentId: string,
+  backendUrl: string,
+): Promise<ExperimentData> {
+  const response = await fetch(`${backendUrl}/experiments/${experimentId}`);
+  if (!response.ok) {
+    throw new Error("Failed to load experiment");
+  }
+  return response.json();
+}
