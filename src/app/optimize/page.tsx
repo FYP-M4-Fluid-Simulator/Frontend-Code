@@ -188,29 +188,42 @@ export default function OptimizePage() {
 
   const handleSaveExperiment = async () => {
     const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
-    const experimentData = {
-      upperCoefficients,
-      lowerCoefficients,
-      angleOfAttack,
-      velocity,
-      meshDensity,
-      airfoilPoints: {
-        upper: airfoil.upper,
-        lower: airfoil.lower,
+    
+    const experimentData: import("../../lib/exportData").ExperimentData = {
+      name: `Optimization-${new Date().toISOString().slice(0, 10)}`,
+      description: `Optimized airfoil with L/D ratio: ${optimizationMetrics.liftToDragRatio?.toFixed(2) || (optimizationMetrics.cl / optimizationMetrics.cd).toFixed(2)}`,
+      cstParameters: {
+        upperCoefficients,
+        lowerCoefficients,
       },
+      flowConditions: {
+        velocity,
+        angleOfAttack,
+      },
+      meshQuality: meshDensity,
       results: {
-        liftCoefficient: optimizationMetrics.cl,
-        dragCoefficient: optimizationMetrics.cd,
-        momentCoefficient: optimizationMetrics.cm,
-        liftToDragRatio:
-          optimizationMetrics.liftToDragRatio ||
-          optimizationMetrics.cl / optimizationMetrics.cd,
+        metrics: {
+          liftCoefficient: optimizationMetrics.cl,
+          dragCoefficient: optimizationMetrics.cd,
+          momentCoefficient: optimizationMetrics.cm,
+          liftToDragRatio:
+            optimizationMetrics.liftToDragRatio ||
+            optimizationMetrics.cl / optimizationMetrics.cd,
+          angleOfAttack,
+          velocity,
+          reynoldsNumber: velocity * 10000,
+        },
+        airfoilCoordinates: {
+          upper: airfoil.upper,
+          lower: airfoil.lower,
+        },
       },
     };
 
     try {
       // Backend URL - can be moved to env variable
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      const backendUrl =
+        process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
       await saveExperimentToBackend(experimentData, backendUrl);
       alert("Experiment saved successfully!");
     } catch (error) {
