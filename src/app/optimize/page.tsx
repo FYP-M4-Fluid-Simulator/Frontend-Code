@@ -14,10 +14,21 @@ import {
   X,
   TrendingUp,
   ChevronRight,
+  BarChart3,
+  FileDown,
+  FileText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
 import { useRouter } from "next/navigation";
+import {
+  downloadMetricsCSV,
+  downloadMetricsJSON,
+  downloadDatFile,
+  downloadCSTParameters,
+  type OptimizationMetrics,
+} from "../../lib/exportData";
+import { generateAirfoil } from "../../lib/cst";
 
 export default function OptimizePage() {
   const router = useRouter();
@@ -61,6 +72,9 @@ export default function OptimizePage() {
   const [bestDragCoeff, setBestDragCoeff] = useState(0);
   const [bestLDRatio, setBestLDRatio] = useState(0);
 
+  // Export menu state
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
@@ -92,6 +106,60 @@ export default function OptimizePage() {
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
   }, []);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showExportMenu && !target.closest(".export-menu-container")) {
+        setShowExportMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showExportMenu]);
+
+  const handleDownloadMetrics = (format: "csv" | "json") => {
+    const metrics: OptimizationMetrics = {
+      liftCoefficient: bestLiftCoeff,
+      dragCoefficient: bestDragCoeff,
+      momentCoefficient: 0, // Add if available
+      liftToDragRatio: bestLDRatio,
+      angleOfAttack: angleOfAttack,
+      velocity: velocity,
+      reynoldsNumber: velocity * 10000,
+    };
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    if (format === "csv") {
+      downloadMetricsCSV(metrics, `optimization-metrics-${timestamp}.csv`);
+    } else {
+      downloadMetricsJSON(metrics, `optimization-metrics-${timestamp}.json`);
+    }
+    setShowExportMenu(false);
+  };
+
+  const handleDownloadDatFile = () => {
+    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadDatFile(
+      airfoil.upper,
+      airfoil.lower,
+      `optimized-airfoil-${timestamp}`,
+    );
+    setShowExportMenu(false);
+  };
+
+  const handleDownloadCSTParams = () => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadCSTParameters(
+      upperCoefficients,
+      lowerCoefficients,
+      `optimized-cst-params-${timestamp}.json`,
+    );
+    setShowExportMenu(false);
+  };
 
   const updateCSTCoefficient = (
     surface: "upper" | "lower",
@@ -259,10 +327,92 @@ export default function OptimizePage() {
             Reset
           </button>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-green-50 border border-gray-300 hover:border-green-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-green-600">
-            <Download className="w-3.5 h-3.5" />
-            Export Results
-          </button>
+          {/* Export Dropdown */}
+          <div className="relative export-menu-container">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-green-50 border border-gray-300 hover:border-green-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-green-600"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+                <div className="py-2">
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                    Export Optimization
+                  </div>
+
+                  <button
+                    onClick={handleDownloadDatFile}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <FileDown className="w-4 h-4 text-blue-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Optimized Airfoil (.dat)
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Selig format coordinates
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadCSTParams}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-purple-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        CST Parameters
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Export coefficients (JSON)
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-gray-200 my-2"></div>
+
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                    Metrics
+                  </div>
+
+                  <button
+                    onClick={() => handleDownloadMetrics("csv")}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4 text-orange-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Metrics (CSV)
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        L/D, C_L, C_D, C_M
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleDownloadMetrics("json")}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4 text-orange-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Metrics (JSON)
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        L/D, C_L, C_D, C_M
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Center: Branding */}

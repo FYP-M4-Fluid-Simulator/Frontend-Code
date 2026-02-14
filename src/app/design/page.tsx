@@ -431,7 +431,7 @@ export default function DesignPage() {
               <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
                 <div className="py-2">
                   <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-                    Download Files
+                    Export Design
                   </div>
 
                   <button
@@ -441,10 +441,10 @@ export default function DesignPage() {
                     <FileDown className="w-4 h-4 text-blue-600" />
                     <div>
                       <div className="text-sm font-medium text-gray-900">
-                        Download .dat File
+                        Selig Format (.dat)
                       </div>
                       <div className="text-xs text-gray-500">
-                        Airfoil coordinates (Selig format)
+                        Airfoil coordinates
                       </div>
                     </div>
                   </button>
@@ -459,76 +459,7 @@ export default function DesignPage() {
                         CST Parameters
                       </div>
                       <div className="text-xs text-gray-500">
-                        Export CST coefficients (JSON)
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={handleSaveDesign}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                  >
-                    <Settings className="w-4 h-4 text-green-600" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        Full Configuration
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Complete design & settings (JSON)
-                      </div>
-                    </div>
-                  </button>
-
-                  <div className="border-t border-gray-200 my-2"></div>
-
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-                    Metrics
-                  </div>
-
-                  <button
-                    onClick={() => handleDownloadMetrics("csv")}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                  >
-                    <BarChart3 className="w-4 h-4 text-orange-600" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        Metrics (CSV)
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        L/D, C_L, C_D, C_M
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => handleDownloadMetrics("json")}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                  >
-                    <BarChart3 className="w-4 h-4 text-orange-600" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        Metrics (JSON)
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        L/D, C_L, C_D, C_M
-                      </div>
-                    </div>
-                  </button>
-
-                  <div className="border-t border-gray-200 my-2"></div>
-
-                  <button
-                    onClick={handleSaveToBackend}
-                    disabled={isSaving}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 text-left transition-colors disabled:opacity-50"
-                  >
-                    <Database className="w-4 h-4 text-indigo-600" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        Save to Backend
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {isSaving ? "Saving..." : "Store experiment for later"}
+                        Export coefficients (JSON)
                       </div>
                     </div>
                   </button>

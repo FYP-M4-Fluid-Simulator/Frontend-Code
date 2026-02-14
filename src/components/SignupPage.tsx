@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import { Wind, Mail, Lock, User, ArrowLeft, UserPlus } from 'lucide-react';
-import { motion } from 'motion/react';
-import { useState } from 'react';
+import { Wind, Mail, Lock, User, ArrowLeft, UserPlus } from "lucide-react";
+import { motion } from "motion/react";
+import { useState } from "react";
 
 interface SignupPageProps {
-  onNavigate: (page: 'landing' | 'login' | 'app') => void;
+  onNavigate: (page: "landing" | "login" | "app") => void;
 }
 
 export function SignupPage({ onNavigate }: SignupPageProps) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Mock signup - navigate to app
-    onNavigate('app');
+    onNavigate("app");
   };
 
   return (
@@ -54,7 +54,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
 
       {/* Back Button */}
       <motion.button
-        onClick={() => onNavigate('landing')}
+        onClick={() => onNavigate("landing")}
         className="absolute top-6 left-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
         whileHover={{ x: -5 }}
         initial={{ opacity: 0, x: -20 }}
@@ -74,7 +74,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
         <div className="relative">
           {/* Glow Effect */}
           <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl blur-xl opacity-30" />
-          
+
           {/* Card Content */}
           <div className="relative bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
             {/* Logo & Title */}
@@ -88,7 +88,9 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
                 <Wind className="w-8 h-8" />
               </div>
               <h1 className="text-3xl font-bold mb-2">Create Account</h1>
-              <p className="text-gray-400">Join AeroSim and start optimizing</p>
+              <p className="text-gray-400">
+                Join TurboDiff and start optimizing
+              </p>
             </motion.div>
 
             {/* Form */}
@@ -192,12 +194,18 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
                   required
                 />
                 <label htmlFor="terms" className="text-sm text-gray-400">
-                  I agree to the{' '}
-                  <button type="button" className="text-purple-400 hover:text-purple-300 transition-colors">
+                  I agree to the{" "}
+                  <button
+                    type="button"
+                    className="text-purple-400 hover:text-purple-300 transition-colors"
+                  >
                     Terms of Service
-                  </button>
-                  {' '}and{' '}
-                  <button type="button" className="text-purple-400 hover:text-purple-300 transition-colors">
+                  </button>{" "}
+                  and{" "}
+                  <button
+                    type="button"
+                    className="text-purple-400 hover:text-purple-300 transition-colors"
+                  >
                     Privacy Policy
                   </button>
                 </label>
@@ -207,7 +215,10 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
               <motion.button
                 type="submit"
                 className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 transition-all mt-6"
-                whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)" }}
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)",
+                }}
                 whileTap={{ scale: 0.98 }}
               >
                 <UserPlus className="w-5 h-5" />
@@ -221,7 +232,9 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
                 <div className="w-full border-t border-slate-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-slate-900 text-gray-400">or sign up with</span>
+                <span className="px-4 bg-slate-900 text-gray-400">
+                  or sign up with
+                </span>
               </div>
             </div>
 
@@ -252,9 +265,9 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              Already have an account?{' '}
+              Already have an account?{" "}
               <button
-                onClick={() => onNavigate('login')}
+                onClick={() => onNavigate("login")}
                 className="text-purple-400 hover:text-purple-300 font-medium transition-colors"
               >
                 Sign in

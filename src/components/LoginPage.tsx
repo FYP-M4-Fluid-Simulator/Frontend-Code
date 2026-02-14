@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { Wind, Mail, Lock, ArrowLeft, LogIn } from 'lucide-react';
-import { motion } from 'motion/react';
-import { useState } from 'react';
+import { Wind, Mail, Lock, ArrowLeft, LogIn } from "lucide-react";
+import { motion } from "motion/react";
+import { useState } from "react";
 
 interface LoginPageProps {
-  onNavigate: (page: 'landing' | 'signup' | 'app') => void;
+  onNavigate: (page: "landing" | "signup" | "app") => void;
 }
 
 export function LoginPage({ onNavigate }: LoginPageProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Mock login - navigate to app
-    onNavigate('app');
+    onNavigate("app");
   };
 
   return (
@@ -52,7 +52,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
 
       {/* Back Button */}
       <motion.button
-        onClick={() => onNavigate('landing')}
+        onClick={() => onNavigate("landing")}
         className="absolute top-6 left-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
         whileHover={{ x: -5 }}
         initial={{ opacity: 0, x: -20 }}
@@ -72,7 +72,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
         <div className="relative">
           {/* Glow Effect */}
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-xl opacity-30" />
-          
+
           {/* Card Content */}
           <div className="relative bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
             {/* Logo & Title */}
@@ -86,7 +86,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                 <Wind className="w-8 h-8" />
               </div>
               <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-              <p className="text-gray-400">Sign in to your AeroSim account</p>
+              <p className="text-gray-400">Sign in to your TurboDiff account</p>
             </motion.div>
 
             {/* Form */}
@@ -148,7 +148,10 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                   />
                   <span className="text-gray-400">Remember me</span>
                 </label>
-                <button type="button" className="text-blue-400 hover:text-blue-300 transition-colors">
+                <button
+                  type="button"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
                   Forgot password?
                 </button>
               </div>
@@ -157,7 +160,10 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               <motion.button
                 type="submit"
                 className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-all"
-                whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(59, 130, 246, 0.4)" }}
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: "0 20px 40px rgba(59, 130, 246, 0.4)",
+                }}
                 whileTap={{ scale: 0.98 }}
               >
                 <LogIn className="w-5 h-5" />
@@ -171,7 +177,9 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                 <div className="w-full border-t border-slate-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-slate-900 text-gray-400">or continue with</span>
+                <span className="px-4 bg-slate-900 text-gray-400">
+                  or continue with
+                </span>
               </div>
             </div>
 
@@ -202,9 +210,9 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              Don't have an account?{' '}
+              Don't have an account?{" "}
               <button
-                onClick={() => onNavigate('signup')}
+                onClick={() => onNavigate("signup")}
                 className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
               >
                 Sign up

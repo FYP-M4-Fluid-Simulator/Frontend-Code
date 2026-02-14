@@ -13,10 +13,19 @@ import {
   Sparkles,
   X,
   ChevronRight,
+  FileDown,
+  FileText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
 import { useRouter } from "next/navigation";
+import {
+  downloadDatFile,
+  downloadCSTParameters,
+  downloadConfigFile,
+  createSimulationConfig,
+} from "../../lib/exportData";
+import { generateAirfoil } from "../../lib/cst";
 
 export default function SimulatePage() {
   const router = useRouter();
@@ -47,6 +56,9 @@ export default function SimulatePage() {
   const [showVectorField, setShowVectorField] = useState(true);
   const [timeStepSize, setTimeStepSize] = useState(0.001);
   const [simulationDuration, setSimulationDuration] = useState(5);
+
+  // Export menu state
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -79,6 +91,56 @@ export default function SimulatePage() {
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
   }, []);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showExportMenu && !target.closest(".export-menu-container")) {
+        setShowExportMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showExportMenu]);
+
+  const handleDownloadDatFile = () => {
+    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadDatFile(
+      airfoil.upper,
+      airfoil.lower,
+      `optimized-airfoil-${timestamp}`,
+    );
+    setShowExportMenu(false);
+  };
+
+  const handleDownloadCSTParams = () => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadCSTParameters(
+      upperCoefficients,
+      lowerCoefficients,
+      `optimized-cst-params-${timestamp}.json`,
+    );
+    setShowExportMenu(false);
+  };
+
+  const handleDownloadFullConfig = () => {
+    const config = createSimulationConfig(
+      upperCoefficients,
+      lowerCoefficients,
+      velocity,
+      angleOfAttack,
+      meshDensity,
+    );
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .slice(0, -5);
+    downloadConfigFile(config, `simulation-config-${timestamp}.json`);
+    setShowExportMenu(false);
+  };
 
   const updateCSTCoefficient = (
     surface: "upper" | "lower",
@@ -167,6 +229,21 @@ export default function SimulatePage() {
     setShowResults(false);
   };
 
+  const handleNavigateToOptimize = () => {
+    // Save current state to sessionStorage before navigating
+    sessionStorage.setItem(
+      "cfdState",
+      JSON.stringify({
+        upperCoefficients,
+        lowerCoefficients,
+        angleOfAttack,
+        velocity,
+        meshDensity,
+      }),
+    );
+    router.push("/optimize");
+  };
+
   return (
     <div className="h-screen flex flex-col bg-white">
       {/* Compact Top Ribbon */}
@@ -189,10 +266,71 @@ export default function SimulatePage() {
             Reset
           </button>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-green-50 border border-gray-300 hover:border-green-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-green-600">
-            <Download className="w-3.5 h-3.5" />
-            Export Results
-          </button>
+          {/* Export Dropdown */}
+          <div className="relative export-menu-container">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-green-50 border border-gray-300 hover:border-green-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-green-600"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+                <div className="py-2">
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                    Export Simulation
+                  </div>
+
+                  <button
+                    onClick={handleDownloadFullConfig}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-green-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Full JSON Config
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Complete simulation data
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadDatFile}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <FileDown className="w-4 h-4 text-blue-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Optimized Shape (.dat)
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Selig format coordinates
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadCSTParams}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-purple-600" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        CST Parameters
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Export coefficients (JSON)
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Center: Branding */}
@@ -458,6 +596,8 @@ export default function SimulatePage() {
                   showPressureField={visualizationType === "pressure"}
                   showVectorField={showVectorField}
                   onCoefficientChange={updateCSTCoefficient}
+                  showControlPoints={false}
+                  showMeshOverlay={false}
                   allowFullScreen={true}
                   designMode={false}
                 />
@@ -528,7 +668,7 @@ export default function SimulatePage() {
                     </button>
 
                     <button
-                      onClick={() => router.push("/optimize")}
+                      onClick={handleNavigateToOptimize}
                       className="w-full bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
                     >
                       <Sparkles className="w-5 h-5" />
