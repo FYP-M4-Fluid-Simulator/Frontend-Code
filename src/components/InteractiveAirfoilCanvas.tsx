@@ -73,22 +73,44 @@ export function InteractiveAirfoilCanvas({
 
   // Generate airfoil and control points
   useEffect(() => {
+    // Guard: Check if coefficients are valid
+    if (!upperCoefficients?.length || !lowerCoefficients?.length) {
+      setControlPoints([]);
+      return;
+    }
+
     const { upper, lower } = generateAirfoil(
       upperCoefficients,
       lowerCoefficients,
       100,
     );
+
+    // Guard: Check if airfoil generation succeeded
+    if (!upper?.length || !lower?.length) {
+      setControlPoints([]);
+      return;
+    }
+
     const rotated = rotateAirfoil(upper, lower, angleOfAttack, 0.25);
+
+    // Guard: Check if rotation succeeded
+    if (!rotated?.upper?.length || !rotated?.lower?.length) {
+      setControlPoints([]);
+      return;
+    }
 
     const baseScale = Math.min(width, height) * 0.7;
     const scale = baseScale * (zoomLevel / 100) * chordLength;
     const offsetX = width / 2;
     const offsetY = height / 2;
 
-    const transformPoint = (p: { x: number; y: number }) => ({
-      x: offsetX + (p.x - 0.5) * scale,
-      y: offsetY - p.y * scale,
-    });
+    const transformPoint = (p: { x: number; y: number } | undefined) => {
+      if (!p) return { x: 0, y: 0 };
+      return {
+        x: offsetX + (p.x - 0.5) * scale,
+        y: offsetY - p.y * scale,
+      };
+    };
 
     // Create control points from CST coefficients
     const points: ControlPoint[] = [];
@@ -96,7 +118,9 @@ export function InteractiveAirfoilCanvas({
     upperCoefficients.forEach((coeff, idx) => {
       const t = idx / Math.max(upperCoefficients.length - 1, 1);
       const sampleIdx = Math.floor(t * (upper.length - 1));
-      const pt = transformPoint(rotated.upper[sampleIdx]);
+      const point = rotated.upper[sampleIdx];
+      if (!point) return; // Skip if point is undefined
+      const pt = transformPoint(point);
       points.push({
         id: `upper-${idx}`,
         x: pt.x,
@@ -106,12 +130,13 @@ export function InteractiveAirfoilCanvas({
         index: idx,
       });
     });
-    console.log(rotated.upper[1], points[1].x);
 
     lowerCoefficients.forEach((coeff, idx) => {
       const t = idx / Math.max(lowerCoefficients.length - 1, 1);
       const sampleIdx = Math.floor(t * (lower.length - 1));
-      const pt = transformPoint(rotated.lower[sampleIdx]);
+      const point = rotated.lower[sampleIdx];
+      if (!point) return; // Skip if point is undefined
+      const pt = transformPoint(point);
       points.push({
         id: `lower-${idx}`,
         x: pt.x,
@@ -140,6 +165,13 @@ export function InteractiveAirfoilCanvas({
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
+    // Guard: Check if coefficients are valid
+    if (!upperCoefficients?.length || !lowerCoefficients?.length) {
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, width, height);
+      return;
+    }
+
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
     canvas.height = height * dpr;
@@ -152,7 +184,23 @@ export function InteractiveAirfoilCanvas({
       lowerCoefficients,
       100,
     );
+
+    // Guard: Check if airfoil generation succeeded
+    if (!upper?.length || !lower?.length) {
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, width, height);
+      return;
+    }
+
     const rotated = rotateAirfoil(upper, lower, angleOfAttack, 0.25);
+
+    // Guard: Check if rotation succeeded
+    if (!rotated?.upper?.length || !rotated?.lower?.length) {
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, width, height);
+      return;
+    }
+
     const airfoilPoints = [...rotated.upper, ...rotated.lower.reverse()];
 
     const baseScale = Math.min(width, height) * 0.7;
@@ -444,6 +492,11 @@ export function InteractiveAirfoilCanvas({
         ...rotated.lower.map(transformPoint),
       ];
 
+      // Guard: Ensure we have valid airfoil points
+      if (!airfoilCanvasPoints?.length) {
+        return;
+      }
+
       if (designMode) {
         // Clean technical drawing style for design mode
         ctx.shadowBlur = 0;
@@ -543,11 +596,15 @@ export function InteractiveAirfoilCanvas({
         const trailingEdge = transformPoint({ x: 1, y: 0 });
 
         // Calculate thickness for display
-        for (let i = 0; i < rotated.upper.length; i++) {
-          const thickness = rotated.upper[i].y - rotated.lower[i].y;
-          if (thickness > maxThickness) {
-            maxThickness = thickness;
-            maxThicknessX = rotated.upper[i].x;
+        if (rotated.upper.length === rotated.lower.length) {
+          for (let i = 0; i < rotated.upper.length; i++) {
+            if (rotated.upper[i] && rotated.lower[i]) {
+              const thickness = rotated.upper[i].y - rotated.lower[i].y;
+              if (thickness > maxThickness) {
+                maxThickness = thickness;
+                maxThicknessX = rotated.upper[i].x;
+              }
+            }
           }
         }
 

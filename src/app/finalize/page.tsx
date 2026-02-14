@@ -18,9 +18,13 @@ import { useRouter } from "next/navigation";
 export default function FinalizePage() {
   const router = useRouter();
 
-  // State loaded from sessionStorage
-  const [upperCoefficients, setUpperCoefficients] = useState<number[]>([]);
-  const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([]);
+  // State loaded from sessionStorage - initialize with default values to prevent empty array issues
+  const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
+    0.15, 0.2, 0.18, 0.12, 0.08,
+  ]);
+  const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
+    -0.1, -0.12, -0.09, -0.06, -0.04,
+  ]);
   const [angleOfAttack, setAngleOfAttack] = useState(5);
   const [velocity, setVelocity] = useState(15);
   const [meshDensity, setMeshDensity] = useState<
@@ -186,11 +190,11 @@ export default function FinalizePage() {
                   showMeshOverlay={showMeshOverlay}
                   showPressureField={showPressureField}
                   showVectorField={showVectorField}
-                  onCoefficientChange={() => { }} // No editing allowed
+                  onCoefficientChange={() => {}} // No editing allowed
                   allowFullScreen={true}
                   designMode={false} // Read-only mode (means we are not on design page (first page) )
-                  onControlPointDragStart={() => { }}
-                  onControlPointDragEnd={() => { }}
+                  onControlPointDragStart={() => {}}
+                  onControlPointDragEnd={() => {}}
                 />
               </div>
             </div>

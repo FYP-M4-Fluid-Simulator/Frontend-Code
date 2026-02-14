@@ -215,8 +215,12 @@ export default function DesignPage() {
   const handleSaveToBackend = async () => {
     setIsSaving(true);
     try {
-      const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
-      
+      const airfoil = generateAirfoil(
+        upperCoefficients,
+        lowerCoefficients,
+        100,
+      );
+
       const experimentData: ExperimentData = {
         name: `Airfoil Experiment ${new Date().toLocaleString()}`,
         description: "Airfoil design from TurboDiff Designer",
@@ -429,7 +433,7 @@ export default function DesignPage() {
                   <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
                     Download Files
                   </div>
-                  
+
                   <button
                     onClick={handleDownloadDatFile}
                     className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
@@ -561,10 +565,11 @@ export default function DesignPage() {
                 <div className="flex border-b border-gray-200">
                   <button
                     onClick={() => setActiveTab("cst")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeTab === "cst"
-                      ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                      activeTab === "cst"
+                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <Wind className="w-4 h-4" />
@@ -670,9 +675,7 @@ export default function DesignPage() {
                               className="w-24 px-2 py-1.5 text-sm border border-blue-300 rounded font-mono"
                             />
                             <button
-                              onClick={() =>
-                                removeCSTCoefficient2(index)
-                              }
+                              onClick={() => removeCSTCoefficient2(index)}
                               disabled={upperCoefficients.length <= 2}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-30"
                             >
@@ -736,9 +739,7 @@ export default function DesignPage() {
                               className="w-24 px-2 py-1.5 text-sm border border-green-300 rounded font-mono"
                             />
                             <button
-                              onClick={() =>
-                                removeCSTCoefficient2(index)
-                              }
+                              onClick={() => removeCSTCoefficient2(index)}
                               disabled={lowerCoefficients.length <= 2}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-30"
                             >
@@ -929,9 +930,9 @@ export default function DesignPage() {
                     </div>
                   </div>
                 </button>
-                  {/* see all the airfoils */}
+                {/* View all airfoils */}
                 <button
-                  onClick={() => router.push("/airfoils")}
+                  onClick={() => router.push("/airfoil_deck")}
                   className="w-full p-4 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-2 border-green-200 hover:border-green-300 rounded-xl transition-all group"
                 >
                   <div className="flex items-center gap-3">
