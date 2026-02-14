@@ -188,7 +188,7 @@ export default function OptimizePage() {
 
   const handleSaveExperiment = async () => {
     const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
-    
+
     const experimentData: import("../../lib/exportData").ExperimentData = {
       name: `Optimization-${new Date().toISOString().slice(0, 10)}`,
       description: `Optimized airfoil with L/D ratio: ${optimizationMetrics.liftToDragRatio?.toFixed(2) || (optimizationMetrics.cl / optimizationMetrics.cd).toFixed(2)}`,
@@ -1016,7 +1016,7 @@ export default function OptimizePage() {
 
             {/* Right Panel */}
             <div
-              className={`${isOptimizing || showResults ? "w-[32rem]" : "w-80"} flex flex-col gap-4 transition-all duration-300`}
+              className={`${isOptimizing || showResults ? "w-[32rem]" : "w-80"} flex flex-col gap-4 transition-all duration-300 overflow-y-auto max-h-full pr-2`}
             >
               <div className="bg-white rounded-xl border-2 border-orange-300 shadow-lg p-6 space-y-4">
                 <div>
