@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
+import ResultsModal from "../../components/ResultsModal";
 import { useRouter } from "next/navigation";
 import {
   downloadDatFile,
@@ -35,6 +36,13 @@ export default function SimulatePage() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationProgress, setSimulationProgress] = useState(0);
   const [showResults, setShowResults] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [simulationMetrics, setSimulationMetrics] = useState({
+    cl: 0.8542,
+    cd: 0.0234,
+    cm: -0.0456,
+    liftToDragRatio: 36.5,
+  });
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
@@ -183,7 +191,15 @@ export default function SimulatePage() {
         setSimulationProgress(i);
       }
 
+      const metrics = {
+        cl: 0.8542,
+        cd: 0.0234,
+        cm: -0.0456,
+        liftToDragRatio: 36.5,
+      };
+      setSimulationMetrics(metrics);
       setShowResults(true);
+      setShowResultsModal(true);
       // Store simulation results for turbine page
       sessionStorage.setItem(
         "simulationResults",
@@ -202,7 +218,15 @@ export default function SimulatePage() {
         await new Promise((resolve) => setTimeout(resolve, 100));
         setSimulationProgress(i);
       }
+      const metrics = {
+        cl: 0.8542,
+        cd: 0.0234,
+        cm: -0.0456,
+        liftToDragRatio: 36.5,
+      };
+      setSimulationMetrics(metrics);
       setShowResults(true);
+      setShowResultsModal(true);
       // Store simulation results for turbine page
       sessionStorage.setItem(
         "simulationResults",
@@ -789,6 +813,14 @@ export default function SimulatePage() {
           </div>
         </div>
       </div>
+
+      {/* Results Modal */}
+      <ResultsModal
+        isOpen={showResultsModal}
+        onClose={() => setShowResultsModal(false)}
+        type="simulation"
+        metrics={simulationMetrics}
+      />
     </div>
   );
 }

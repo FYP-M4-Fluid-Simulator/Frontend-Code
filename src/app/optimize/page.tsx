@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
+import ResultsModal from "../../components/ResultsModal";
 import { useRouter } from "next/navigation";
 import {
   downloadMetricsCSV,
@@ -39,6 +40,15 @@ export default function OptimizePage() {
   const [optimizationIteration, setOptimizationIteration] = useState(0);
   const [maxIterations, setMaxIterations] = useState(50);
   const [showResults, setShowResults] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [optimizationMetrics, setOptimizationMetrics] = useState({
+    cl: 1.2345,
+    cd: 0.0156,
+    cm: -0.0234,
+    liftToDragRatio: 79.2,
+    error: 0.000123,
+    loss: 0.000456,
+  });
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
@@ -207,7 +217,18 @@ export default function OptimizePage() {
           if (prev >= numIterations) {
             clearInterval(interval);
             setIsOptimizing(false);
+
+            const metrics = {
+              cl: 1.2345,
+              cd: 0.0156,
+              cm: -0.0234,
+              liftToDragRatio: 79.2,
+              error: 0.000123,
+              loss: 0.000456,
+            };
+            setOptimizationMetrics(metrics);
             setShowResults(true);
+            setShowResultsModal(true);
 
             // Set final results
             setBestLiftCoeff(1.245);
@@ -251,7 +272,18 @@ export default function OptimizePage() {
           if (prev >= numIterations) {
             clearInterval(interval);
             setIsOptimizing(false);
+
+            const metrics = {
+              cl: 1.2345,
+              cd: 0.0156,
+              cm: -0.0234,
+              liftToDragRatio: 79.2,
+              error: 0.000123,
+              loss: 0.000456,
+            };
+            setOptimizationMetrics(metrics);
             setShowResults(true);
+            setShowResultsModal(true);
 
             setBestLiftCoeff(1.245);
             setBestDragCoeff(0.0187);
@@ -977,6 +1009,14 @@ export default function OptimizePage() {
           </div>
         </div>
       </div>
+
+      {/* Results Modal */}
+      <ResultsModal
+        isOpen={showResultsModal}
+        onClose={() => setShowResultsModal(false)}
+        type="optimization"
+        metrics={optimizationMetrics}
+      />
     </div>
   );
 }
