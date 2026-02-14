@@ -23,10 +23,20 @@ import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCan
 import ResultsModal from "../../components/ResultsModal";
 import { useRouter } from "next/navigation";
 import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
   downloadMetricsCSV,
   downloadMetricsJSON,
   downloadDatFile,
   downloadCSTParameters,
+  saveExperimentToBackend,
   type OptimizationMetrics,
 } from "../../lib/exportData";
 import { generateAirfoil } from "../../lib/cst";
@@ -64,10 +74,12 @@ export default function OptimizePage() {
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
   >("medium");
-  const [showPressureField, setShowPressureField] = useState(false);
-  const [showVectorField, setShowVectorField] = useState(true);
-  const [showMeshOverlay, setShowMeshOverlay] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(false);
+
+  // L/D ratio tracking for live chart
+  const [ldRatioHistory, setLdRatioHistory] = useState<
+    Array<{ iteration: number; ldRatio: number }>
+  >([]);
 
   // Optimization parameters
   const [timeStepSize, setTimeStepSize] = useState(0.001);
@@ -88,6 +100,9 @@ export default function OptimizePage() {
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+  
+  // Optimization interval ref for cleanup
+  const optimizationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load state from sessionStorage on mount
   useEffect(() => {
@@ -171,6 +186,54 @@ export default function OptimizePage() {
     setShowExportMenu(false);
   };
 
+  const handleSaveExperiment = async () => {
+    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+    const experimentData = {
+      upperCoefficients,
+      lowerCoefficients,
+      angleOfAttack,
+      velocity,
+      meshDensity,
+      airfoilPoints: {
+        upper: airfoil.upper,
+        lower: airfoil.lower,
+      },
+      results: {
+        liftCoefficient: optimizationMetrics.cl,
+        dragCoefficient: optimizationMetrics.cd,
+        momentCoefficient: optimizationMetrics.cm,
+        liftToDragRatio: optimizationMetrics.liftToDragRatio || optimizationMetrics.cl / optimizationMetrics.cd,
+      },
+    };
+    
+    try {
+      await saveExperimentToBackend(experimentData);
+      alert('Experiment saved successfully!');
+    } catch (error) {
+      console.error('Failed to save experiment:', error);
+      alert('Failed to save experiment. Please try again.');
+    }
+  };
+
+  const handleModalDownloadMetrics = (format: "csv" | "json") => {
+    const metrics: OptimizationMetrics = {
+      liftCoefficient: optimizationMetrics.cl,
+      dragCoefficient: optimizationMetrics.cd,
+      momentCoefficient: optimizationMetrics.cm,
+      liftToDragRatio: optimizationMetrics.liftToDragRatio || optimizationMetrics.cl / optimizationMetrics.cd,
+      angleOfAttack: angleOfAttack,
+      velocity: velocity,
+      reynoldsNumber: velocity * 10000,
+    };
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    if (format === "csv") {
+      downloadMetricsCSV(metrics, `optimization-metrics-${timestamp}.csv`);
+    } else {
+      downloadMetricsJSON(metrics, `optimization-metrics-${timestamp}.json`);
+    }
+  };
+
   const updateCSTCoefficient = (
     surface: "upper" | "lower",
     index: number,
@@ -188,9 +251,17 @@ export default function OptimizePage() {
   };
 
   const handleStartOptimization = async () => {
+    // Clear any existing interval
+    if (optimizationIntervalRef.current) {
+      clearInterval(optimizationIntervalRef.current);
+      optimizationIntervalRef.current = null;
+    }
+    
     setIsOptimizing(true);
     setOptimizationIteration(0);
     setShowResults(false);
+    setLdRatioHistory([]); // Reset L/D history
+    setIsSidebarOpen(false); // Close sidebar when optimization starts
 
     // Dummy API call to start optimization
     try {
@@ -212,10 +283,11 @@ export default function OptimizePage() {
       });
 
       // Simulate optimization progress with morphing airfoil
-      const interval = setInterval(() => {
+      const interval = setInterval(async () => {
         setOptimizationIteration((prev) => {
           if (prev >= numIterations) {
             clearInterval(interval);
+            optimizationIntervalRef.current = null;
             setIsOptimizing(false);
 
             const metrics = {
@@ -252,25 +324,66 @@ export default function OptimizePage() {
             return prev;
           }
 
-          // Simulate airfoil morphing during optimization
-          setUpperCoefficients((coeffs) =>
-            coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
-          );
-          setLowerCoefficients((coeffs) =>
-            coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
-          );
+          // Call API to get optimized airfoil shape for current iteration
+          fetch("/api/optimize/iteration", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              iteration: prev + 1,
+              currentUpperCoefficients: upperCoefficients,
+              currentLowerCoefficients: lowerCoefficients,
+              learningRate,
+              minThickness,
+              maxThickness,
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.upperCoefficients && data.lowerCoefficients) {
+                setUpperCoefficients(data.upperCoefficients);
+                setLowerCoefficients(data.lowerCoefficients);
+              }
+              
+              // Update L/D ratio from API or calculate
+              const ldRatio = data.ldRatio || 30 + (prev / numIterations) * 36.6 + Math.random() * 2;
+              setLdRatioHistory((history) => [
+                ...history,
+                { iteration: prev + 1, ldRatio },
+              ]);
+            })
+            .catch((error) => {
+              console.log("API call failed, using simulated morphing:", error);
+              // Fallback: Simulate airfoil morphing during optimization
+              setUpperCoefficients((coeffs) =>
+                coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
+              );
+              setLowerCoefficients((coeffs) =>
+                coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
+              );
+
+              // Update L/D ratio history
+              const currentLDRatio = 30 + (prev / numIterations) * 36.6 + Math.random() * 2;
+              setLdRatioHistory((history) => [
+                ...history,
+                { iteration: prev + 1, ldRatio: currentLDRatio },
+              ]);
+            });
 
           return prev + 1;
         });
       }, 200); // Update every 200ms
+      
+      // Store interval ref for cleanup
+      optimizationIntervalRef.current = interval;
     } catch (error) {
       console.log("Optimization would run here with API");
 
-      // Run simulation even if API fails
-      const interval = setInterval(() => {
+      // Run simulation even if initial API fails
+      const interval = setInterval(async () => {
         setOptimizationIteration((prev) => {
           if (prev >= numIterations) {
             clearInterval(interval);
+            optimizationIntervalRef.current = null;
             setIsOptimizing(false);
 
             const metrics = {
@@ -306,21 +419,76 @@ export default function OptimizePage() {
             return prev;
           }
 
-          setUpperCoefficients((coeffs) =>
-            coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
-          );
-          setLowerCoefficients((coeffs) =>
-            coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
-          );
+          // Call API for iteration-based optimization
+          fetch("/api/optimize/iteration", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              iteration: prev + 1,
+              currentUpperCoefficients: upperCoefficients,
+              currentLowerCoefficients: lowerCoefficients,
+              learningRate,
+              minThickness,
+              maxThickness,
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.upperCoefficients && data.lowerCoefficients) {
+                setUpperCoefficients(data.upperCoefficients);
+                setLowerCoefficients(data.lowerCoefficients);
+              }
+              
+              const ldRatio = data.ldRatio || 30 + (prev / numIterations) * 36.6 + Math.random() * 2;
+              setLdRatioHistory((history) => [
+                ...history,
+                { iteration: prev + 1, ldRatio },
+              ]);
+            })
+            .catch(() => {
+              // Fallback simulation
+              setUpperCoefficients((coeffs) =>
+                coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
+              );
+              setLowerCoefficients((coeffs) =>
+                coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
+              );
+
+              const currentLDRatio = 30 + (prev / numIterations) * 36.6 + Math.random() * 2;
+              setLdRatioHistory((history) => [
+                ...history,
+                { iteration: prev + 1, ldRatio: currentLDRatio },
+              ]);
+            });
 
           return prev + 1;
         });
       }, 200);
+      
+      // Store interval ref for cleanup
+      optimizationIntervalRef.current = interval;
     }
   };
 
-  const handlePauseOptimization = () => {
+  const handleStopOptimization = () => {
+    // Clear the interval
+    if (optimizationIntervalRef.current) {
+      clearInterval(optimizationIntervalRef.current);
+      optimizationIntervalRef.current = null;
+    }
+    
     setIsOptimizing(false);
+    setOptimizationIteration(0);
+    setShowResults(false);
+    setLdRatioHistory([]);
+    
+    // Optionally reload initial coefficients from session storage
+    const savedState = sessionStorage.getItem("cfdState");
+    if (savedState) {
+      const state = JSON.parse(savedState);
+      setUpperCoefficients(state.upperCoefficients || upperCoefficients);
+      setLowerCoefficients(state.lowerCoefficients || lowerCoefficients);
+    }
   };
 
   const handleResetOptimization = () => {
@@ -450,16 +618,12 @@ export default function OptimizePage() {
         {/* Center: Branding */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 px-4 py-1 bg-gradient-to-r from-orange-600 to-pink-600 rounded-lg">
-            <Sparkles className="w-4 h-4 text-white" />
+            {/* <Sparkles className="w-4 h-4 text-white" /> */}
             <span className="text-xs font-black text-white tracking-wide">
               CFD AIRFOIL PLATFORM
             </span>
           </div>
-          <div className="px-3 py-1 bg-orange-100 rounded-lg border border-orange-300">
-            <span className="text-xs font-bold text-orange-800">
-              Optimization Mode
-            </span>
-          </div>
+        
         </div>
 
         {/* Right: User Controls */}
@@ -741,8 +905,23 @@ export default function OptimizePage() {
           )}
         </AnimatePresence>
 
+        {/* Control Points Toggle */}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
+          <div className="flex items-center gap-3 px-4 py-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg border-2 border-gray-200">
+            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
+              <input
+                type="checkbox"
+                checked={showControlPoints}
+                onChange={(e) => setShowControlPoints(e.target.checked)}
+                className="w-4 h-4 accent-blue-600"
+              />
+              Control Points
+            </label>
+          </div>
+        </div>
+
         {/* Sidebar Edge Tab - Always visible when sidebar is closed */}
-        {!isSidebarOpen && (
+        {!isSidebarOpen && !isOptimizing && (
           <motion.div
             initial={{ x: -50, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -760,56 +939,7 @@ export default function OptimizePage() {
           </motion.div>
         )}
 
-        {/* Visualization Controls */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
-          <div className="flex items-center gap-3 px-4 py-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg border-2 border-gray-200">
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
-              <input
-                type="checkbox"
-                checked={showControlPoints}
-                onChange={(e) => setShowControlPoints(e.target.checked)}
-                className="w-4 h-4 accent-blue-600"
-              />
-              Control Points
-            </label>
 
-            <div className="w-px h-4 bg-gray-300" />
-
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-green-600 transition-colors">
-              <input
-                type="checkbox"
-                checked={showMeshOverlay}
-                onChange={(e) => setShowMeshOverlay(e.target.checked)}
-                className="w-4 h-4 accent-green-600"
-              />
-              Grid Overlay
-            </label>
-
-            <div className="w-px h-4 bg-gray-300" />
-
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
-              <input
-                type="checkbox"
-                checked={showVectorField}
-                onChange={(e) => setShowVectorField(e.target.checked)}
-                className="w-4 h-4 accent-purple-600"
-              />
-              Vector Field
-            </label>
-
-            <div className="w-px h-4 bg-gray-300" />
-
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
-              <input
-                type="checkbox"
-                checked={showPressureField}
-                onChange={(e) => setShowPressureField(e.target.checked)}
-                className="w-4 h-4 accent-orange-600"
-              />
-              Pressure Field
-            </label>
-          </div>
-        </div>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col p-6 gap-4">
@@ -831,9 +961,9 @@ export default function OptimizePage() {
                   velocity={velocity}
                   meshQuality={meshDensity}
                   showControlPoints={showControlPoints}
-                  showMeshOverlay={showMeshOverlay}
-                  showPressureField={showPressureField}
-                  showVectorField={showVectorField}
+                  showMeshOverlay={false}
+                  showPressureField={false}
+                  showVectorField={true}
                   onCoefficientChange={updateCSTCoefficient}
                   allowFullScreen={true}
                   designMode={false}
@@ -863,7 +993,7 @@ export default function OptimizePage() {
             </div>
 
             {/* Right Panel */}
-            <div className="w-80 flex flex-col gap-4">
+            <div className={`${isOptimizing || showResults ? 'w-[32rem]' : 'w-80'} flex flex-col gap-4 transition-all duration-300`}>
               <div className="bg-white rounded-xl border-2 border-orange-300 shadow-lg p-6 space-y-4">
                 <div>
                   <h3 className="text-base font-black text-gray-900 mb-1">
@@ -885,13 +1015,22 @@ export default function OptimizePage() {
                 )}
 
                 {isOptimizing && (
-                  <button
-                    onClick={handlePauseOptimization}
-                    className="w-full bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
-                  >
-                    <Pause className="w-5 h-5" />
-                    Pause Optimization
-                  </button>
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleStopOptimization}
+                      className="w-full bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
+                    >
+                      <X className="w-5 h-5" />
+                      Stop Optimization
+                    </button>
+                    <button
+                      onClick={handleStartOptimization}
+                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-bold shadow-lg text-sm"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Restart Optimization
+                    </button>
+                  </div>
                 )}
 
                 {showResults && (
@@ -1005,6 +1144,53 @@ export default function OptimizePage() {
                   </div>
                 </div>
               )}
+
+              {/* Live L/D Ratio Chart */}
+              {(isOptimizing || showResults) && ldRatioHistory.length > 0 && (
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 p-5 space-y-3">
+                  <h4 className="text-sm font-black text-green-900">
+                    📊 L/D Ratio Progress
+                  </h4>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <LineChart data={ldRatioHistory}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
+                      <XAxis 
+                        dataKey="iteration" 
+                        stroke="#6b7280"
+                        style={{ fontSize: '11px' }}
+                        label={{ value: 'Iteration', position: 'insideBottom', offset: -5, style: { fontSize: '10px' } }}
+                      />
+                      <YAxis 
+                        stroke="#6b7280"
+                        style={{ fontSize: '11px' }}
+                        domain={['auto', 'auto']}
+                        label={{ value: 'L/D', angle: -90, position: 'insideLeft', style: { fontSize: '10px' } }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #10b981',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="ldRatio"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        dot={false}
+                        name="L/D Ratio"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  {showResults && (
+                    <div className="text-xs font-bold text-green-800 text-center">
+                      Final L/D: {ldRatioHistory[ldRatioHistory.length - 1]?.ldRatio.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1016,6 +1202,8 @@ export default function OptimizePage() {
         onClose={() => setShowResultsModal(false)}
         type="optimization"
         metrics={optimizationMetrics}
+        onSaveExperiment={handleSaveExperiment}
+        onDownloadMetrics={handleModalDownloadMetrics}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, Download, Save, FileText, BarChart3 } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -34,6 +34,8 @@ interface ResultsModalProps {
     error?: number;
     loss?: number;
   }>;
+  onSaveExperiment?: () => void;
+  onDownloadMetrics?: (format: "csv" | "json") => void;
 }
 
 export default function ResultsModal({
@@ -42,22 +44,25 @@ export default function ResultsModal({
   type,
   metrics,
   convergenceData = [],
+  onSaveExperiment,
+  onDownloadMetrics,
 }: ResultsModalProps) {
   if (!isOpen) return null;
 
   // Generate sample convergence data if not provided
-  const chartData = convergenceData.length > 0 
-    ? convergenceData 
-    : Array.from({ length: 20 }, (_, i) => ({
-        iteration: i + 1,
-        cl: metrics.cl * (0.7 + Math.random() * 0.3),
-        cd: metrics.cd * (0.8 + Math.random() * 0.4),
-        cm: metrics.cm * (0.6 + Math.random() * 0.8),
-        ...(type === "optimization" && {
-          error: (metrics.error || 0.1) * Math.exp(-i / 10),
-          loss: (metrics.loss || 0.5) * Math.exp(-i / 8),
-        }),
-      }));
+  const chartData =
+    convergenceData.length > 0
+      ? convergenceData
+      : Array.from({ length: 20 }, (_, i) => ({
+          iteration: i + 1,
+          cl: metrics.cl * (0.7 + Math.random() * 0.3),
+          cd: metrics.cd * (0.8 + Math.random() * 0.4),
+          cm: metrics.cm * (0.6 + Math.random() * 0.8),
+          ...(type === "optimization" && {
+            error: (metrics.error || 0.1) * Math.exp(-i / 10),
+            loss: (metrics.loss || 0.5) * Math.exp(-i / 8),
+          }),
+        }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -118,7 +123,9 @@ export default function ResultsModal({
                 {type === "optimization" ? "L/D Ratio" : "Lift-to-Drag"}
               </div>
               <div className="text-blue-100 text-2xl font-bold">
-                {(metrics.liftToDragRatio || metrics.cl / metrics.cd).toFixed(2)}
+                {(metrics.liftToDragRatio || metrics.cl / metrics.cd).toFixed(
+                  2,
+                )}
               </div>
             </div>
 
@@ -153,14 +160,24 @@ export default function ResultsModal({
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis 
-                  dataKey="iteration" 
+                <XAxis
+                  dataKey="iteration"
                   stroke="#94a3b8"
-                  label={{ value: 'Iteration', position: 'insideBottom', offset: -5, fill: '#94a3b8' }}
+                  label={{
+                    value: "Iteration",
+                    position: "insideBottom",
+                    offset: -5,
+                    fill: "#94a3b8",
+                  }}
                 />
-                <YAxis 
+                <YAxis
                   stroke="#94a3b8"
-                  label={{ value: 'Coefficient Value', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
+                  label={{
+                    value: "Coefficient Value",
+                    angle: -90,
+                    position: "insideLeft",
+                    fill: "#94a3b8",
+                  }}
                 />
                 <Tooltip
                   contentStyle={{
@@ -290,14 +307,71 @@ export default function ResultsModal({
             </ResponsiveContainer>
           </div>
 
-          {/* Close Button */}
-          <div className="flex justify-center pt-4">
-            <button
-              onClick={onClose}
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-blue-500/50 transition-all"
-            >
-              Close Results
-            </button>
+          {/* Action Buttons */}
+          <div className="space-y-4 pt-4">
+            {type === "optimization" && (
+              <div className="grid grid-cols-2 gap-3">
+                {onSaveExperiment && (
+                  <button
+                    onClick={() => {
+                      onSaveExperiment();
+                      onClose();
+                    }}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-green-500/50 transition-all"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save Experiment
+                  </button>
+                )}
+
+                {onDownloadMetrics && (
+                  <div className="relative group">
+                    <button
+                      onClick={() => onDownloadMetrics("csv")}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-500 hover:to-pink-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-orange-500/50 transition-all"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Metrics
+                    </button>
+                    
+                    {/* Dropdown options */}
+                    <div className="absolute bottom-full left-0 right-0 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                      <div className="bg-slate-800 rounded-lg shadow-xl border border-blue-500/30 overflow-hidden">
+                        <button
+                          onClick={() => {
+                            onDownloadMetrics("csv");
+                            onClose();
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
+                        >
+                          <FileText className="w-3 h-3" />
+                          CSV Format
+                        </button>
+                        <button
+                          onClick={() => {
+                            onDownloadMetrics("json");
+                            onClose();
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          JSON Format
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div className="flex justify-center">
+              <button
+                onClick={onClose}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-blue-500/50 transition-all"
+              >
+                Close Results
+              </button>
+            </div>
           </div>
         </div>
       </div>
