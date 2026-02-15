@@ -333,64 +333,64 @@ export default function SimulatePage() {
                             </button>
 
                             {showExportMenu && (
-                            <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
-                                <div className="py-2">
-                                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-                                        Export Simulation
+                                <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+                                    <div className="py-2">
+                                        <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                                            Export Simulation
+                                        </div>
+
+                                        <button
+                                            onClick={handleDownloadFullConfig}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                                        >
+                                            <FileText className="w-4 h-4 text-green-600" />
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    Full JSON Config
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    Complete simulation data
+                                                </div>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={handleDownloadDatFile}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                                        >
+                                            <FileDown className="w-4 h-4 text-blue-600" />
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    Optimized Shape (.dat)
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    Selig format coordinates
+                                                </div>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={handleDownloadCSTParams}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
+                                        >
+                                            <FileText className="w-4 h-4 text-purple-600" />
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    CST Parameters
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    Export coefficients (JSON)
+                                                </div>
+                                            </div>
+                                        </button>
                                     </div>
-
-                                    <button
-                                        onClick={handleDownloadFullConfig}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                                    >
-                                        <FileText className="w-4 h-4 text-green-600" />
-                                        <div>
-                                            <div className="text-sm font-medium text-gray-900">
-                                                Full JSON Config
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                Complete simulation data
-                                            </div>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        onClick={handleDownloadDatFile}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                                    >
-                                        <FileDown className="w-4 h-4 text-blue-600" />
-                                        <div>
-                                            <div className="text-sm font-medium text-gray-900">
-                                                Optimized Shape (.dat)
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                Selig format coordinates
-                                            </div>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        onClick={handleDownloadCSTParams}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                                    >
-                                        <FileText className="w-4 h-4 text-purple-600" />
-                                        <div>
-                                            <div className="text-sm font-medium text-gray-900">
-                                                CST Parameters
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                Export coefficients (JSON)
-                                            </div>
-                                        </div>
-                                    </button>
                                 </div>
-                            </div>
                             )}
                         </div>
                     )}
                 </div>
 
-                {/* Center: Branding */
+                {/* Center: Branding */}
                 <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2 px-4 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg">
                         <Wind className="w-4 h-4 text-white" />
