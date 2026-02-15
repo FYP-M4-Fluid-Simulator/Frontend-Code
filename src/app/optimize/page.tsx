@@ -1138,6 +1138,27 @@ export default function OptimizePage() {
                     <BarChart3 className="w-4 h-4" />
                     View Full Results
                   </button>
+
+                  {/* Export Optimized Airfoil */}
+                  <div className="pt-3 border-t border-orange-200 space-y-2">
+                    <h5 className="text-xs font-black text-orange-900 mb-2">
+                      💾 Export Optimized Design
+                    </h5>
+                    <button
+                      onClick={handleDownloadDatFile}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-blue-50 border-2 border-blue-300 hover:border-blue-400 text-blue-700 font-semibold rounded-lg transition-all text-xs"
+                    >
+                      <FileDown className="w-3.5 h-3.5" />
+                      Export as .DAT (Selig)
+                    </button>
+                    <button
+                      onClick={handleDownloadCSTParams}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-purple-50 border-2 border-purple-300 hover:border-purple-400 text-purple-700 font-semibold rounded-lg transition-all text-xs"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Export CST Parameters
+                    </button>
+                  </div>
                 </div>
               )}
 
