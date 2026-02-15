@@ -205,6 +205,7 @@ export default function SimulatePage() {
         setShowResults(false);
         setShowResultsModal(false); // Ensure modal is hidden at start
         setCoefficientHistory([]); // Reset coefficient history
+        setIsSidebarOpen(false); // Close sidebar when simulation starts
 
         // Create session config for WebSocket
         const config: SessionConfig = {
@@ -320,17 +321,18 @@ export default function SimulatePage() {
                         Reset
                     </button>
 
-                    {/* Export Dropdown */}
-                    <div className="relative export-menu-container">
-                        <button
-                            onClick={() => setShowExportMenu(!showExportMenu)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-green-50 border border-gray-300 hover:border-green-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-green-600"
-                        >
-                            <Download className="w-3.5 h-3.5" />
-                            Export
-                        </button>
+                    {/* Export Dropdown - Only show when not simulating */}
+                    {!isSimulating && !showResults && (
+                        <div className="relative export-menu-container">
+                            <button
+                                onClick={() => setShowExportMenu(!showExportMenu)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-green-50 border border-gray-300 hover:border-green-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-green-600"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                Export
+                            </button>
 
-                        {showExportMenu && (
+                            {showExportMenu && (
                             <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
                                 <div className="py-2">
                                     <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
@@ -383,11 +385,12 @@ export default function SimulatePage() {
                                     </button>
                                 </div>
                             </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* Center: Branding */}
+                {/* Center: Branding */
                 <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2 px-4 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg">
                         <Wind className="w-4 h-4 text-white" />
@@ -573,8 +576,8 @@ export default function SimulatePage() {
                     )}
                 </AnimatePresence>
 
-                {/* Sidebar Edge Tab - Always visible when sidebar is closed */}
-                {!isSidebarOpen && (
+                {/* Sidebar Edge Tab - Only show when sidebar is closed and not simulating */}
+                {!isSidebarOpen && !isSimulating && !showResults && (
                     <motion.div
                         initial={{ x: -50, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
@@ -592,41 +595,43 @@ export default function SimulatePage() {
                     </motion.div>
                 )}
 
-                {/* Visualization Controls */}
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
-                    <div className="flex items-center gap-3 px-4 py-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg border-2 border-gray-200">
-                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
-                            <input
-                                type="checkbox"
-                                checked={showVectorField}
-                                onChange={(e) => setShowVectorField(e.target.checked)}
-                                className="w-4 h-4 accent-purple-600"
-                            />
-                            Vector Field
-                        </label>
-
-                        <div className="w-px h-4 bg-gray-300" />
-
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs font-bold text-gray-700">
-                                Visualize:
+                {/* Visualization Controls - Only show after simulation starts */}
+                {(isSimulating || showResults) && (
+                    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
+                        <div className="flex items-center gap-3 px-4 py-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg border-2 border-gray-200">
+                            <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-purple-600 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={showVectorField}
+                                    onChange={(e) => setShowVectorField(e.target.checked)}
+                                    className="w-4 h-4 accent-purple-600"
+                                />
+                                Vector Field
                             </label>
-                            <select
-                                value={visualizationType}
-                                onChange={(e) =>
-                                    setVisualizationType(
-                                        e.target.value as "curl" | "pressure" | "tracer",
-                                    )
-                                }
-                                className="px-3 py-1 text-xs font-semibold border border-gray-300 rounded bg-white hover:border-orange-400 transition-colors"
-                            >
-                                <option value="curl">Curl</option>
-                                <option value="pressure">Pressure</option>
-                                <option value="tracer">Tracer (Density)</option>
-                            </select>
+
+                            <div className="w-px h-4 bg-gray-300" />
+
+                            <div className="flex items-center gap-2">
+                                <label className="text-xs font-bold text-gray-700">
+                                    Visualize Velocity:
+                                </label>
+                                <select
+                                    value={visualizationType}
+                                    onChange={(e) =>
+                                        setVisualizationType(
+                                            e.target.value as "curl" | "pressure" | "tracer",
+                                        )
+                                    }
+                                    className="px-3 py-1 text-xs font-semibold border border-gray-300 rounded bg-white hover:border-orange-400 transition-colors"
+                                >
+                                    <option value="curl">Curl</option>
+                                    <option value="pressure">Pressure</option>
+                                    <option value="tracer">Tracer (Density)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Main Content */}
                 <div className="flex-1 flex flex-col p-6 gap-4">
@@ -662,8 +667,8 @@ export default function SimulatePage() {
                             </div>
                         </div>
 
-                        {/* Right Panel */}
-                        <div className="w-80 flex flex-col gap-4">
+                        {/* Right Panel - Expand when simulation is running */}
+                        <div className={`${isSimulating || showResults ? 'w-96' : 'w-80'} flex flex-col gap-4 transition-all duration-300`}>
                             <div className="bg-white rounded-xl border-2 border-cyan-300 shadow-lg p-6 space-y-4">
                                 <div>
                                     <h3 className="text-base font-black text-gray-900 mb-1">
