@@ -1,43 +1,65 @@
 import { PYTHON_BACKEND_URL } from "@/config";
 
-export async function createSession() {
-  /**
-   * This function sends a POST request to the 
-   * Python FASTAPI backend to start a websocket
+export interface SessionConfig {
+    upperCoefficients: number[];
+    lowerCoefficients: number[];
+    velocity?: number;
+    angleOfAttack?: number;
+    meshDensity?: "coarse" | "medium" | "fine" | "ultra";
+    timeStepSize?: number;
+    simulationDuration?: number;
+}
 
-   * params:
-   *        - fidelity: "low" | "medium" | "high"
-   *        - sim_time: number (seconds)
-   *        - cst_upper: number[] (length 6)
-   *        - cst_lower: number[] (length 6)
-   *        - stream_every: number (stream every N steps)
-   *        - stream_fps: number (frames per second to stream)
-   * returns:
-   *        - session_id: string (UUID for the session)
-   *        - error handling: throws an error if the request fails or if the response is not ok
-   * 
-   * 
-   */
+export async function createSession(config: SessionConfig) {
+    /**
+     * This function sends a POST request to the 
+     * Python FASTAPI backend to start a websocket session
+  
+     * params:
+     *        - upperCoefficients: number[] (CST upper surface weights)
+     *        - lowerCoefficients: number[] (CST lower surface weights)
+     *        - velocity: number (inflow velocity in m/s)
+     *        - angleOfAttack: number (angle of attack in degrees)
+     *        - meshDensity: "coarse" | "medium" | "fine" | "ultra"
+     *        - timeStepSize: number (dt in seconds)
+     *        - simulationDuration: number (total sim time in seconds)
+     * returns:
+     *        - session_id: string (UUID for the session)
+     *        - config: object (session configuration)
+     */
 
-  const res = await fetch(`${PYTHON_BACKEND_URL}/sessions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fidelity: "medium",
-      sim_time: 10,
-      cst_upper: [0.18, 0.22, 0.2, 0.18, 0.15, 0.12], // Default RAE2822
-      cst_lower: [-0.1, -0.08, -0.06, -0.05, -0.04, -0.03], // Default RAE2822
-      stream_every: 1,
-      stream_fps: 30.0,
-    }),
-  });
+    // Map mesh density to fidelity
+    const fidelityMap: Record<string, string> = {
+        coarse: "low",
+        medium: "medium",
+        fine: "coarse",
+        ultra: "coarse",
+    };
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Session creation failed: ${res.status} ${errorText}`);
-  }
+    const fidelity = fidelityMap[config.meshDensity || "medium"];
 
-  const data = await res.json();
-  console.log("Session response:", data);
-  return data;
+    const res = await fetch(`${PYTHON_BACKEND_URL}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            fidelity,
+            sim_time: config.simulationDuration || 10,
+            dt: config.timeStepSize || 0.01,
+            inflow_velocity: config.velocity || 2.0,
+            angle_of_attack: config.angleOfAttack || 0,
+            cst_upper: config.upperCoefficients,
+            cst_lower: config.lowerCoefficients,
+            stream_every: 1,
+            stream_fps: 30.0,
+        }),
+    });
+
+    if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Session creation failed: ${res.status} ${errorText}`);
+    }
+
+    const data = await res.json();
+    console.log("Session response:", data);
+    return data;
 }
