@@ -275,6 +275,7 @@ export default function DesignPage() {
 
   const handleImportFromFile = () => {
     fileInputRef.current?.click();
+    
   };
 
   const handleFileSelect = async (

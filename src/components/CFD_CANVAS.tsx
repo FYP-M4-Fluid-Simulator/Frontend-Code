@@ -30,6 +30,12 @@ export default function CFDCanvas() {
 
       const { u, v, curl, solid } = frame.fields;
 
+      // Print the names of the fields received (runs once per frame)
+      //   console.log("📋 Fields received:", Object.keys(frame.fields));
+
+      // Uncomment to see field values:
+      // console.log("Field details:", frame.fields);
+
       // Additional validation
       if (!curl || !solid) {
         console.error("❌ Missing curl or solid fields:", {
@@ -38,10 +44,8 @@ export default function CFDCanvas() {
         });
         return;
       }
-      console.log("U: ", u);
-      console.log("V : ", v);
-
-
+      //   console.log("U: ", u);
+      //   console.log("V : ", v);
 
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, W * CELL, H * CELL);
