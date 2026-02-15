@@ -75,9 +75,13 @@ export default function DesignPage() {
   // Zoom level and chord length
   const [zoomLevel, setZoomLevel] = useState(100);
   const [chordLength, setChordLength] = useState(1.0);
+  const [leadingEdgeRadius, setLeadingEdgeRadius] = useState(0.015867);
+  const [numBernsteinCoefficients, setNumBernsteinCoefficients] = useState(8);
 
   // Modal and file handling states
   const [showNewDesignModal, setShowNewDesignModal] = useState(false);
+  const [showLeadingEdgeModal, setShowLeadingEdgeModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   // const [conversionProgress, setConversionProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -275,7 +279,6 @@ export default function DesignPage() {
 
   const handleImportFromFile = () => {
     fileInputRef.current?.click();
-    
   };
 
   const handleFileSelect = async (
@@ -287,16 +290,30 @@ export default function DesignPage() {
       return;
     }
 
+    // Show modal to get leading edge radius
+    setSelectedFile(file);
+    setShowNewDesignModal(false);
+    setShowLeadingEdgeModal(true);
+
+    // Reset file input
+    event.target.value = "";
+  };
+
+  const handleLeadingEdgeSubmit = async () => {
+    if (!selectedFile) return;
+
+    setShowLeadingEdgeModal(false);
     setIsConverting(true);
     setConversionProgress(0);
-    setShowNewDesignModal(false);
+
+    let progressInterval: NodeJS.Timeout | null = null;
 
     try {
       // Simulate progress updates
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setConversionProgress((prev) => {
           if (prev >= 90) {
-            clearInterval(progressInterval);
+            if (progressInterval) clearInterval(progressInterval);
             return prev;
           }
           return prev + Math.random() * 20;
@@ -304,22 +321,63 @@ export default function DesignPage() {
       }, 200);
 
       const formData = new FormData();
-      formData.append("file", file);
-      console.log(
-        "sending reqest to url :" + PYTHON_BACKEND_URL + "cst/get_cst_values",
-      );
-      const response = await fetch(PYTHON_BACKEND_URL + "cst/get_cst_values", {
+      formData.append("file", selectedFile);
+      formData.append("leadingEdgeRadius", leadingEdgeRadius.toString());
+      formData.append("numCoefficients", numBernsteinCoefficients.toString());
+
+      // Ensure proper URL format with slash
+      
+      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values`;
+
+      console.log("=== API Request Details ===");
+      console.log("URL:", apiUrl);
+      console.log("Leading Edge Radius:", leadingEdgeRadius);
+      console.log("Num Coefficients:", numBernsteinCoefficients);
+      console.log("File:", selectedFile.name);
+      console.log("==========================");
+
+      const response = await fetch(apiUrl, {
         method: "POST",
         body: formData,
       });
 
+      if (progressInterval) clearInterval(progressInterval);
+
+      console.log("Response status:", response.status);
+      console.log("Response statusText:", response.statusText);
+
       if (!response.ok) {
-        throw new Error("Conversion failed");
+        // Try to get error details from response
+        let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          console.error("Error response data:", errorData);
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+        } catch (e) {
+          // If response is not JSON, try to get text
+          try {
+            const errorText = await response.text();
+            console.error("Error response text:", errorText);
+            if (errorText) errorMessage = errorText;
+          } catch (e2) {
+            console.error("Could not parse error response");
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
 
-      console.log("RESPONSE RECEIVED FROM BACKEND: ", data);
+      console.log("=== API Response ===");
+      console.log("Full response:", data);
+      console.log("Upper coefficients:", data.upperCoefficients);
+      console.log("Lower coefficients:", data.lowerCoefficients);
+      console.log("===================");
+
+      // Validate response data
+      if (!data.upperCoefficients || !data.lowerCoefficients) {
+        throw new Error("Invalid response: Missing coefficient data");
+      }
 
       // Update coefficients with converted data
       setUpperCoefficients(data.upperCoefficients);
@@ -329,16 +387,30 @@ export default function DesignPage() {
       setTimeout(() => {
         setIsConverting(false);
         setConversionProgress(0);
+        setSelectedFile(null);
       }, 500);
     } catch (error) {
-      console.error("Error converting file:", error);
-      alert("Failed to convert .dat file. Please try again.");
+      if (progressInterval) clearInterval(progressInterval);
+
+      console.error("=== Conversion Error ===");
+      console.error("Error:", error);
+      console.error("Error type:", typeof error);
+      console.error(
+        "Error message:",
+        error instanceof Error ? error.message : String(error),
+      );
+      console.error("=======================");
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      alert(
+        `Failed to convert .dat file:\n\n${errorMessage}\n\nCheck console for details.`,
+      );
+
       setIsConverting(false);
       setConversionProgress(0);
+      setSelectedFile(null);
     }
-
-    // Reset file input
-    event.target.value = "";
   };
 
   const addCSTCoefficient = (surface: "upper" | "lower") => {
@@ -580,8 +652,8 @@ export default function DesignPage() {
                             </span>
                             <input
                               type="range"
-                              min={-0.5}
-                              max={0.5}
+                              min={-2.0}
+                              max={2.0}
                               step={0.01}
                               value={coeff}
                               onChange={(e) =>
@@ -644,8 +716,8 @@ export default function DesignPage() {
                             </span>
                             <input
                               type="range"
-                              min={-0.5}
-                              max={0.5}
+                              min={-2.0}
+                              max={2.0}
                               step={0.01}
                               value={coeff}
                               onChange={(e) =>
@@ -889,6 +961,95 @@ export default function DesignPage() {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Airfoil Parameters Modal */}
+      {showLeadingEdgeModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-r from-orange-600 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Settings className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Airfoil Parameters
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Configure CST conversion parameters
+                </p>
+              </div>
+
+              <div className="space-y-5 mb-6">
+                {/* Bernstein Coefficients */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Number of Bernstein Coefficients
+                  </label>
+                  <input
+                    type="number"
+                    min={4}
+                    max={14}
+                    value={numBernsteinCoefficients}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (!isNaN(value) && value >= 4 && value <= 14) {
+                        setNumBernsteinCoefficients(value);
+                      }
+                    }}
+                    className="w-full px-4 py-3 text-lg border-2 border-blue-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="8"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Range: 4-14 control points (default: 8)
+                  </p>
+                </div>
+
+                {/* Leading Edge Radius */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Leading Edge Radius (r<sub>LE</sub>)
+                  </label>
+                  <input
+                    type="text"
+                    value={leadingEdgeRadius.toFixed(6)}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value) && value >= 0) {
+                        setLeadingEdgeRadius(value);
+                      }
+                    }}
+                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="0.015867"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Typical values: 0.005 - 0.02 for most airfoils
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowLeadingEdgeModal(false);
+                    setSelectedFile(null);
+                    setLeadingEdgeRadius(0.015867);
+                    setNumBernsteinCoefficients(8);
+                  }}
+                  className="flex-1 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLeadingEdgeSubmit}
+                  className="flex-1 py-2.5 px-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-lg transition-all shadow-md"
+                >
+                  OK
+                </button>
+              </div>
             </div>
           </div>
         </div>
