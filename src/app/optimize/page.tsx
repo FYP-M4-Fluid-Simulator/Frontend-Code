@@ -1129,6 +1129,15 @@ export default function OptimizePage() {
                       </span>
                     </div>
                   </div>
+
+                  {/* View Full Results Button */}
+                  <button
+                    onClick={() => setShowResultsModal(true)}
+                    className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all shadow-md text-sm"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    View Full Results
+                  </button>
                 </div>
               )}
 
