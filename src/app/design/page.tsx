@@ -4,13 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import {
   Wind,
   Settings,
-  Download,
-  Save,
-  LogOut,
   Plus,
   Trash2,
   ArrowRight,
-  RotateCw,
   X,
   ZoomIn,
   ZoomOut,
@@ -20,23 +16,9 @@ import {
   User,
   ChevronRight,
   Database,
-  FileDown,
-  FileText,
-  BarChart3,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
-import {
-  createSimulationConfig,
-  downloadConfigFile,
-  downloadDatFile,
-  downloadCSTParameters,
-  downloadMetricsCSV,
-  downloadMetricsJSON,
-  saveExperimentToBackend,
-  type OptimizationMetrics,
-  type ExperimentData,
-} from "../../lib/exportData";
 import { generateAirfoil } from "../../lib/cst";
 import { useRouter } from "next/navigation";
 import { PYTHON_BACKEND_URL } from "@/config";
@@ -83,21 +65,8 @@ export default function DesignPage() {
   const [showLeadingEdgeModal, setShowLeadingEdgeModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isConverting, setIsConverting] = useState(false);
-  // const [conversionProgress, setConversionProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Export menu state
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Metrics state (can be populated from simulation results)
-  const [metrics, setMetrics] = useState<OptimizationMetrics | null>(null);
-
-  // Modal and file handling states
-  // const [showNewDesignModal, setShowNewDesignModal] = useState(false);
-  // const [isConverting, setIsConverting] = useState(false);
   const [conversionProgress, setConversionProgress] = useState(0);
-  // const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -117,19 +86,6 @@ export default function DesignPage() {
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
   }, []);
-
-  // Close export menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (showExportMenu && !target.closest(".export-menu-container")) {
-        setShowExportMenu(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showExportMenu]);
 
   const updateCSTCoefficient = async (
     surface: "upper" | "lower",
@@ -166,103 +122,6 @@ export default function DesignPage() {
     //   } catch (error) {
     //     console.log("API call failed:", error);
     //   }
-  };
-
-  const handleSaveDesign = () => {
-    const config = createSimulationConfig(
-      upperCoefficients,
-      lowerCoefficients,
-      velocity,
-      angleOfAttack,
-      meshDensity,
-    );
-
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/[:.]/g, "-")
-      .slice(0, -5);
-    downloadConfigFile(config, `airfoil-design-${timestamp}.json`);
-  };
-
-  const handleDownloadDatFile = () => {
-    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
-    const timestamp = new Date().toISOString().slice(0, 10);
-    downloadDatFile(airfoil.upper, airfoil.lower, `airfoil-${timestamp}`);
-    setShowExportMenu(false);
-  };
-
-  const handleDownloadCSTParams = () => {
-    const timestamp = new Date().toISOString().slice(0, 10);
-    downloadCSTParameters(
-      upperCoefficients,
-      lowerCoefficients,
-      `cst-params-${timestamp}.json`,
-    );
-    setShowExportMenu(false);
-  };
-
-  const handleDownloadMetrics = (format: "csv" | "json") => {
-    if (!metrics) {
-      alert("No metrics available. Please run a simulation first.");
-      return;
-    }
-
-    const timestamp = new Date().toISOString().slice(0, 10);
-    if (format === "csv") {
-      downloadMetricsCSV(metrics, `metrics-${timestamp}.csv`);
-    } else {
-      downloadMetricsJSON(metrics, `metrics-${timestamp}.json`);
-    }
-    setShowExportMenu(false);
-  };
-
-  const handleSaveToBackend = async () => {
-    setIsSaving(true);
-    try {
-      const airfoil = generateAirfoil(
-        upperCoefficients,
-        lowerCoefficients,
-        100,
-      );
-
-      const experimentData: ExperimentData = {
-        name: `Airfoil Experiment ${new Date().toLocaleString()}`,
-        description: "Airfoil design from TurboDiff Designer",
-        cstParameters: {
-          upperCoefficients,
-          lowerCoefficients,
-        },
-        flowConditions: {
-          velocity,
-          angleOfAttack,
-        },
-        meshQuality: meshDensity,
-        results: {
-          metrics: metrics || undefined,
-          airfoilCoordinates: {
-            upper: airfoil.upper,
-            lower: airfoil.lower,
-          },
-        },
-      };
-
-      const response = await saveExperimentToBackend(
-        experimentData,
-        PYTHON_BACKEND_URL || "",
-      );
-
-      if (response.ok) {
-        alert("Experiment saved successfully!");
-      } else {
-        throw new Error("Failed to save experiment");
-      }
-    } catch (error) {
-      console.error("Error saving experiment:", error);
-      alert("Failed to save experiment to backend. Please try again.");
-    } finally {
-      setIsSaving(false);
-      setShowExportMenu(false);
-    }
   };
 
   const handleResetDesign = () => {
@@ -326,7 +185,7 @@ export default function DesignPage() {
       formData.append("numCoefficients", numBernsteinCoefficients.toString());
 
       // Ensure proper URL format with slash
-      
+
       const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values`;
 
       console.log("=== API Request Details ===");
@@ -487,60 +346,8 @@ export default function DesignPage() {
           </button>
         </div>
 
-        {/* Right: Save and User */}
+        {/* Right: User */}
         <div className="flex items-center gap-3">
-          {/* Export/Download Dropdown */}
-          <div className="relative export-menu-container">
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs font-medium text-blue-700 transition-colors"
-              title="Export Options"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
-
-            {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
-                <div className="py-2">
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-                    Export Design
-                  </div>
-
-                  <button
-                    onClick={handleDownloadDatFile}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                  >
-                    <FileDown className="w-4 h-4 text-blue-600" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        Selig Format (.dat)
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Airfoil coordinates
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={handleDownloadCSTParams}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                  >
-                    <FileText className="w-4 h-4 text-purple-600" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        CST Parameters
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Export coefficients (JSON)
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
           <button
             onClick={() => router.push("/")}
             className="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
