@@ -67,9 +67,33 @@ export function InteractiveAirfoilCanvas({
   const [draggedPoint, setDraggedPoint] = useState<ControlPoint | null>(null);
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const animationFrameRef = useRef<number>();
+  const [canvasSize, setCanvasSize] = useState({ width, height });
 
   let maxThickness = 0;
   let maxThicknessX = 0;
+
+  // Update canvas size when container size changes (e.g., sidebar toggle)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width: containerWidth, height: containerHeight } =
+          entry.contentRect;
+        setCanvasSize({
+          width: containerWidth || width,
+          height: containerHeight || height,
+        });
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [width, height]);
 
   // Generate airfoil and control points
   useEffect(() => {
@@ -99,10 +123,10 @@ export function InteractiveAirfoilCanvas({
       return;
     }
 
-    const baseScale = Math.min(width, height) * 0.7;
+    const baseScale = Math.min(canvasSize.width, canvasSize.height) * 0.7;
     const scale = baseScale * (zoomLevel / 100) * chordLength;
-    const offsetX = width / 2;
-    const offsetY = height / 2;
+    const offsetX = canvasSize.width / 2;
+    const offsetY = canvasSize.height / 2;
 
     const transformPoint = (p: { x: number; y: number } | undefined) => {
       if (!p) return { x: 0, y: 0 };
@@ -151,8 +175,8 @@ export function InteractiveAirfoilCanvas({
     upperCoefficients,
     lowerCoefficients,
     angleOfAttack,
-    width,
-    height,
+    canvasSize.width,
+    canvasSize.height,
     zoomLevel,
     chordLength,
   ]);
@@ -168,15 +192,15 @@ export function InteractiveAirfoilCanvas({
     // Guard: Check if coefficients are valid
     if (!upperCoefficients?.length || !lowerCoefficients?.length) {
       ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
       return;
     }
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    canvas.width = canvasSize.width * dpr;
+    canvas.height = canvasSize.height * dpr;
+    canvas.style.width = `${canvasSize.width}px`;
+    canvas.style.height = `${canvasSize.height}px`;
     ctx.scale(dpr, dpr);
 
     const { upper, lower } = generateAirfoil(
@@ -188,7 +212,7 @@ export function InteractiveAirfoilCanvas({
     // Guard: Check if airfoil generation succeeded
     if (!upper?.length || !lower?.length) {
       ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
       return;
     }
 
@@ -197,16 +221,16 @@ export function InteractiveAirfoilCanvas({
     // Guard: Check if rotation succeeded
     if (!rotated?.upper?.length || !rotated?.lower?.length) {
       ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
       return;
     }
 
     const airfoilPoints = [...rotated.upper, ...rotated.lower.reverse()];
 
-    const baseScale = Math.min(width, height) * 0.7;
+    const baseScale = Math.min(canvasSize.width, canvasSize.height) * 0.7;
     const scale = baseScale * (zoomLevel / 100) * chordLength;
-    const offsetX = width / 2;
-    const offsetY = height / 2;
+    const offsetX = canvasSize.width / 2;
+    const offsetY = canvasSize.height / 2;
 
     const gridSpacing = {
       coarse: 40,
@@ -224,7 +248,7 @@ export function InteractiveAirfoilCanvas({
       if (designMode) {
         // Dark background for design mode
         ctx.fillStyle = "#111827";
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
         // Draw subtle grid lines for technical drawing feel
         ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
@@ -232,16 +256,16 @@ export function InteractiveAirfoilCanvas({
 
         // Major grid lines every 4 units
         const majorGridSpacing = 80;
-        for (let x = 0; x <= width; x += majorGridSpacing) {
+        for (let x = 0; x <= canvasSize.width; x += majorGridSpacing) {
           ctx.beginPath();
           ctx.moveTo(x, 0);
-          ctx.lineTo(x, height);
+          ctx.lineTo(x, canvasSize.height);
           ctx.stroke();
         }
-        for (let y = 0; y <= height; y += majorGridSpacing) {
+        for (let y = 0; y <= canvasSize.height; y += majorGridSpacing) {
           ctx.beginPath();
           ctx.moveTo(0, y);
-          ctx.lineTo(width, y);
+          ctx.lineTo(canvasSize.width, y);
           ctx.stroke();
         }
 
@@ -249,16 +273,16 @@ export function InteractiveAirfoilCanvas({
         const minorGridSpacing = 20;
         ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
         ctx.lineWidth = 0.3;
-        for (let x = 0; x <= width; x += minorGridSpacing) {
+        for (let x = 0; x <= canvasSize.width; x += minorGridSpacing) {
           ctx.beginPath();
           ctx.moveTo(x, 0);
-          ctx.lineTo(x, height);
+          ctx.lineTo(x, canvasSize.height);
           ctx.stroke();
         }
-        for (let y = 0; y <= height; y += minorGridSpacing) {
+        for (let y = 0; y <= canvasSize.height; y += minorGridSpacing) {
           ctx.beginPath();
           ctx.moveTo(0, y);
-          ctx.lineTo(width, y);
+          ctx.lineTo(canvasSize.width, y);
           ctx.stroke();
         }
 
@@ -267,33 +291,38 @@ export function InteractiveAirfoilCanvas({
         ctx.lineWidth = 1;
         // Horizontal axis through center
         ctx.beginPath();
-        ctx.moveTo(0, height / 2);
-        ctx.lineTo(width, height / 2);
+        ctx.moveTo(0, canvasSize.height / 2);
+        ctx.lineTo(canvasSize.width, canvasSize.height / 2);
         ctx.stroke();
         // Vertical axis through center
         ctx.beginPath();
-        ctx.moveTo(width / 2, 0);
-        ctx.lineTo(width / 2, height);
+        ctx.moveTo(canvasSize.width / 2, 0);
+        ctx.lineTo(canvasSize.width / 2, canvasSize.height);
         ctx.stroke();
       }
 
       // this means we are on finalize design page
       else {
         // Clear with dark blue background for simulation mode (matching the reference image)
-        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        const gradient = ctx.createLinearGradient(
+          0,
+          0,
+          canvasSize.width,
+          canvasSize.height,
+        );
         gradient.addColorStop(0, "#0B1628");
         gradient.addColorStop(0.5, "#1a2942");
         gradient.addColorStop(1, "#0B1628");
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
       }
 
       // Draw pressure field heatmap (ANSYS-style smooth contours) - only in simulation mode
       if (showPressureField && !designMode) {
         const cellSize = gridSpacing / 2;
 
-        for (let x = 0; x < width; x += cellSize) {
-          for (let y = 0; y < height; y += cellSize) {
+        for (let x = 0; x < canvasSize.width; x += cellSize) {
+          for (let y = 0; y < canvasSize.height; y += cellSize) {
             const ax = (x - offsetX) / scale + 0.5;
             const ay = (offsetY - y) / scale;
 
@@ -342,17 +371,17 @@ export function InteractiveAirfoilCanvas({
         ctx.globalAlpha = 0.3;
 
         const softGradient = ctx.createRadialGradient(
-          width / 2,
-          height / 2,
+          canvasSize.width / 2,
+          canvasSize.height / 2,
           0,
-          width / 2,
-          height / 2,
-          Math.max(width, height) / 2,
+          canvasSize.width / 2,
+          canvasSize.height / 2,
+          Math.max(canvasSize.width, canvasSize.height) / 2,
         );
         softGradient.addColorStop(0, "rgba(255, 248, 240, 0.5)");
         softGradient.addColorStop(1, "rgba(255, 232, 213, 0.3)");
         ctx.fillStyle = softGradient;
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
         ctx.filter = "none";
         ctx.globalCompositeOperation = "source-over";
@@ -364,17 +393,17 @@ export function InteractiveAirfoilCanvas({
         ctx.strokeStyle = "rgba(59, 130, 246, 0.25)"; // Blue grid lines to match theme
         ctx.lineWidth = 0.8;
 
-        for (let x = 0; x < width; x += gridSpacing) {
+        for (let x = 0; x < canvasSize.width; x += gridSpacing) {
           ctx.beginPath();
           ctx.moveTo(x, 0);
-          ctx.lineTo(x, height);
+          ctx.lineTo(x, canvasSize.height);
           ctx.stroke();
         }
 
-        for (let y = 0; y < height; y += gridSpacing) {
+        for (let y = 0; y < canvasSize.height; y += gridSpacing) {
           ctx.beginPath();
           ctx.moveTo(0, y);
-          ctx.lineTo(width, y);
+          ctx.lineTo(canvasSize.width, y);
           ctx.stroke();
         }
       }
@@ -391,12 +420,12 @@ export function InteractiveAirfoilCanvas({
 
         for (
           let x = arrowSpacing;
-          x < width - arrowSpacing;
+          x < canvasSize.width - arrowSpacing;
           x += arrowSpacing
         ) {
           for (
             let y = arrowSpacing;
-            y < height - arrowSpacing;
+            y < canvasSize.height - arrowSpacing;
             y += arrowSpacing
           ) {
             const ax = (x - offsetX) / scale + 0.5;
@@ -551,7 +580,7 @@ export function InteractiveAirfoilCanvas({
         ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
         ctx.font = "12px sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText("Chord: 1.0 m", 20, height - 40);
+        ctx.fillText("Chord: 1.0 m", 20, canvasSize.height - 40);
         // ctx.fillText(
         //   `Angle of Attack: ${angleOfAttack.toFixed(1)}°`,
         //   20,
@@ -614,20 +643,24 @@ export function InteractiveAirfoilCanvas({
         ctx.textAlign = "left";
 
         // Chord length
-        ctx.fillText(`Chord: ${chordLength.toFixed(2)} m`, 20, height - 60);
+        ctx.fillText(
+          `Chord: ${chordLength.toFixed(2)} m`,
+          20,
+          canvasSize.height - 60,
+        );
 
         // Maximum thickness
         ctx.fillText(
           `Max Thickness: ${(maxThickness * 100).toFixed(1)}%`,
           20,
-          height - 40,
+          canvasSize.height - 40,
         );
 
         // Thickness location
         ctx.fillText(
           `Thickness at: ${(maxThicknessX * 100).toFixed(1)}% chord`,
           20,
-          height - 20,
+          canvasSize.height - 20,
         );
 
         // Leading edge (orange/yellow control point)
@@ -646,7 +679,13 @@ export function InteractiveAirfoilCanvas({
         ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
         ctx.beginPath();
         if (controlPoints.length) {
-          ctx.arc(controlPoints[controlPoints.length - 1].x, controlPoints[controlPoints.length - 1].y, 7, 0, Math.PI * 2);
+          ctx.arc(
+            controlPoints[controlPoints.length - 1].x,
+            controlPoints[controlPoints.length - 1].y,
+            7,
+            0,
+            Math.PI * 2,
+          );
           ctx.fill();
         }
 
@@ -664,8 +703,8 @@ export function InteractiveAirfoilCanvas({
       }
     };
   }, [
-    width,
-    height,
+    canvasSize.width,
+    canvasSize.height,
     upperCoefficients,
     lowerCoefficients,
     angleOfAttack,
@@ -710,9 +749,9 @@ export function InteractiveAirfoilCanvas({
     const y = e.clientY - rect.top;
 
     // Calculate new coefficient based on vertical position
-    const baseScale = Math.min(width, height) * 0.5;
+    const baseScale = Math.min(canvasSize.width, canvasSize.height) * 0.5;
     const scale = baseScale * (zoomLevel / 100) * chordLength;
-    const offsetY = height / 2;
+    const offsetY = canvasSize.height / 2;
     const newCoefficient = (offsetY - y) / scale;
 
     // Clamp to reasonable range
@@ -790,6 +829,8 @@ export function InteractiveAirfoilCanvas({
           isFullScreen && !document.fullscreenElement
             ? "#0B1628"
             : "transparent",
+        minWidth: 0,
+        minHeight: 0,
       }}
     >
       {/* Canvas layer */}
@@ -798,8 +839,8 @@ export function InteractiveAirfoilCanvas({
       {/* SVG overlay for control points */}
       <svg
         ref={overlayRef}
-        width={width}
-        height={height}
+        width={canvasSize.width}
+        height={canvasSize.height}
         className="absolute inset-0"
         style={{ cursor: showControlPoints ? "crosshair" : "default" }}
         onMouseDown={handleMouseDown}
@@ -933,7 +974,7 @@ export function InteractiveAirfoilCanvas({
                   x1={pt.x}
                   y1={pt.y}
                   x2={pt.x}
-                  y2={height / 2}
+                  y2={canvasSize.height / 2}
                   stroke={designMode ? "#fbbf24" : "#3b82f6"}
                   strokeWidth="2"
                   strokeDasharray="4 4"
