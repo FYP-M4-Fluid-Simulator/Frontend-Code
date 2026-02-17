@@ -592,8 +592,8 @@ export function InteractiveAirfoilCanvas({
         ctx.shadowBlur = 0;
 
         // Define leading and trailing edge points for reference
-        const leadingEdge = transformPoint({ x: 0, y: 0 });
-        const trailingEdge = transformPoint({ x: 1, y: 0 });
+        // const leadingEdge = transformPoint({ x: 0, y: 0 });
+        // const trailingEdge = transformPoint({ x: 1, y: 0 });
 
         // Calculate thickness for display
         if (rotated.upper.length === rotated.lower.length) {
@@ -645,8 +645,10 @@ export function InteractiveAirfoilCanvas({
         ctx.fillStyle = "#f59e0b"; // Amber/Orange
         ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
         ctx.beginPath();
-        ctx.arc(trailingEdge.x, trailingEdge.y, 7, 0, Math.PI * 2);
-        ctx.fill();
+        if (controlPoints.length) {
+          ctx.arc(controlPoints[controlPoints.length - 1].x, controlPoints[controlPoints.length - 1].y, 7, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
         ctx.shadowBlur = 0;
       }

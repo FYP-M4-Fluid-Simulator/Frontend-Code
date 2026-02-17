@@ -298,8 +298,8 @@ export default function DesignPage() {
     removeCSTCoefficient("lower", index);
   };
 
-  const handleFinalizeDesign = () => {
-    // Store state in sessionStorage for other pages
+  const handleNavigateToSimulate = () => {
+    // Store state in sessionStorage for simulation page
     sessionStorage.setItem(
       "cfdState",
       JSON.stringify({
@@ -308,9 +308,26 @@ export default function DesignPage() {
         angleOfAttack,
         velocity,
         meshDensity,
+        chordLength,
       }),
     );
-    router.push("/finalize");
+    router.push("/simulate");
+  };
+
+  const handleNavigateToOptimize = () => {
+    // Store state in sessionStorage for optimization page
+    sessionStorage.setItem(
+      "cfdState",
+      JSON.stringify({
+        upperCoefficients,
+        lowerCoefficients,
+        angleOfAttack,
+        velocity,
+        meshDensity,
+        chordLength,
+      }),
+    );
+    router.push("/optimize");
   };
 
   // Auto-open sidebar when control point is dragged
@@ -376,11 +393,10 @@ export default function DesignPage() {
                 <div className="flex border-b border-gray-200">
                   <button
                     onClick={() => setActiveTab("cst")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                      activeTab === "cst"
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeTab === "cst"
                         ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <Wind className="w-4 h-4" />
@@ -666,14 +682,23 @@ export default function DesignPage() {
               </label>
             </div>
           </div>
-          {/* Finalize Button */}
-          <button
-            onClick={handleFinalizeDesign}
-            className="flex justify-center items-center bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-cyan-400"
-          >
-            <ArrowRight className="w-5 h-5 mr-2" />
-            Finalize Design
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleNavigateToSimulate}
+              className="flex-1 flex justify-center items-center bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-cyan-400"
+            >
+              <Settings className="w-5 h-5 mr-2" />
+              Start Simulation
+            </button>
+            <button
+              onClick={handleNavigateToOptimize}
+              className="flex-1 flex justify-center items-center bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-pink-400"
+            >
+              <ArrowRight className="w-5 h-5 mr-2" />
+              Start Optimization
+            </button>
+          </div>
         </div>
       </div>
 
