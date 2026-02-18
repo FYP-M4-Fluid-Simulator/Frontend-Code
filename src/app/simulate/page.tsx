@@ -65,6 +65,7 @@ export default function SimulatePage() {
   const {
     coefficients,
     isConnected,
+    isCompleted,
     error: cfdError,
     closeConnection,
   } = useCFD(sessionConfig);
@@ -79,7 +80,7 @@ export default function SimulatePage() {
   ]);
 
   const [angleOfAttack, setAngleOfAttack] = useState(0);
-  const [velocity, setVelocity] = useState(1);
+  const [velocity, setVelocity] = useState(15);
   const [chordLength, setChordLength] = useState(1.0);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
@@ -97,6 +98,9 @@ export default function SimulatePage() {
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  // Ref for progress interval
+  const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load state from sessionStorage on mount
   useEffect(() => {
@@ -229,20 +233,24 @@ export default function SimulatePage() {
 
     setSessionConfig(config);
 
-    // Simulate progress animation (visual feedback)
+    // Simulate progress animation (asymptotic)
     const progressInterval = setInterval(
       () => {
         setSimulationProgress((prev) => {
           if (prev >= 95) return prev;
-          return prev + 1;
+          // Slower increment as it gets higher
+          const increment = Math.max(0.1, (95 - prev) / 100);
+          return prev + increment;
         });
       },
-      (simulationDuration * 1000) / 95,
+      100,
     );
+    simulationIntervalRef.current = progressInterval;
+  };
 
-    // Wait for simulation duration
-    setTimeout(() => {
-      clearInterval(progressInterval);
+  // Handle simulation completion from WebSocket
+  useEffect(() => {
+    if (isCompleted && isSimulating) {
       setSimulationProgress(100);
       setIsSimulating(false);
 
@@ -256,15 +264,10 @@ export default function SimulatePage() {
       }
 
       setShowResults(true);
-      setActiveSidebarTab("results"); // Switch to results tab
-      setIsSidebarOpen(true); // Ensure sidebar is open to show results
+      setActiveSidebarTab("results");
+      setIsSidebarOpen(true);
 
-      // Close WebSocket connection to stop backend simulation
-      if (closeConnection) {
-        closeConnection();
-      }
-
-      // Show modal only after simulation completes
+      // Show modal after a short delay
       setTimeout(() => {
         setShowResultsModal(true);
       }, 500);
@@ -282,8 +285,14 @@ export default function SimulatePage() {
           }),
         );
       }
-    }, simulationDuration * 1000);
-  };
+
+      // Clear interval
+      if (simulationIntervalRef.current) {
+        clearInterval(simulationIntervalRef.current);
+        simulationIntervalRef.current = null;
+      }
+    }
+  }, [isCompleted, isSimulating, coefficients, simulationDuration]);
 
   const handlePauseSimulation = () => {
     setIsSimulating(false);
@@ -295,6 +304,10 @@ export default function SimulatePage() {
     setShowResults(false);
     setShowResultsModal(false);
     setSessionConfig(undefined); // Clear WebSocket connection
+    if (simulationIntervalRef.current) {
+      clearInterval(simulationIntervalRef.current);
+      simulationIntervalRef.current = null;
+    }
   };
 
   const handleNavigateToOptimize = () => {
@@ -572,7 +585,7 @@ export default function SimulatePage() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-xs font-bold text-gray-700">
                             <span>Progress</span>
-                            <span>{simulationProgress}%</span>
+                            <span>{simulationProgress.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                             <div

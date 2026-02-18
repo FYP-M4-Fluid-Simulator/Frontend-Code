@@ -45,7 +45,7 @@ export default function DesignPage() {
 
   // Flow parameters
   const [angleOfAttack, setAngleOfAttack] = useState(0);
-  const [velocity, setVelocity] = useState(1);
+  const [velocity, setVelocity] = useState(15);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
   >("medium");
@@ -128,7 +128,7 @@ export default function DesignPage() {
     setUpperCoefficients([0.18, 0.22, 0.20, 0.18, 0.15, 0.12]);
     setLowerCoefficients([-0.10, -0.08, -0.06, -0.05, -0.04, -0.03]);
     setAngleOfAttack(0);
-    setVelocity(1);
+    setVelocity(15);
   };
 
   const handleStartWithDefault = () => {
