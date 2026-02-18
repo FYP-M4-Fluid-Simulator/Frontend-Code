@@ -252,7 +252,7 @@ export function downloadCSTParameters(
 export interface OptimizationMetrics {
   liftCoefficient: number;
   dragCoefficient: number;
-  momentCoefficient: number;
+  momentCoefficient?: number;
   liftToDragRatio: number;
   angleOfAttack: number;
   velocity: number;
@@ -268,7 +268,8 @@ export function downloadMetricsCSV(
   let csvContent = "Angle of Attack (deg),Velocity (m/s),Lift Coefficient (C_L),Drag Coefficient (C_D),Moment Coefficient (C_M),Lift-to-Drag Ratio (L/D),Reynolds Number\n";
 
   metricsArray.forEach((m) => {
-    csvContent += `${m.angleOfAttack},${m.velocity},${m.liftCoefficient.toFixed(6)},${m.dragCoefficient.toFixed(6)},${m.momentCoefficient.toFixed(6)},${m.liftToDragRatio.toFixed(3)},${m.reynoldsNumber || "N/A"}\n`;
+    const cmVal = m.momentCoefficient !== undefined ? m.momentCoefficient.toFixed(6) : "N/A";
+    csvContent += `${m.angleOfAttack},${m.velocity},${m.liftCoefficient.toFixed(6)},${m.dragCoefficient.toFixed(6)},${cmVal},${m.liftToDragRatio.toFixed(3)},${m.reynoldsNumber || "N/A"}\n`;
   });
 
   const blob = new Blob([csvContent], { type: "text/csv" });

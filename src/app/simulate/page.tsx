@@ -48,7 +48,6 @@ export default function SimulatePage() {
   const [simulationMetrics, setSimulationMetrics] = useState({
     cl: 0,
     cd: 0,
-    cm: 0,
     liftToDragRatio: 0,
   });
 
@@ -58,7 +57,7 @@ export default function SimulatePage() {
       iteration: number;
       cl: number;
       cd: number;
-      cm: number;
+      ldRatio: number;
     }>
   >([]);
 
@@ -72,15 +71,15 @@ export default function SimulatePage() {
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.15, 0.2, 0.18, 0.12, 0.08,
+    0.18, 0.22, 0.20, 0.18, 0.15, 0.12,
   ]);
 
   const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.1, -0.12, -0.09, -0.06, -0.04,
+    -0.10, -0.08, -0.06, -0.05, -0.04, -0.03,
   ]);
 
   const [angleOfAttack, setAngleOfAttack] = useState(0);
-  const [velocity, setVelocity] = useState(15);
+  const [velocity, setVelocity] = useState(1);
   const [chordLength, setChordLength] = useState(1.0);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
@@ -203,7 +202,7 @@ export default function SimulatePage() {
           iteration: prev.length + 1,
           cl: coefficients.cl,
           cd: coefficients.cd,
-          cm: 0, // Not provided yet
+          ldRatio: coefficients.l_d,
         },
       ]);
     }
@@ -252,7 +251,6 @@ export default function SimulatePage() {
         setSimulationMetrics({
           cl: coefficients.cl,
           cd: coefficients.cd,
-          cm: 0, // Not provided by backend yet
           liftToDragRatio: coefficients.l_d,
         });
       }

@@ -21,18 +21,15 @@ interface ResultsModalProps {
   metrics: {
     cl: number;
     cd: number;
-    cm: number;
     liftToDragRatio?: number;
-    error?: number;
     loss?: number;
   };
   convergenceData?: Array<{
     iteration: number;
     cl: number;
     cd: number;
-    cm: number;
-    error?: number;
     loss?: number;
+    ldRatio?: number;
   }>;
   onSaveExperiment?: () => void;
   onDownloadMetrics?: (format: "csv" | "json") => void;
@@ -54,15 +51,30 @@ export default function ResultsModal({
     convergenceData.length > 0
       ? convergenceData
       : Array.from({ length: 20 }, (_, i) => ({
-          iteration: i + 1,
-          cl: metrics.cl * (0.7 + Math.random() * 0.3),
-          cd: metrics.cd * (0.8 + Math.random() * 0.4),
-          cm: metrics.cm * (0.6 + Math.random() * 0.8),
-          ...(type === "optimization" && {
-            error: (metrics.error || 0.1) * Math.exp(-i / 10),
-            loss: (metrics.loss || 0.5) * Math.exp(-i / 8),
-          }),
-        }));
+        iteration: i + 1,
+        cl: metrics.cl * (0.7 + Math.random() * 0.3),
+        cd: metrics.cd * (0.8 + Math.random() * 0.4),
+        ldRatio: (metrics.cl * (0.7 + Math.random() * 0.3)) / (metrics.cd * (0.8 + Math.random() * 0.4)),
+        ...(type === "optimization" && {
+          loss: (metrics.loss || 0.5) * Math.exp(-i / 8),
+        }),
+      }));
+
+  const formatValue = (val: number | undefined | null) => {
+    if (val === undefined || val === null) return "0.0000";
+    if (val === 0) return "0.0000";
+
+    // Use scientific notation for small values
+    if (Math.abs(val) < 0.001 && Math.abs(val) > 0) {
+      const parts = val.toExponential(2).split("e");
+      return (
+        <span>
+          {parts[0]} &times; 10<sup>{parts[1].replace("+", "")}</sup>
+        </span>
+      );
+    }
+    return val.toFixed(4);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -96,7 +108,7 @@ export default function ResultsModal({
                 Lift Coefficient (C<sub>L</sub>)
               </div>
               <div className="text-green-100 text-2xl font-bold">
-                {metrics.cl.toFixed(4)}
+                {formatValue(metrics.cl)}
               </div>
             </div>
 
@@ -105,16 +117,7 @@ export default function ResultsModal({
                 Drag Coefficient (C<sub>D</sub>)
               </div>
               <div className="text-orange-100 text-2xl font-bold">
-                {metrics.cd.toFixed(4)}
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-400/30 rounded-xl p-4">
-              <div className="text-purple-300 text-xs font-semibold mb-2">
-                Moment Coefficient (C<sub>M</sub>)
-              </div>
-              <div className="text-purple-100 text-2xl font-bold">
-                {metrics.cm.toFixed(4)}
+                {formatValue(metrics.cd)}
               </div>
             </div>
 
@@ -123,32 +126,19 @@ export default function ResultsModal({
                 {type === "optimization" ? "L/D Ratio" : "Lift-to-Drag"}
               </div>
               <div className="text-blue-100 text-2xl font-bold">
-                {(metrics.liftToDragRatio || metrics.cl / metrics.cd).toFixed(
-                  2,
-                )}
+                {(metrics.liftToDragRatio || metrics.cl / metrics.cd).toFixed(2)}
               </div>
             </div>
 
             {type === "optimization" && (
-              <>
-                <div className="bg-gradient-to-br from-red-500/20 to-rose-500/20 border border-red-400/30 rounded-xl p-4">
-                  <div className="text-red-300 text-xs font-semibold mb-2">
-                    Error
-                  </div>
-                  <div className="text-red-100 text-2xl font-bold">
-                    {(metrics.error || 0).toFixed(6)}
-                  </div>
+              <div className="bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/30 rounded-xl p-4">
+                <div className="text-yellow-300 text-xs font-semibold mb-2">
+                  Loss
                 </div>
-
-                <div className="bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/30 rounded-xl p-4">
-                  <div className="text-yellow-300 text-xs font-semibold mb-2">
-                    Loss
-                  </div>
-                  <div className="text-yellow-100 text-2xl font-bold">
-                    {(metrics.loss || 0).toFixed(6)}
-                  </div>
+                <div className="text-yellow-100 text-2xl font-bold">
+                  {formatValue(metrics.loss)}
                 </div>
-              </>
+              </div>
             )}
           </div>
 
@@ -204,51 +194,14 @@ export default function ResultsModal({
                   name="C_D"
                   dot={false}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="cm"
-                  stroke="#a855f7"
-                  strokeWidth={2}
-                  name="C_M"
-                  dot={false}
-                />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Optimization-specific charts */}
-          {type === "optimization" && (
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Error Convergence */}
-              <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-blue-200 mb-4">
-                  Error Convergence
-                </h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="iteration" stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#1e293b",
-                        border: "1px solid #3b82f6",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="error"
-                      stroke="#ef4444"
-                      strokeWidth={2}
-                      name="Error"
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Loss Convergence */}
+          {/* Convergence Charts */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Loss Convergence (Optimization Only) */}
+            {type === "optimization" && (
               <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
                 <h3 className="text-xl font-bold text-blue-200 mb-4">
                   Loss Convergence
@@ -276,8 +229,37 @@ export default function ResultsModal({
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+            )}
+
+            {/* L/D Ratio Evolution (Both) */}
+            <div className={`bg-slate-800/50 border border-blue-500/30 rounded-xl p-6 ${type !== "optimization" ? "md:col-span-2" : ""}`}>
+              <h3 className="text-xl font-bold text-blue-200 mb-4">
+                L/D Ratio Evolution
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="iteration" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1e293b",
+                      border: "1px solid #3b82f6",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="ldRatio"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    name="L/D Ratio"
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-          )}
+          </div>
 
           {/* Coefficient Comparison Bar Chart */}
           <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
@@ -289,7 +271,6 @@ export default function ResultsModal({
                 data={[
                   { name: "C_L", value: metrics.cl, fill: "#10b981" },
                   { name: "C_D", value: metrics.cd, fill: "#f97316" },
-                  { name: "C_M", value: Math.abs(metrics.cm), fill: "#a855f7" },
                 ]}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />

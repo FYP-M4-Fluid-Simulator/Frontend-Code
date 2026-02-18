@@ -36,16 +36,16 @@ export default function DesignPage() {
 
   // CST Coefficients
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.15, 0.2, 0.18, 0.12, 0.08,
+    0.18, 0.22, 0.20, 0.18, 0.15, 0.12,
   ]);
 
   const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.1, -0.12, -0.09, -0.06, -0.04,
+    -0.10, -0.08, -0.06, -0.05, -0.04, -0.03,
   ]);
 
   // Flow parameters
   const [angleOfAttack, setAngleOfAttack] = useState(0);
-  const [velocity, setVelocity] = useState(15);
+  const [velocity, setVelocity] = useState(1);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
   >("medium");
@@ -125,10 +125,10 @@ export default function DesignPage() {
   };
 
   const handleResetDesign = () => {
-    setUpperCoefficients([0.15, 0.2, 0.18, 0.12, 0.08]);
-    setLowerCoefficients([-0.1, -0.12, -0.09, -0.06, -0.04]);
-    setAngleOfAttack(5);
-    setVelocity(15);
+    setUpperCoefficients([0.18, 0.22, 0.20, 0.18, 0.15, 0.12]);
+    setLowerCoefficients([-0.10, -0.08, -0.06, -0.05, -0.04, -0.03]);
+    setAngleOfAttack(0);
+    setVelocity(1);
   };
 
   const handleStartWithDefault = () => {
@@ -394,8 +394,8 @@ export default function DesignPage() {
                   <button
                     onClick={() => setActiveTab("cst")}
                     className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeTab === "cst"
-                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                   >
                     <div className="flex items-center justify-center gap-2">

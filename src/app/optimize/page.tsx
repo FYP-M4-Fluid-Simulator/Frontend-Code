@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Wind,
   Settings,
@@ -40,6 +40,8 @@ import {
   type OptimizationMetrics,
 } from "../../lib/exportData";
 import { generateAirfoil } from "../../lib/cst";
+import { useOptimization } from "../../lib/socket/OptimizationWebSocket";
+import type { OptSessionConfig } from "../../lib/http/createOptSession";
 
 export default function OptimizePage() {
   const router = useRouter();
@@ -55,26 +57,24 @@ export default function OptimizePage() {
   const [optimizationMetrics, setOptimizationMetrics] = useState({
     cl: 1.2345,
     cd: 0.0156,
-    cm: -0.0234,
     liftToDragRatio: 79.2,
-    error: 0.000123,
     loss: 0.000456,
   });
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.15, 0.2, 0.18, 0.12, 0.08,
+    0.18, 0.22, 0.20, 0.18, 0.15, 0.12,
   ]);
 
   const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.1, -0.12, -0.09, -0.06, -0.04,
+    -0.10, -0.08, -0.06, -0.05, -0.04, -0.03,
   ]);
 
   const [angleOfAttack, setAngleOfAttack] = useState(0);
-  const [velocity, setVelocity] = useState(15);
+  const [velocity, setVelocity] = useState(1);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
-  >("medium");
+  >("coarse");
   const [showControlPoints, setShowControlPoints] = useState(false);
 
   // L/D ratio tracking for live chart
@@ -85,15 +85,16 @@ export default function OptimizePage() {
   // Optimization parameters
   const [timeStepSize, setTimeStepSize] = useState(0.001);
   const [simulationDuration, setSimulationDuration] = useState(5);
-  const [numIterations, setNumIterations] = useState(50);
-  const [minThickness, setMinThickness] = useState(0.05);
+  const [numIterations, setNumIterations] = useState(30);
+  const [minThickness, setMinThickness] = useState(0.06);
   const [maxThickness, setMaxThickness] = useState(0.25);
-  const [learningRate, setLearningRate] = useState(0.01);
+  const [learningRate, setLearningRate] = useState(0.005);
 
   // Optimization results
   const [bestLiftCoeff, setBestLiftCoeff] = useState(0);
   const [bestDragCoeff, setBestDragCoeff] = useState(0);
   const [bestLDRatio, setBestLDRatio] = useState(0);
+  const [optimizationLoss, setOptimizationLoss] = useState(0);
 
   // Export menu state
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -104,6 +105,21 @@ export default function OptimizePage() {
 
   // Optimization interval ref for cleanup
   const optimizationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Optimization session config — setting this triggers the hook
+  const [optSessionConfig, setOptSessionConfig] = useState<OptSessionConfig | undefined>(undefined);
+
+  // Real optimization hook
+  const {
+    isConnected: optConnected,
+    isComplete: optComplete,
+    error: optError,
+    currentMeta,
+    currentShape,
+    completedFrame,
+    history: optHistory,
+    closeConnection: closeOptConnection,
+  } = useOptimization(optSessionConfig);
 
   // Load state from sessionStorage on mount
   useEffect(() => {
@@ -133,24 +149,88 @@ export default function OptimizePage() {
     return () => window.removeEventListener("resize", updateSize);
   }, [isSidebarOpen]); // Add dependency on sidebar state to trigger resize
 
-  // Close export menu when clicking outside
+  // Update shape + metrics on every iteration
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (showExportMenu && !target.closest(".export-menu-container")) {
-        setShowExportMenu(false);
-      }
-    };
+    if (!currentMeta || !currentShape) return;
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showExportMenu]);
+    // Update live CST coefficients so the canvas re-renders the new shape
+    setUpperCoefficients(currentShape.cst_upper);
+    setLowerCoefficients(currentShape.cst_lower);
+
+    // Update live metrics display
+    setOptimizationIteration(currentMeta.iteration);
+    setMaxIterations(currentMeta.total_iterations);
+
+    // Append to L/D chart
+    setLdRatioHistory((prev) => [
+      ...prev,
+      { iteration: currentMeta.iteration, ldRatio: currentMeta.cl_cd },
+    ]);
+
+    // Keep running best values updated
+    setBestLiftCoeff(currentMeta.cl);
+    setBestDragCoeff(currentMeta.cd);
+    setBestLDRatio(currentMeta.cl_cd);
+    setOptimizationLoss(currentMeta.loss);
+  }, [currentMeta, currentShape]);
+
+  // Handle optimization completion
+  useEffect(() => {
+    if (!optComplete || !completedFrame) return;
+
+    const { meta, shape } = completedFrame;
+
+    // Final shape
+    setUpperCoefficients(shape.cst_upper);
+    setLowerCoefficients(shape.cst_lower);
+
+    // Final metrics
+    const finalMetrics = {
+      cl: meta.final_cl,
+      cd: meta.final_cd,
+      liftToDragRatio: meta.final_cl_cd,
+      loss: meta.final_loss,
+    };
+    setOptimizationMetrics(finalMetrics);
+    setBestLiftCoeff(meta.final_cl);
+    setBestDragCoeff(meta.final_cd);
+    setBestLDRatio(meta.final_cl_cd);
+
+    setIsOptimizing(false);
+    setShowResults(true);
+    setActiveSidebarTab("results");
+    setIsSidebarOpen(true);
+
+    // Store for turbine page
+    sessionStorage.setItem(
+      "optimizationResults",
+      JSON.stringify({
+        bestLiftToDragRatio: meta.final_cl_cd,
+        bestLiftCoefficient: meta.final_cl,
+        bestDragCoefficient: meta.final_cd,
+        generations: meta.total_iterations,
+        numIterations: meta.total_iterations,
+        convergenceRate: 100,
+        improvementPercent: 0,
+      }),
+    );
+
+    setTimeout(() => setShowResultsModal(true), 500);
+  }, [optComplete, completedFrame]);
+
+  // Surface errors
+  useEffect(() => {
+    if (optError) {
+      console.error("Optimization error:", optError);
+      setIsOptimizing(false);
+    }
+  }, [optError]);
+
 
   const handleDownloadMetrics = (format: "csv" | "json") => {
     const metrics: OptimizationMetrics = {
       liftCoefficient: bestLiftCoeff,
       dragCoefficient: bestDragCoeff,
-      momentCoefficient: 0, // Add if available
       liftToDragRatio: bestLDRatio,
       angleOfAttack: angleOfAttack,
       velocity: velocity,
@@ -206,7 +286,6 @@ export default function OptimizePage() {
         metrics: {
           liftCoefficient: optimizationMetrics.cl,
           dragCoefficient: optimizationMetrics.cd,
-          momentCoefficient: optimizationMetrics.cm,
           liftToDragRatio:
             optimizationMetrics.liftToDragRatio ||
             optimizationMetrics.cl / optimizationMetrics.cd,
@@ -237,7 +316,6 @@ export default function OptimizePage() {
     const metrics: OptimizationMetrics = {
       liftCoefficient: optimizationMetrics.cl,
       dragCoefficient: optimizationMetrics.cd,
-      momentCoefficient: optimizationMetrics.cm,
       liftToDragRatio:
         optimizationMetrics.liftToDragRatio ||
         optimizationMetrics.cl / optimizationMetrics.cd,
@@ -270,8 +348,8 @@ export default function OptimizePage() {
     }
   };
 
-  const handleStartOptimization = async () => {
-    // Clear any existing interval
+  const handleStartOptimization = () => {
+    // Clear any stale interval
     if (optimizationIntervalRef.current) {
       clearInterval(optimizationIntervalRef.current);
       optimizationIntervalRef.current = null;
@@ -280,224 +358,34 @@ export default function OptimizePage() {
     setIsOptimizing(true);
     setOptimizationIteration(0);
     setShowResults(false);
-    setLdRatioHistory([]); // Reset L/D history
-    setIsSidebarOpen(false); // Close sidebar when optimization starts
+    setShowResultsModal(false);
+    setLdRatioHistory([]);
+    setIsSidebarOpen(false);
 
-    // Dummy API call to start optimization
-    try {
-      const response = await fetch("/api/optimize/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          upperCoefficients,
-          lowerCoefficients,
-          velocity,
-          angleOfAttack,
-          timeStepSize,
-          simulationDuration,
-          numIterations,
-          minThickness,
-          maxThickness,
-          learningRate,
-        }),
-      });
+    // Reset metrics
+    setOptimizationMetrics({
+      cl: 0,
+      cd: 0,
+      liftToDragRatio: 0,
+      loss: 0,
+    });
+    setBestLiftCoeff(0);
+    setBestDragCoeff(0);
+    setBestLDRatio(0);
+    setOptimizationLoss(0);
 
-      // Simulate optimization progress with morphing airfoil
-      const interval = setInterval(async () => {
-        setOptimizationIteration((prev) => {
-          if (prev >= numIterations) {
-            clearInterval(interval);
-            optimizationIntervalRef.current = null;
-            setIsOptimizing(false);
-
-            const metrics = {
-              cl: 1.2345,
-              cd: 0.0156,
-              cm: -0.0234,
-              liftToDragRatio: 79.2,
-              error: 0.000123,
-              loss: 0.000456,
-            };
-            setOptimizationMetrics(metrics);
-            setShowResults(true);
-            setActiveSidebarTab("results"); // Switch to results tab
-            setIsSidebarOpen(true); // Ensure sidebar is open to show results
-            setShowResultsModal(true);
-
-            // Set final results
-            setBestLiftCoeff(1.245);
-            setBestDragCoeff(0.0187);
-            setBestLDRatio(66.6);
-
-            // Store optimization results for turbine page
-            sessionStorage.setItem(
-              "optimizationResults",
-              JSON.stringify({
-                bestLiftToDragRatio: 66.6,
-                bestLiftCoefficient: 1.245,
-                bestDragCoefficient: 0.0187,
-                generations: numIterations,
-                numIterations: numIterations,
-                convergenceRate: 95.8,
-                improvementPercent: 66.5,
-              }),
-            );
-
-            return prev;
-          }
-
-          // Call API to get optimized airfoil shape for current iteration
-          fetch("/api/optimize/iteration", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              iteration: prev + 1,
-              currentUpperCoefficients: upperCoefficients,
-              currentLowerCoefficients: lowerCoefficients,
-              learningRate,
-              minThickness,
-              maxThickness,
-            }),
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.upperCoefficients && data.lowerCoefficients) {
-                setUpperCoefficients(data.upperCoefficients);
-                setLowerCoefficients(data.lowerCoefficients);
-              }
-
-              // Update L/D ratio from API or calculate
-              const ldRatio =
-                data.ldRatio ||
-                30 + (prev / numIterations) * 36.6 + Math.random() * 2;
-              setLdRatioHistory((history) => [
-                ...history,
-                { iteration: prev + 1, ldRatio },
-              ]);
-            })
-            .catch((error) => {
-              console.log("API call failed, using simulated morphing:", error);
-              // Fallback: Simulate airfoil morphing during optimization
-              setUpperCoefficients((coeffs) =>
-                coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
-              );
-              setLowerCoefficients((coeffs) =>
-                coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
-              );
-
-              // Update L/D ratio history
-              const currentLDRatio =
-                30 + (prev / numIterations) * 36.6 + Math.random() * 2;
-              setLdRatioHistory((history) => [
-                ...history,
-                { iteration: prev + 1, ldRatio: currentLDRatio },
-              ]);
-            });
-
-          return prev + 1;
-        });
-      }, 200); // Update every 200ms
-
-      // Store interval ref for cleanup
-      optimizationIntervalRef.current = interval;
-    } catch (error) {
-      console.log("Optimization would run here with API");
-
-      // Run simulation even if initial API fails
-      const interval = setInterval(async () => {
-        setOptimizationIteration((prev) => {
-          if (prev >= numIterations) {
-            clearInterval(interval);
-            optimizationIntervalRef.current = null;
-            setIsOptimizing(false);
-
-            const metrics = {
-              cl: 1.2345,
-              cd: 0.0156,
-              cm: -0.0234,
-              liftToDragRatio: 79.2,
-              error: 0.000123,
-              loss: 0.000456,
-            };
-            setOptimizationMetrics(metrics);
-            setShowResults(true);
-            setActiveSidebarTab("results"); // Switch to results tab
-            setIsSidebarOpen(true); // Ensure sidebar is open to show results
-            setShowResultsModal(true);
-
-            setBestLiftCoeff(1.245);
-            setBestDragCoeff(0.0187);
-            setBestLDRatio(66.6);
-
-            // Store optimization results for turbine page
-            sessionStorage.setItem(
-              "optimizationResults",
-              JSON.stringify({
-                bestLiftToDragRatio: 66.6,
-                bestLiftCoefficient: 1.245,
-                bestDragCoefficient: 0.0187,
-                generations: numIterations,
-                numIterations: numIterations,
-                convergenceRate: 95.8,
-                improvementPercent: 66.5,
-              }),
-            );
-
-            return prev;
-          }
-
-          // Call API for iteration-based optimization
-          fetch("/api/optimize/iteration", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              iteration: prev + 1,
-              currentUpperCoefficients: upperCoefficients,
-              currentLowerCoefficients: lowerCoefficients,
-              learningRate,
-              minThickness,
-              maxThickness,
-            }),
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.upperCoefficients && data.lowerCoefficients) {
-                setUpperCoefficients(data.upperCoefficients);
-                setLowerCoefficients(data.lowerCoefficients);
-              }
-
-              const ldRatio =
-                data.ldRatio ||
-                30 + (prev / numIterations) * 36.6 + Math.random() * 2;
-              setLdRatioHistory((history) => [
-                ...history,
-                { iteration: prev + 1, ldRatio },
-              ]);
-            })
-            .catch(() => {
-              // Fallback simulation
-              setUpperCoefficients((coeffs) =>
-                coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
-              );
-              setLowerCoefficients((coeffs) =>
-                coeffs.map((c) => c + (Math.random() - 0.5) * 0.008),
-              );
-
-              const currentLDRatio =
-                30 + (prev / numIterations) * 36.6 + Math.random() * 2;
-              setLdRatioHistory((history) => [
-                ...history,
-                { iteration: prev + 1, ldRatio: currentLDRatio },
-              ]);
-            });
-
-          return prev + 1;
-        });
-      }, 200);
-
-      // Store interval ref for cleanup
-      optimizationIntervalRef.current = interval;
-    }
+    // Trigger the hook by setting a new config object
+    setOptSessionConfig({
+      upperCoefficients,
+      lowerCoefficients,
+      numIterations,
+      learningRate,
+      numSimSteps: 80,
+      minThickness,
+      maxThickness,
+      inflow_velocity: velocity,
+      meshDensity,
+    });
   };
 
   const handleStopOptimization = () => {
@@ -507,12 +395,15 @@ export default function OptimizePage() {
       optimizationIntervalRef.current = null;
     }
 
+    closeOptConnection();
+
     setIsOptimizing(false);
     setOptimizationIteration(0);
     setShowResults(false);
     setLdRatioHistory([]);
+    setOptSessionConfig(undefined);
 
-    // Optionally reload initial coefficients from session storage
+    // Reload initial coefficients from session storage
     const savedState = sessionStorage.getItem("cfdState");
     if (savedState) {
       const state = JSON.parse(savedState);
@@ -533,6 +424,22 @@ export default function OptimizePage() {
       setUpperCoefficients(state.upperCoefficients);
       setLowerCoefficients(state.lowerCoefficients);
     }
+  };
+
+  const formatValue = (val: number | undefined | null) => {
+    if (val === undefined || val === null) return "0.0000";
+    if (val === 0) return "0.0000";
+
+    // Use scientific notation for small values
+    if (Math.abs(val) < 0.001 && Math.abs(val) > 0) {
+      const parts = val.toExponential(2).split("e");
+      return (
+        <span>
+          {parts[0]} &times; 10<sup>{parts[1].replace("+", "")}</sup>
+        </span>
+      );
+    }
+    return val.toFixed(4);
   };
 
   return (
@@ -930,7 +837,7 @@ export default function OptimizePage() {
                           Best C<sub>L</sub>:
                         </span>
                         <span className="font-black">
-                          {optimizationMetrics.cl.toFixed(4)}
+                          {formatValue(optimizationMetrics.cl)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -938,7 +845,7 @@ export default function OptimizePage() {
                           Best C<sub>D</sub>:
                         </span>
                         <span className="font-black">
-                          {optimizationMetrics.cd.toFixed(4)}
+                          {formatValue(optimizationMetrics.cd)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -946,6 +853,12 @@ export default function OptimizePage() {
                         <span className="font-black text-green-700">
                           {optimizationMetrics.liftToDragRatio?.toFixed(2) ||
                             (optimizationMetrics.cl / optimizationMetrics.cd).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Final Loss:</span>
+                        <span className="font-black">
+                          {formatValue(optimizationMetrics.loss)}
                         </span>
                       </div>
                     </div>
@@ -1079,21 +992,48 @@ export default function OptimizePage() {
 
               {/* Optimization Progress Overlay */}
               {isOptimizing && (
-                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md rounded-xl p-4 shadow-2xl border-2 border-orange-300">
-                  <div className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-orange-600 animate-spin" />
-                    Optimizing...
+                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md rounded-xl p-5 shadow-2xl border-2 border-orange-300 w-64">
+                  <div className="text-sm font-bold text-gray-700 mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-orange-600 animate-spin" />
+                      Optimizing...
+                    </div>
+                    <span className="text-xs font-black px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                      Step {optimizationIteration}
+                    </span>
                   </div>
-                  <div className="text-2xl font-black text-orange-600">
-                    Gen: {optimizationIteration} / {numIterations}
+
+                  <div className="text-2xl font-black text-orange-600 mb-1">
+                    Iter: {optimizationIteration} / {numIterations}
                   </div>
-                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+
+                  <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden mb-4">
                     <div
                       className="bg-gradient-to-r from-orange-500 to-pink-600 h-full transition-all duration-300"
                       style={{
                         width: `${(optimizationIteration / numIterations) * 100}%`,
                       }}
                     />
+                  </div>
+
+                  {/* Real-time Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+                    <div className="bg-orange-50 p-2 rounded-lg border border-orange-100">
+                      <p className="text-[10px] font-black text-orange-800 uppercase tracking-tighter">Loss</p>
+                      <p className="text-sm font-bold text-gray-900">{formatValue(optimizationLoss)}</p>
+                    </div>
+                    <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                      <p className="text-[10px] font-black text-blue-800 uppercase tracking-tighter">L/D Ratio</p>
+                      <p className="text-sm font-bold text-gray-900 text-green-600">{bestLDRatio.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">C<sub>L</sub></p>
+                      <p className="text-sm font-bold text-gray-900">{formatValue(bestLiftCoeff)}</p>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">C<sub>D</sub></p>
+                      <p className="text-sm font-bold text-gray-900">{formatValue(bestDragCoeff)}</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1110,6 +1050,13 @@ export default function OptimizePage() {
         onClose={() => setShowResultsModal(false)}
         type="optimization"
         metrics={optimizationMetrics}
+        convergenceData={optHistory.map(h => ({
+          iteration: h.iteration,
+          cl: h.cl,
+          cd: h.cd,
+          loss: h.loss,
+          ldRatio: h.cl_cd,
+        }))}
         onSaveExperiment={handleSaveExperiment}
         onDownloadMetrics={handleModalDownloadMetrics}
       />
