@@ -549,13 +549,13 @@ export function InteractiveAirfoilCanvas({
         const trailingEdge = transformPoint({ x: 1, y: 0 });
 
         // Leading edge marker (yellow)
-        ctx.fillStyle = "#fbbf24"; // Yellow
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = "rgba(251, 191, 36, 0.7)";
-        ctx.beginPath();
-        ctx.arc(leadingEdge.x, leadingEdge.y, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        // ctx.fillStyle = "#fbbf24"; // Yellow
+        // ctx.shadowBlur = 12;
+        // ctx.shadowColor = "rgba(251, 191, 36, 0.7)";
+        // ctx.beginPath();
+        // ctx.arc(leadingEdge.x, leadingEdge.y, 6, 0, Math.PI * 2);
+        // ctx.fill();
+        // ctx.shadowBlur = 0;
 
         // Add "LE" label
         ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
@@ -564,13 +564,13 @@ export function InteractiveAirfoilCanvas({
         ctx.fillText("LE", leadingEdge.x, leadingEdge.y - 15);
 
         // Trailing edge marker (yellow)
-        ctx.fillStyle = "#fbbf24"; // Yellow
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = "rgba(251, 191, 36, 0.7)";
-        ctx.beginPath();
-        ctx.arc(trailingEdge.x, trailingEdge.y, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        // ctx.fillStyle = "#fbbf24"; // Yellow
+        // ctx.shadowBlur = 12;
+        // ctx.shadowColor = "rgba(251, 191, 36, 0.7)";
+        // ctx.beginPath();
+        // ctx.arc(trailingEdge.x, trailingEdge.y, 6, 0, Math.PI * 2);
+        // ctx.fill();
+        // ctx.shadowBlur = 0;
 
         // Add "TE" label
         ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
@@ -664,30 +664,30 @@ export function InteractiveAirfoilCanvas({
         );
 
         // Leading edge (orange/yellow control point)
-        ctx.fillStyle = "#f59e0b"; // Amber/Orange
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
-        ctx.beginPath();
+        // ctx.fillStyle = "#f59e0b"; // Amber/Orange
+        // ctx.shadowBlur = 12;
+        // ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
+        // ctx.beginPath();
 
-        if (controlPoints.length) {
-          ctx.arc(controlPoints[0].x, controlPoints[0].y, 7, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        // if (controlPoints.length) {
+        //   ctx.arc(controlPoints[0].x, controlPoints[0].y, 7, 0, Math.PI * 2);
+        //   ctx.fill();
+        // }
 
         // Trailing edge (orange/yellow control point)
-        ctx.fillStyle = "#f59e0b"; // Amber/Orange
-        ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
-        ctx.beginPath();
-        if (controlPoints.length) {
-          ctx.arc(
-            controlPoints[controlPoints.length - 1].x,
-            controlPoints[controlPoints.length - 1].y,
-            7,
-            0,
-            Math.PI * 2,
-          );
-          ctx.fill();
-        }
+        // ctx.fillStyle = "#f59e0b"; // Amber/Orange
+        // ctx.shadowColor = "rgba(245, 158, 11, 0.7)";
+        // ctx.beginPath();
+        // if (controlPoints.length) {
+        //   ctx.arc(
+        //     controlPoints[controlPoints.length - 1].x,
+        //     controlPoints[controlPoints.length - 1].y,
+        //     7,
+        //     0,
+        //     Math.PI * 2,
+        //   );
+        //   ctx.fill();
+        // }
 
         ctx.shadowBlur = 0;
       }
