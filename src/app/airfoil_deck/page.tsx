@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Airfoil {
   id: string;
@@ -19,6 +19,9 @@ export default function AirfoilDeck() {
   const [airfoils, setAirfoils] = useState<Airfoil[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   useEffect(() => {
     fetchAirfoils();
@@ -58,6 +61,27 @@ export default function AirfoilDeck() {
     // Store selected airfoil in sessionStorage and navigate to design page
     sessionStorage.setItem("selectedAirfoil", JSON.stringify(airfoil));
     router.push("/design");
+  };
+
+  // Filter airfoils based on search query
+  const filteredAirfoils = airfoils.filter((airfoil) =>
+    airfoil.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredAirfoils.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentAirfoils = filteredAirfoils.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   if (loading) {
@@ -104,8 +128,35 @@ export default function AirfoilDeck() {
           <div className="w-40"></div> {/* Spacer for centering */}
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-8">
+          <div className="relative max-w-md mx-auto">
+            <input
+              type="text"
+              placeholder="Search airfoils by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border-2 border-blue-500/30 focus:border-cyan-400/60 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
+            />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-400" />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <div className="text-center mt-3 text-blue-300 text-sm">
+              Found {filteredAirfoils.length} airfoil{filteredAirfoils.length !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+
         <div className="space-y-5">
-          {airfoils.length === 0 ? (
+          {currentAirfoils.length === 0 ? (
             <div className="text-center py-20">
               <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-2 border-blue-400/30 flex items-center justify-center">
                 <svg
@@ -123,20 +174,24 @@ export default function AirfoilDeck() {
                 </svg>
               </div>
               <div className="text-gray-300 text-xl font-semibold mb-2">
-                No airfoils found
+                {searchQuery ? "No airfoils match your search" : "No airfoils found"}
               </div>
               <div className="text-gray-500 text-sm mb-6">
-                Create your first airfoil design to get started!
+                {searchQuery
+                  ? "Try a different search term"
+                  : "Create your first airfoil design to get started!"}
               </div>
-              <button
-                onClick={() => router.push("/design")}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-blue-500/50 transition-all"
-              >
-                Start Designing
-              </button>
+              {!searchQuery && (
+                <button
+                  onClick={() => router.push("/design")}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-blue-500/50 transition-all"
+                >
+                  Start Designing
+                </button>
+              )}
             </div>
           ) : (
-            airfoils.map((airfoil) => (
+            currentAirfoils.map((airfoil) => (
               <div
                 key={airfoil.id}
                 onClick={() => handleAirfoilClick(airfoil)}
@@ -227,6 +282,60 @@ export default function AirfoilDeck() {
             ))
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && currentAirfoils.length > 0 && (
+          <div className="mt-10 flex items-center justify-center gap-2">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                currentPage === 1
+                  ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
+                  : "bg-slate-800/50 text-white hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/30"
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+
+            <div className="flex items-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => goToPage(page)}
+                  className={`w-10 h-10 rounded-lg font-semibold transition-all ${
+                    currentPage === page
+                      ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30"
+                      : "bg-slate-800/50 text-gray-300 hover:bg-slate-700 hover:text-white"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                currentPage === totalPages
+                  ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
+                  : "bg-slate-800/50 text-white hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/30"
+              }`}
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Results Info */}
+        {filteredAirfoils.length > 0 && (
+          <div className="mt-6 text-center text-gray-400 text-sm">
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredAirfoils.length)} of {filteredAirfoils.length} airfoils
+          </div>
+        )}
       </div>
     </div>
   );

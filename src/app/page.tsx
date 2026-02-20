@@ -14,7 +14,7 @@ export default function HomePage() {
 
   const handleNavigate = (page: Page | 'app') => {
     if (page === 'app') {
-      router.push('/design');
+      router.push('/airfoil_deck');
     } else {
       setCurrentPage(page);
     }
