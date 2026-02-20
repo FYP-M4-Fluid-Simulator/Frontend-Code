@@ -147,6 +147,42 @@ export default function DesignPage() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
+  // Load airfoil data from sessionStorage if available
+  useEffect(() => {
+    // Check for CST coefficients from imported file
+    const storedCoefficients = sessionStorage.getItem("cstCoefficients");
+    if (storedCoefficients) {
+      try {
+        const { upper, lower } = JSON.parse(storedCoefficients);
+        if (upper && lower) {
+          setUpperCoefficients(upper);
+          setLowerCoefficients(lower);
+        }
+        // Clear the stored data after loading
+        sessionStorage.removeItem("cstCoefficients");
+      } catch (error) {
+        console.error("Error loading CST coefficients:", error);
+      }
+    }
+
+    // Check for selected airfoil from saved designs
+    const selectedAirfoil = sessionStorage.getItem("selectedAirfoil");
+    if (selectedAirfoil) {
+      try {
+        const airfoil = JSON.parse(selectedAirfoil);
+        // If the airfoil has CST coefficients, load them
+        if (airfoil.upperCoefficients && airfoil.lowerCoefficients) {
+          setUpperCoefficients(airfoil.upperCoefficients);
+          setLowerCoefficients(airfoil.lowerCoefficients);
+        }
+        // Clear the stored data after loading
+        sessionStorage.removeItem("selectedAirfoil");
+      } catch (error) {
+        console.error("Error loading selected airfoil:", error);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const updateSize = () => {
       if (canvasRef.current) {
@@ -199,7 +235,7 @@ export default function DesignPage() {
         newUpperCoeffs,
         newLowerCoeffs,
         0, // trailingEdgeThickness
-        100 // numPoints
+        100, // numPoints
       );
 
       console.log(`[CST Update] Complete airfoil recalculated:`, {
