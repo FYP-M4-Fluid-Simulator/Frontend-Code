@@ -19,9 +19,80 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
-import { generateAirfoil } from "../../lib/cst";
+import { generateAirfoil, generateCSTAirfoil } from "../../lib/cst";
 import { useRouter } from "next/navigation";
 import { PYTHON_BACKEND_URL } from "@/config";
+
+// Reusable number input component with improved UX
+function EditableNumberInput({
+  value,
+  onChange,
+  step = 0.01,
+  decimals = 3,
+  min,
+  max,
+  className = "",
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  step?: number;
+  decimals?: number;
+  min?: number;
+  max?: number;
+  className?: string;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsEditing(true);
+    setEditValue(value.toFixed(decimals));
+    // Select all text for easy replacement
+    e.target.select();
+  };
+
+  const handleBlur = () => {
+    applyValue();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      applyValue();
+      inputRef.current?.blur();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+      setEditValue("");
+      inputRef.current?.blur();
+    }
+  };
+
+  const applyValue = () => {
+    const parsed = parseFloat(editValue);
+    if (!isNaN(parsed)) {
+      let finalValue = parsed;
+      if (min !== undefined && finalValue < min) finalValue = min;
+      if (max !== undefined && finalValue > max) finalValue = max;
+      onChange(finalValue);
+    }
+    setIsEditing(false);
+    setEditValue("");
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="number"
+      step={step}
+      value={isEditing ? editValue : value.toFixed(decimals)}
+      onChange={(e) => setEditValue(e.target.value)}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className={`${className} ${isEditing ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
+    />
+  );
+}
 
 if (!PYTHON_BACKEND_URL) {
   throw new Error("Python backend URL is not defined.");
@@ -34,13 +105,17 @@ export default function DesignPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"cst" | "simulation">("cst");
 
-  // CST Coefficients
+  // CST Coefficients - using symmetric airfoil values that match Python example
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.18, 0.22, 0.20, 0.18, 0.15, 0.12,
+    0.17104533, 0.15300564, 0.1501825, 0.135824, 0.14169314,
   ]);
 
   const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.10, -0.08, -0.06, -0.05, -0.04, -0.03,
+    -0.17104533,
+    -0.15300564,
+    -0.1501825,
+    -0.135824,
+    -0.14169314, // Negative for lower surface
   ]);
 
   // Flow parameters
@@ -82,52 +157,76 @@ export default function DesignPage() {
       }
     };
 
-    updateSize();
+    // Small delay to allow sidebar animation to complete (300ms transition)
+    const timer = setTimeout(updateSize, 350);
     window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateSize);
+    };
+  }, [isSidebarOpen]);
 
   const updateCSTCoefficient = async (
     surface: "upper" | "lower",
     index: number,
     value: number,
   ) => {
+    // Update local coefficients array
+    const newUpperCoeffs =
+      surface === "upper"
+        ? [...upperCoefficients].map((coeff, i) =>
+            i === index ? value : coeff,
+          )
+        : [...upperCoefficients];
+
+    const newLowerCoeffs =
+      surface === "lower"
+        ? [...lowerCoefficients].map((coeff, i) =>
+            i === index ? value : coeff,
+          )
+        : [...lowerCoefficients];
+
+    // Update state
     if (surface === "upper") {
-      const newCoeffs = [...upperCoefficients];
-      newCoeffs[index] = value;
-      setUpperCoefficients(newCoeffs);
+      setUpperCoefficients(newUpperCoeffs);
     } else {
-      const newCoeffs = [...lowerCoefficients];
-      newCoeffs[index] = value;
-      setLowerCoefficients(newCoeffs);
+      setLowerCoefficients(newLowerCoeffs);
     }
 
-    // Call API (dummy for now)
+    // Calculate airfoil locally using the CST function
     try {
-      await fetch("/api/cst/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ surface, index, value }),
+      const result = generateCSTAirfoil(
+        newUpperCoeffs,
+        newLowerCoeffs,
+        0, // trailingEdgeThickness
+        100 // numPoints
+      );
+
+      console.log(`[CST Update] Complete airfoil recalculated:`, {
+        totalPoints: result.coordinates.length,
+        upperPoints: result.upperCoordinates.length,
+        lowerPoints: result.lowerCoordinates.length,
+        changedSurface: surface,
+        changedIndex: index,
+        newValue: value,
       });
     } catch (error) {
-      console.log("API call would happen here:", { surface, index, value });
+      console.error("CST update error:", error);
     }
-    // try {
-
-    //     await fetch(PYTHON_BACKEND_URL + "/cst/get_cst_values" || "bhai_backend_url_tou_daalo??", {
-    //       method: "GET",
-    //       headers: { "Content-Type": "application/json" },
-    //       body: JSON.stringify({ surface, index, value }),
-    //     });
-    //   } catch (error) {
-    //     console.log("API call failed:", error);
-    //   }
   };
 
   const handleResetDesign = () => {
-    setUpperCoefficients([0.18, 0.22, 0.20, 0.18, 0.15, 0.12]);
-    setLowerCoefficients([-0.10, -0.08, -0.06, -0.05, -0.04, -0.03]);
-    setAngleOfAttack(0);
+    // Use symmetric airfoil values matching the Python example
+    const defaultUpperWeights = [
+      0.17104533, 0.15300564, 0.1501825, 0.135824, 0.14169314,
+    ];
+    const defaultLowerWeights = [
+      -0.17104533, -0.15300564, -0.1501825, -0.135824, -0.14169314,
+    ]; // Negative for lower surface
+
+    setUpperCoefficients(defaultUpperWeights);
+    setLowerCoefficients(defaultLowerWeights);
+    setAngleOfAttack(5);
     setVelocity(15);
   };
 
@@ -276,13 +375,14 @@ export default function DesignPage() {
     if (surface === "upper") {
       setUpperCoefficients([...upperCoefficients, 0.05]);
     } else {
-      setLowerCoefficients([...lowerCoefficients, -0.05]);
+      setLowerCoefficients([...lowerCoefficients, -0.05]); // Negative for lower surface
     }
   };
 
   const addCSTCoefficient2 = () => {
-    addCSTCoefficient("upper");
-    addCSTCoefficient("lower");
+    // Add coefficients to both surfaces maintaining the pattern
+    setUpperCoefficients([...upperCoefficients, 0.05]);
+    setLowerCoefficients([...lowerCoefficients, -0.05]); // Negative for lower surface
   };
 
   const removeCSTCoefficient = (surface: "upper" | "lower", index: number) => {
@@ -294,8 +394,11 @@ export default function DesignPage() {
   };
 
   const removeCSTCoefficient2 = (index: number) => {
-    removeCSTCoefficient("upper", index);
-    removeCSTCoefficient("lower", index);
+    // Remove coefficient from both surfaces to maintain matching lengths
+    if (upperCoefficients.length > 2 && lowerCoefficients.length > 2) {
+      setUpperCoefficients(upperCoefficients.filter((_, i) => i !== index));
+      setLowerCoefficients(lowerCoefficients.filter((_, i) => i !== index));
+    }
   };
 
   const handleNavigateToSimulate = () => {
@@ -393,10 +496,11 @@ export default function DesignPage() {
                 <div className="flex border-b border-gray-200">
                   <button
                     onClick={() => setActiveTab("cst")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeTab === "cst"
-                      ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                      activeTab === "cst"
+                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <Wind className="w-4 h-4" />
@@ -437,13 +541,13 @@ export default function DesignPage() {
                           }
                           className="flex-1 h-2 accent-purple-600"
                         />
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={chordLength.toFixed(1)}
-                          onChange={(e) =>
-                            setChordLength(Number(e.target.value))
-                          }
+                        <EditableNumberInput
+                          value={chordLength}
+                          onChange={setChordLength}
+                          step={0.1}
+                          decimals={1}
+                          min={0.5}
+                          max={2.0}
                           className="w-24 px-2 py-1.5 text-sm border border-purple-300 rounded font-mono"
                         />
                       </div>
@@ -488,18 +592,16 @@ export default function DesignPage() {
                               }
                               className="flex-1 h-2 accent-blue-600"
                             />
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={coeff.toFixed(3)}
-                              onChange={(e) =>
-                                updateCSTCoefficient(
-                                  "upper",
-                                  index,
-                                  Number(e.target.value),
-                                )
+                            <EditableNumberInput
+                              value={coeff}
+                              onChange={(newValue) =>
+                                updateCSTCoefficient("upper", index, newValue)
                               }
-                              className="w-24 px-2 py-1.5 text-sm border border-blue-300 rounded font-mono"
+                              step={0.0001}
+                              decimals={4}
+                              min={-2.0}
+                              max={2.0}
+                              className="w-28 px-2 py-1.5 text-sm border border-blue-300 rounded font-mono"
                             />
                             <button
                               onClick={() => removeCSTCoefficient2(index)}
@@ -552,18 +654,16 @@ export default function DesignPage() {
                               }
                               className="flex-1 h-2 accent-green-600"
                             />
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={coeff.toFixed(3)}
-                              onChange={(e) =>
-                                updateCSTCoefficient(
-                                  "lower",
-                                  index,
-                                  Number(e.target.value),
-                                )
+                            <EditableNumberInput
+                              value={coeff}
+                              onChange={(newValue) =>
+                                updateCSTCoefficient("lower", index, newValue)
                               }
-                              className="w-24 px-2 py-1.5 text-sm border border-green-300 rounded font-mono"
+                              step={0.0001}
+                              decimals={4}
+                              min={-2.0}
+                              max={2.0}
+                              className="w-28 px-2 py-1.5 text-sm border border-green-300 rounded font-mono"
                             />
                             <button
                               onClick={() => removeCSTCoefficient2(index)}

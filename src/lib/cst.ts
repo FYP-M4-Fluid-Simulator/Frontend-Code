@@ -1,52 +1,122 @@
 // CST (Class Shape Transformation) Mathematics Library
+// Matches the Python implementation for accurate airfoil generation
 
 /**
- * Binomial coefficient calculation
+ * Factorial calculation
  */
-function binomial(n: number, k: number): number {
-  if (k < 0 || k > n) return 0;
-  if (k === 0 || k === n) return 1;
-  
+const factorial = (n: number): number => {
+  if (n <= 1) return 1;
   let result = 1;
-  for (let i = 0; i < k; i++) {
-    result *= (n - i) / (i + 1);
+  for (let i = 2; i <= n; i++) {
+    result *= i;
   }
   return result;
-}
+};
 
 /**
- * Bernstein polynomial basis function
+ * Binomial coefficient calculation (nCr) - K in Python code
  */
-function bernstein(n: number, i: number, x: number): number {
-  return binomial(n, i) * Math.pow(x, i) * Math.pow(1 - x, n - i);
-}
+const nCr = (n: number, r: number): number => {
+  if (r < 0 || r > n) return 0;
+  if (r === 0 || r === n) return 1;
+  return factorial(n) / (factorial(r) * factorial(n - r));
+};
 
 /**
- * Class function for CST parameterization
- * C(x) = x^N1 * (1-x)^N2
+ * Class Shape Function - matches Python implementation
+ * Calculates y-coordinates for a given surface
  */
-function classFunction(x: number, N1: number = 0.5, N2: number = 1.0): number {
-  return Math.pow(x, N1) * Math.pow(1 - x, N2);
+function classShape(
+  weights: number[],
+  x: number[],
+  dz: number,
+  N1 = 0.5,
+  N2 = 1.0,
+) {
+  const n = weights.length - 1; // Order of Bernstein polynomial
+
+  // Pre-compute Bernstein coefficients (the 'K' in Python)
+  const K = Array.from({ length: n + 1 }, (_, i) => nCr(n, i));
+
+  // Calculate y-coordinates for each x
+  return x.map((xi) => {
+    // 1. Class Function
+    const C = Math.pow(xi, N1) * Math.pow(1 - xi, N2);
+
+    // 2. Shape Function (Bernstein Polynomial)
+    let S = 0;
+    for (let j = 0; j <= n; j++) {
+      S += weights[j] * K[j] * Math.pow(xi, j) * Math.pow(1 - xi, n - j);
+    }
+
+    // 3. Calculate final y-coordinate
+    // y = C * S + x * dz
+    return C * S + xi * dz;
+  });
 }
 
 /**
- * Shape function using Bernstein polynomials
- * S(x) = sum(A_i * K_i(x)) where K_i is Bernstein basis
+ * Generate complete CST airfoil - matches Python cst_airfoil function
+ * Uses cosine spacing for proper point distribution
  */
-function shapeFunction(x: number, coefficients: number[]): number {
-  const n = coefficients.length - 1;
-  let sum = 0;
-  
-  for (let i = 0; i <= n; i++) {
-    sum += coefficients[i] * bernstein(n, i, x);
-  }
-  
-  return sum;
+export function generateCSTAirfoil(
+  upperWeights: number[],
+  lowerWeights: number[],
+  dz = 0,
+  numPoints = 100,
+) {
+  // 1. Generate x-coordinates using cosine spacing (like in Python)
+  const zeta = Array.from({ length: numPoints + 1 }, (_, i) => ((2 * Math.PI) / numPoints) * i);
+  const x = zeta.map((z) => 0.5 * (Math.cos(z) + 1));
+
+  // 2. Find the leading edge (LE) index
+  const zerind = x.indexOf(Math.min(...x));
+
+  // 3. Split x-coordinates for lower and upper surfaces
+  const xl = x.slice(0, zerind); // Lower surface x-coordinates
+  const xu = x.slice(zerind); // Upper surface x-coordinates
+
+  // 4. Calculate y-coordinates for both surfaces
+  const yl = classShape(lowerWeights, xl, -dz, 0.5, 1.0); // Lower surface
+  const yu = classShape(upperWeights, xu, dz, 0.5, 1.0); // Upper surface
+
+  // 5. Combine coordinates
+  const y = [...yl, ...yu];
+
+
+
+  // Create coordinate arrays
+  const coordinates = x.map((xi, i) => ({ x: xi, y: y[i] }));
+  const upperCoordinates = xu.map((xi, i) => ({ x: xi, y: yu[i] }));
+  const lowerCoordinates = xl.map((xi, i) => ({ x: xi, y: yl[i] }));
+
+  return {
+    coordinates,
+    upperCoordinates,
+    lowerCoordinates,
+  };
 }
 
 /**
- * Complete CST curve calculation
- * y(x) = C(x) * S(x) + x * dz_te
+ * Legacy function - kept for backwards compatibility
+ * @deprecated Use generateCSTAirfoil instead
+ */
+export function generateAirfoil(
+  upperCoefficients: number[],
+  lowerCoefficients: number[],
+  numPoints: number = 100,
+  trailingEdgeThickness: number = 0
+): { upper: { x: number; y: number }[]; lower: { x: number; y: number }[] } {
+  const result = generateCSTAirfoil(upperCoefficients, lowerCoefficients, trailingEdgeThickness, numPoints);
+  return {
+    upper: result.upperCoordinates,
+    lower: result.lowerCoordinates,
+  };
+}
+
+/**
+ * Legacy function - kept for backwards compatibility
+ * @deprecated Use generateCSTAirfoil instead
  */
 export function calculateCSTCurve(
   coefficients: number[],
@@ -55,35 +125,11 @@ export function calculateCSTCurve(
   N2: number = 1.0,
   dz_te: number = 0
 ): { x: number; y: number }[] {
-  const points: { x: number; y: number }[] = [];
+  // Use linear spacing for legacy compatibility
+  const x = Array.from({ length: numPoints + 1 }, (_, i) => i / numPoints);
+  const y = classShape(coefficients, x, dz_te, N1, N2);
   
-  for (let i = 0; i <= numPoints; i++) {
-    const x = i / numPoints;
-    const C = classFunction(x, N1, N2);
-    const S = shapeFunction(x, coefficients);
-    const y = C * S + x * dz_te;
-    
-    points.push({ x, y });
-  }
-  
-  return points;
-}
-
-/**
- * Generate complete airfoil from upper and lower CST coefficients
- */
-export function generateAirfoil(
-  upperCoefficients: number[],
-  lowerCoefficients: number[],
-  numPoints: number = 100
-): { upper: { x: number; y: number }[]; lower: { x: number; y: number }[] } {
-  // Upper surface (N1=0.5, N2=1.0)
-  const upper = calculateCSTCurve(upperCoefficients, numPoints, 0.5, 1.0, 0);
-  
-  // Lower surface (N1=0.5, N2=1.0)
-  const lower = calculateCSTCurve(lowerCoefficients, numPoints, 0.5, 1.0, 0);
-  
-  return { upper, lower };
+  return x.map((xi, i) => ({ x: xi, y: y[i] }));
 }
 
 /**
