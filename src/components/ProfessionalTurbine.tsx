@@ -69,9 +69,9 @@ export function ProfessionalTurbine({
 
       // Turbine specifications
       const centerX = width / 2;
-      const centerY = height * 0.55; // Moved down from 0.5
+      const centerY = height * 0.65; // Moved down from 0.5
       const hubRadius = Math.min(width, height) * 0.03; // Reduced from 0.04
-      const bladeLength = Math.min(width, height) * 0.35; // Reduced from 0.4 to prevent clipping
+      const bladeLength = Math.min(width, height) * 0.30; // Reduced from 0.4 to prevent clipping
 
       // Draw velocity field streamlines (professional CFD style)
       const time = Date.now() / 1000;
