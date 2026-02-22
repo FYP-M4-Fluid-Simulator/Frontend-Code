@@ -12,6 +12,7 @@ export interface OptSessionConfig {
   minThickness?: number;
   maxThickness?: number;
   inflow_velocity?: number;
+  angle_of_attack?: number;
   runId?: string;
 }
 
@@ -46,6 +47,7 @@ export async function createOptSession(config: OptSessionConfig) {
       min_thickness: config.minThickness ?? 0.06,
       max_thickness: config.maxThickness ?? 0.25,
       inflow_velocity: config.inflow_velocity ?? 1.0,
+      angle_of_attack: config.angle_of_attack ?? 0.0,
     }),
   });
 

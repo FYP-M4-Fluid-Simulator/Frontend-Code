@@ -822,6 +822,9 @@ export default function SimulatePage() {
                     frameRef={frameRef}
                     showVectorField={showVectorField}
                     visualizationType={visualizationType}
+                    upperCoefficients={upperCoefficients}
+                    lowerCoefficients={lowerCoefficients}
+                    angleOfAttack={angleOfAttack}
                   />
                 ) : (
                   <InteractiveAirfoilCanvas

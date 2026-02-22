@@ -398,6 +398,7 @@ export default function OptimizePage() {
       minThickness,
       maxThickness,
       inflow_velocity: velocity,
+      angle_of_attack: angleOfAttack,
       meshDensity,
       runId: Date.now().toString(),
     });
