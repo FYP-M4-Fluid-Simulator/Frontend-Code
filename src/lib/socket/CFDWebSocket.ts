@@ -137,25 +137,25 @@ export function useCFD(config?: SessionConfig) {
       start();
     }
 
-    // Cleanup on unmount or when config changes
     return () => {
       mounted = false;
       if (ws) {
         console.log("🧹 Cleaning up WebSocket connection");
+        ws.onclose = null; // Prevent old connection from triggering onclose!
         ws.close();
         wsRef.current = null;
       }
     };
   }, [config ? JSON.stringify(config) : null]);
 
-  // Function to manually close the connection
   const closeConnection = () => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       console.log("🔌 Manually closing WebSocket connection");
+      wsRef.current.onclose = null; // Prevent manual close from marking it as completed
       wsRef.current.close(1000, "Simulation completed");
       wsRef.current = null;
     }
   };
 
-  return { frameRef, isConnected, isCompleted, error, coefficients, closeConnection };
+  return { frameRef, isConnected, isCompleted, setIsCompleted, error, coefficients, closeConnection };
 }

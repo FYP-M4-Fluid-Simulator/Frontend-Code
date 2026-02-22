@@ -8,7 +8,7 @@ export default function SignupRoute() {
 
   const handleNavigate = (page: "landing" | "login" | "app") => {
     if (page === "app") {
-      router.push("/airfoil_deck");
+      router.push("/airfoils");
     } else if (page === "landing") {
       router.push("/");
     } else if (page === "login") {

@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
   if ((pathname === "/login" || pathname === "/signup") && authToken) {
-    const appUrl = new URL("/airfoil_deck", request.url);
+    const appUrl = new URL("/airfoils", request.url);
     return NextResponse.redirect(appUrl);
   }
 

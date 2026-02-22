@@ -8,7 +8,7 @@ export default function HomePage() {
 
   const handleNavigate = (page: 'login' | 'signup' | 'app') => {
     if (page === 'app') {
-      router.push('/airfoil_deck');
+      router.push('/airfoils');
     } else if (page === 'login') {
       router.push('/login');
     } else if (page === 'signup') {

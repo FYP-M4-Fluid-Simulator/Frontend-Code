@@ -33,6 +33,7 @@ interface ResultsModalProps {
   }>;
   onSaveExperiment?: () => void;
   onDownloadMetrics?: (format: "csv" | "json") => void;
+  computationTime?: number;
 }
 
 export default function ResultsModal({
@@ -43,6 +44,7 @@ export default function ResultsModal({
   convergenceData = [],
   onSaveExperiment,
   onDownloadMetrics,
+  computationTime,
 }: ResultsModalProps) {
   if (!isOpen) return null;
 
@@ -126,17 +128,26 @@ export default function ResultsModal({
                 {type === "optimization" ? "L/D Ratio" : "Lift-to-Drag"}
               </div>
               <div className="text-blue-100 text-2xl font-bold">
-                {(metrics.liftToDragRatio || metrics.cl / metrics.cd).toFixed(2)}
+                {formatValue(metrics.liftToDragRatio || metrics.cl / metrics.cd)}
               </div>
             </div>
 
-            {type === "optimization" && (
+            {type === "optimization" ? (
               <div className="bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/30 rounded-xl p-4">
                 <div className="text-yellow-300 text-xs font-semibold mb-2">
                   Loss
                 </div>
                 <div className="text-yellow-100 text-2xl font-bold">
                   {formatValue(metrics.loss)}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-400/30 rounded-xl p-4">
+                <div className="text-gray-300 text-xs font-semibold mb-2">
+                  Computation Time
+                </div>
+                <div className="text-gray-300 text-2xl font-bold">
+                  {computationTime ? `${computationTime.toFixed(1)}s` : "-"}
                 </div>
               </div>
             )}
@@ -261,32 +272,7 @@ export default function ResultsModal({
             </div>
           </div>
 
-          {/* Coefficient Comparison Bar Chart */}
-          <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-blue-200 mb-4">
-              Final Coefficients Comparison
-            </h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart
-                data={[
-                  { name: "C_L", value: metrics.cl, fill: "#10b981" },
-                  { name: "C_D", value: metrics.cd, fill: "#f97316" },
-                ]}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="name" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1e293b",
-                    border: "1px solid #3b82f6",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Bar dataKey="value" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+
 
           {/* Action Buttons */}
           <div className="space-y-4 pt-4">
