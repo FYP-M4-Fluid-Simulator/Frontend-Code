@@ -220,7 +220,8 @@ export function InteractiveAirfoilCanvas({
       return;
     }
 
-    const airfoilPoints = [...rotated.upper, ...rotated.lower.reverse()];
+    // Proper closed loop: lower (TE→LE) + upper (LE→TE)
+    const airfoilPoints = [...rotated.lower, ...rotated.upper];
 
     const baseScale = Math.min(canvasSize.width, canvasSize.height) * 0.7;
     const scale = baseScale * (zoomLevel / 100) * chordLength;
@@ -476,9 +477,10 @@ export function InteractiveAirfoilCanvas({
         y: offsetY - p.y * scale,
       });
 
+      // Proper closed loop: lower (TE→LE) + upper (LE→TE)
       const airfoilCanvasPoints = [
-        ...rotated.upper.map(transformPoint),
         ...rotated.lower.map(transformPoint),
+        ...rotated.upper.map(transformPoint),
       ];
 
       // Guard: Ensure we have valid airfoil points
