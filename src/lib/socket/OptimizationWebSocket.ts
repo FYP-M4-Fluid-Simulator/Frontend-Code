@@ -62,6 +62,7 @@ export function useOptimization(config?: OptSessionConfig) {
   const [history, setHistory] = useState<OptIterationMeta[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const initializedConfigRef = useRef<string | null>(null);
 
   // Stable close helper
   const closeConnection = useCallback(() => {
@@ -74,6 +75,13 @@ export function useOptimization(config?: OptSessionConfig) {
 
   useEffect(() => {
     if (!config) return;
+    const configString = JSON.stringify(config);
+
+    if (configString === initializedConfigRef.current) {
+      return;
+    }
+
+    initializedConfigRef.current = configString;
 
     let mounted = true;
 
@@ -159,7 +167,7 @@ export function useOptimization(config?: OptSessionConfig) {
         wsRef.current = null;
       }
     };
-  }, [config]);
+  }, [config ? JSON.stringify(config) : null]);
 
   return {
     isConnected,

@@ -3,6 +3,14 @@
 import { Wind, Mail, Lock, ArrowLeft, LogIn } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  GithubAuthProvider
+} from "firebase/auth";
+import { auth } from "../lib/firebase/config";
+import { getFirebaseErrorMessage } from "../lib/firebase/errors";
 
 interface LoginPageProps {
   onNavigate: (page: "landing" | "signup" | "app") => void;
@@ -11,11 +19,46 @@ interface LoginPageProps {
 export function LoginPage({ onNavigate }: LoginPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login - navigate to app
-    onNavigate("app");
+    setError(null);
+    setLoading(true);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      onNavigate("app");
+    } catch (err: any) {
+      console.error("Login Error:", err);
+      setError(getFirebaseErrorMessage(err));
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      onNavigate("app");
+    } catch (err: any) {
+      console.error("Google Login Error:", err);
+      setError(getFirebaseErrorMessage(err));
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setError(null);
+    try {
+      const provider = new GithubAuthProvider();
+      await signInWithPopup(auth, provider);
+      onNavigate("app");
+    } catch (err: any) {
+      console.error("GitHub Login Error:", err);
+      setError(getFirebaseErrorMessage(err));
+    }
   };
 
   return (
@@ -118,6 +161,13 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                 </div>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <div className="text-red-400 text-sm font-medium bg-red-400/10 p-3 rounded-lg border border-red-400/20">
+                  {error}
+                </div>
+              )}
+
               {/* Password Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -159,15 +209,22 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               {/* Submit Button */}
               <motion.button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-all"
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-all"
                 whileHover={{
-                  scale: 1.02,
-                  boxShadow: "0 20px 40px rgba(59, 130, 246, 0.4)",
+                  scale: loading ? 1 : 1.02,
+                  boxShadow: loading ? "none" : "0 20px 40px rgba(59, 130, 246, 0.4)",
                 }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: loading ? 1 : 0.98 }}
               >
-                <LogIn className="w-5 h-5" />
-                Sign In
+                {loading ? (
+                  <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" />
+                    Sign In
+                  </>
+                )}
               </motion.button>
             </motion.form>
 
@@ -187,6 +244,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
             <div className="grid grid-cols-2 gap-3">
               <motion.button
                 type="button"
+                onClick={handleGoogleLogin}
                 className="py-2.5 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -195,6 +253,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               </motion.button>
               <motion.button
                 type="button"
+                onClick={handleGithubLogin}
                 className="py-2.5 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
