@@ -52,6 +52,7 @@ export function useOptimization(config?: OptSessionConfig) {
   const [isConnected, setIsConnected] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   // Latest iteration data
   const [currentMeta, setCurrentMeta] = useState<OptIterationMeta | null>(null);
@@ -102,6 +103,7 @@ export function useOptimization(config?: OptSessionConfig) {
         // 1. Create session via HTTP
         const session = await createOptSession(config!);
         if (!mounted) return;
+        setSessionId(session.session_id);
 
         // 2. Open WebSocket
         const wsUrl = `${WS_BACKEND_URL}/optimize/ws/${session.session_id}`;
@@ -178,5 +180,6 @@ export function useOptimization(config?: OptSessionConfig) {
     completedFrame,
     history,
     closeConnection,
+    sessionId,
   };
 }

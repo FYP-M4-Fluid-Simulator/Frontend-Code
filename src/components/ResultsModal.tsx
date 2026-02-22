@@ -1,6 +1,8 @@
 "use client";
 
-import { X, Download, Save, FileText, BarChart3 } from "lucide-react";
+import { useState } from "react";
+
+import { X, Download, Save, FileText, BarChart3, Loader2 } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -31,9 +33,11 @@ interface ResultsModalProps {
     loss?: number;
     ldRatio?: number;
   }>;
-  onSaveExperiment?: () => void;
+  onSaveExperiment?: (name: string) => void;
   onDownloadMetrics?: (format: "csv" | "json") => void;
   computationTime?: number;
+  isSaved?: boolean;
+  isSaving?: boolean;
 }
 
 export default function ResultsModal({
@@ -45,7 +49,11 @@ export default function ResultsModal({
   onSaveExperiment,
   onDownloadMetrics,
   computationTime,
+  isSaved = false,
+  isSaving = false,
 }: ResultsModalProps) {
+  const [experimentName, setExperimentName] = useState("");
+
   if (!isOpen) return null;
 
   // Generate sample convergence data if not provided
@@ -276,62 +284,94 @@ export default function ResultsModal({
 
           {/* Action Buttons */}
           <div className="space-y-4 pt-4">
-            {type === "optimization" && (
-              <div className="grid grid-cols-2 gap-3">
-                {onSaveExperiment && (
-                  <button
-                    onClick={() => {
-                      onSaveExperiment();
-                      onClose();
-                    }}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-green-500/50 transition-all"
-                  >
-                    <Save className="w-4 h-4" />
-                    Save Experiment
-                  </button>
-                )}
-
-                {onDownloadMetrics && (
-                  <div className="relative group">
-                    <button
-                      onClick={() => onDownloadMetrics("csv")}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-500 hover:to-pink-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-orange-500/50 transition-all"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download Metrics
-                    </button>
-
-                    {/* Dropdown options */}
-                    <div className="absolute bottom-full left-0 right-0 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                      <div className="bg-slate-800 rounded-lg shadow-xl border border-blue-500/30 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {onSaveExperiment && (
+                <div className="flex flex-col gap-2 p-4 bg-slate-800/80 border border-blue-500/30 rounded-xl">
+                  {isSaved ? (
+                    <div className="flex-1 flex items-center justify-center py-2 h-full gap-2">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/50">
+                        <Save className="w-5 h-5 text-emerald-400" />
+                      </div>
+                      <span className="text-emerald-400 font-semibold text-sm">Experiment Saved Successfully</span>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="text-xs font-semibold text-blue-200 uppercase tracking-wider">Save Design</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Experiment Name"
+                          value={experimentName}
+                          onChange={(e) => setExperimentName(e.target.value)}
+                          className="flex-1 px-3 py-2.5 bg-slate-900 border border-blue-500/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all font-medium text-sm"
+                        />
                         <button
                           onClick={() => {
-                            onDownloadMetrics("csv");
-                            onClose();
+                            onSaveExperiment(experimentName);
+                            // We do not close the modal here to let the user see the success state
                           }}
-                          className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
+                          disabled={!experimentName.trim() || isSaving}
+                          className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-gray-500 disabled:border-slate-600 border border-transparent disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-lg hover:shadow-emerald-500/30 transition-all text-sm whitespace-nowrap"
                         >
-                          <FileText className="w-3 h-3" />
-                          CSV Format
-                        </button>
-                        <button
-                          onClick={() => {
-                            onDownloadMetrics("json");
-                            onClose();
-                          }}
-                          className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          JSON Format
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4" />
+                              Save
+                            </>
+                          )}
                         </button>
                       </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {onDownloadMetrics && (
+                <div className="relative group flex flex-col gap-2 p-4 bg-slate-800/80 border border-blue-500/30 rounded-xl">
+                  <label className="text-xs font-semibold text-orange-200 uppercase tracking-wider">Export Results</label>
+                  <button
+                    onClick={() => onDownloadMetrics("csv")}
+                    className="w-full flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-lg font-semibold shadow-lg hover:shadow-orange-500/30 transition-all text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Metrics
+                  </button>
+
+                  {/* Dropdown options */}
+                  <div className="absolute bottom-full left-0 right-0 mb-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20">
+                    <div className="bg-slate-900 rounded-lg shadow-xl border border-blue-500/50 overflow-hidden mx-4">
+                      <button
+                        onClick={() => {
+                          onDownloadMetrics("csv");
+                          onClose();
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
+                      >
+                        <FileText className="w-3 h-3" />
+                        CSV Format
+                      </button>
+                      <button
+                        onClick={() => {
+                          onDownloadMetrics("json");
+                          onClose();
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
+                      >
+                        <BarChart3 className="w-3 h-3" />
+                        JSON Format
+                      </button>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center mt-6">
               <button
                 onClick={onClose}
                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-blue-500/50 transition-all"

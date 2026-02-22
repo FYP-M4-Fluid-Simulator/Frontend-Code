@@ -15,6 +15,7 @@ export function useCFD(config?: SessionConfig) {
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coefficients, setCoefficients] = useState<CoefficientData | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const initializedConfigRef = useRef<string | null>(null);
 
@@ -50,9 +51,8 @@ export function useCFD(config?: SessionConfig) {
         };
 
         const session = await createSession(sessionConfig);
-
-        // Only proceed if component is still mounted
         if (!mounted) return;
+        setSessionId(session.session_id);
 
         // Create WebSocket connection
         const wsUrl = `${WS_BACKEND_URL}/ws/${session.session_id}`;
@@ -157,5 +157,5 @@ export function useCFD(config?: SessionConfig) {
     }
   };
 
-  return { frameRef, isConnected, isCompleted, setIsCompleted, error, coefficients, closeConnection };
+  return { frameRef, isConnected, isCompleted, setIsCompleted, error, coefficients, closeConnection, sessionId };
 }
