@@ -8,6 +8,7 @@ export interface SessionConfig {
   velocity?: number;
   angleOfAttack?: number;
   meshDensity?: "coarse" | "medium" | "fine" | "ultra";
+  chordLength?: number;
   timeStepSize?: number;
   simulationDuration?: number;
   runId?: string;
@@ -32,15 +33,17 @@ export async function createSession(config: SessionConfig) {
    *        - config: object (session configuration)
    */
 
-  // Map mesh density to fidelity
+  // Map frontend meshDensity labels to backend fidelity keys.
+  // Each level maps to a distinct grid resolution on the backend.
   const fidelityMap: Record<string, string> = {
     coarse: "low",
     medium: "medium",
-    fine: "coarse",
-    ultra: "coarse",
+    fine:   "high",
+    ultra:  "ultra",
   };
 
-  const fidelity = fidelityMap[config.meshDensity || "medium"];
+  const density = config.meshDensity || "medium";
+  const fidelity = fidelityMap[density];
 
   const res = await fetch(`${PYTHON_BACKEND_URL}/sessions`, {
     method: "POST",
@@ -48,6 +51,7 @@ export async function createSession(config: SessionConfig) {
     body: JSON.stringify({
       user_id: config.userId || auth?.currentUser?.uid,
       fidelity: fidelity,
+      chord_length: config.chordLength ?? 1.0,
       sim_time: config.simulationDuration || 10,
       dt: config.timeStepSize || 0.01,
       inflow_velocity: config.velocity || 2.0,

@@ -266,6 +266,7 @@ export default function SimulatePage() {
       velocity,
       angleOfAttack,
       meshDensity,
+      chordLength,
       timeStepSize,
       simulationDuration,
       runId: Date.now().toString(),

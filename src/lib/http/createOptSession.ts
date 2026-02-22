@@ -8,6 +8,7 @@ export interface OptSessionConfig {
   numIterations?: number;
   learningRate?: number;
   meshDensity?: "coarse" | "medium" | "fine" | "ultra";
+  chordLength?: number;
   numSimSteps?: number;
   minThickness?: number;
   maxThickness?: number;
@@ -24,14 +25,16 @@ export async function createOptSession(config: OptSessionConfig) {
    * the WebSocket at /optimize/ws/{session_id}.
    */
 
+  // Map frontend meshDensity labels to backend fidelity keys.
   const fidelityMap: Record<string, string> = {
     coarse: "low",
     medium: "medium",
-    fine: "coarse",
-    ultra: "coarse",
+    fine:   "high",
+    ultra:  "ultra",
   };
 
-  const fidelity = fidelityMap[config.meshDensity || "coarse"];
+  const density = config.meshDensity || "coarse";
+  const fidelity = fidelityMap[density];
 
   const res = await fetch(`${PYTHON_BACKEND_URL}/optimize/sessions`, {
     method: "POST",
@@ -39,6 +42,7 @@ export async function createOptSession(config: OptSessionConfig) {
     body: JSON.stringify({
       user_id: config.userId || auth?.currentUser?.uid,
       fidelity,
+      chord_length: config.chordLength ?? 1.0,
       cst_upper: config.upperCoefficients,
       cst_lower: config.lowerCoefficients,
       num_iterations: config.numIterations ?? 30,
