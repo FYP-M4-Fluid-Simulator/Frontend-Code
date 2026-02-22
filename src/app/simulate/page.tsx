@@ -459,6 +459,7 @@ export default function SimulatePage() {
                           type="number"
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
+                          onBlur={(e) => setVelocity(Math.min(30, Math.max(5, Number(e.target.value))))}
                           min={5}
                           max={30}
                           disabled={isSimulating}
@@ -495,6 +496,9 @@ export default function SimulatePage() {
                           value={angleOfAttack.toFixed(1)}
                           onChange={(e) =>
                             setAngleOfAttack(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setAngleOfAttack(Math.min(25, Math.max(-15, Number(e.target.value))))
                           }
                           disabled={isSimulating}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -547,6 +551,9 @@ export default function SimulatePage() {
                           onChange={(e) =>
                             setTimeStepSize(Number(e.target.value))
                           }
+                          onBlur={(e) =>
+                            setTimeStepSize(Math.min(0.005, Math.max(0, Number(e.target.value))))
+                          }
                           disabled={isSimulating}
                           className={`w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
@@ -581,6 +588,9 @@ export default function SimulatePage() {
                           value={simulationDuration}
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setSimulationDuration(Math.min(10, Math.max(0.05, Number(e.target.value))))
                           }
                           disabled={isSimulating}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}

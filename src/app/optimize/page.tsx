@@ -564,6 +564,7 @@ export default function OptimizePage() {
                           max={30}
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
+                          onBlur={(e) => setVelocity(Math.min(30, Math.max(5, Number(e.target.value))))}
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -596,6 +597,9 @@ export default function OptimizePage() {
                           value={angleOfAttack.toFixed(1)}
                           onChange={(e) =>
                             setAngleOfAttack(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setAngleOfAttack(Math.min(25, Math.max(-15, Number(e.target.value))))
                           }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -630,6 +634,9 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setTimeStepSize(Number(e.target.value))
                           }
+                          onBlur={(e) =>
+                            setTimeStepSize(Math.min(0.005, Math.max(0, Number(e.target.value))))
+                          }
                           className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -662,6 +669,9 @@ export default function OptimizePage() {
                           value={simulationDuration}
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setSimulationDuration(Math.min(60, Math.max(1, Number(e.target.value))))
                           }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -696,6 +706,9 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setNumIterations(Number(e.target.value))
                           }
+                          onBlur={(e) =>
+                            setNumIterations(Math.min(200, Math.max(10, Number(e.target.value))))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -728,6 +741,9 @@ export default function OptimizePage() {
                           value={minThickness.toFixed(2)}
                           onChange={(e) =>
                             setMinThickness(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setMinThickness(Math.min(0.15, Math.max(0.01, Number(e.target.value))))
                           }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -762,6 +778,9 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setMaxThickness(Number(e.target.value))
                           }
+                          onBlur={(e) =>
+                            setMaxThickness(Math.min(0.35, Math.max(0.15, Number(e.target.value))))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -794,6 +813,9 @@ export default function OptimizePage() {
                           value={learningRate.toFixed(3)}
                           onChange={(e) =>
                             setLearningRate(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setLearningRate(Math.min(0.1, Math.max(0.001, Number(e.target.value))))
                           }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />

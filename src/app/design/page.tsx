@@ -80,13 +80,29 @@ function EditableNumberInput({
     setEditValue("");
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isEditing) {
+      // User is typing — update local edit buffer
+      setEditValue(e.target.value);
+    } else {
+      // Spinner button clicked — apply immediately with clamping
+      const parsed = parseFloat(e.target.value);
+      if (!isNaN(parsed)) {
+        let finalValue = parsed;
+        if (min !== undefined && finalValue < min) finalValue = min;
+        if (max !== undefined && finalValue > max) finalValue = max;
+        onChange(finalValue);
+      }
+    }
+  };
+
   return (
     <input
       ref={inputRef}
       type="number"
       step={step}
       value={isEditing ? editValue : value.toFixed(decimals)}
-      onChange={(e) => setEditValue(e.target.value)}
+      onChange={handleChange}
       onFocus={handleFocus}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
