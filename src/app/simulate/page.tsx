@@ -302,18 +302,6 @@ export default function SimulatePage() {
     setIsSimulating(false);
   };
 
-  const handleResetSimulation = () => {
-    setIsSimulating(false);
-    setSimulationProgress(0);
-    setShowResults(false);
-    setShowResultsModal(false);
-    setSessionConfig(undefined); // Clear WebSocket connection
-    if (simulationIntervalRef.current) {
-      clearInterval(simulationIntervalRef.current);
-      simulationIntervalRef.current = null;
-    }
-  };
-
   const handleNavigateToOptimize = () => {
     // Save current state to sessionStorage before navigating
     sessionStorage.setItem(
@@ -341,14 +329,6 @@ export default function SimulatePage() {
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Design
-          </button>
-
-          <button
-            onClick={handleResetSimulation}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-blue-600"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset
           </button>
         </div>
 
