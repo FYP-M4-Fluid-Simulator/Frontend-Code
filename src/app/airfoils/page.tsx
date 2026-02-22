@@ -15,6 +15,9 @@ import {
   Plus,
   Upload,
   ArrowRight,
+  Filter,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { PYTHON_BACKEND_URL } from "@/config";
 import { auth } from "@/lib/firebase/config";
@@ -43,6 +46,7 @@ interface Airfoil {
 }
 
 type ViewMode = "home" | "saved";
+type FilterType = "all" | "simulated" | "optimized";
 
 export default function AirfoilDeck() {
   const router = useRouter();
@@ -52,6 +56,9 @@ export default function AirfoilDeck() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<FilterType>("all");
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("home");
   const itemsPerPage = 10;
@@ -88,6 +95,20 @@ export default function AirfoilDeck() {
       fetchAirfoils(false, 0, userId);
     }
   }, [userId]);
+
+  // Handle clicking outside the custom filter dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsFilterDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchAirfoils = async (append = false, retry = 0, currentUserId = userId) => {
     try {
@@ -439,10 +460,21 @@ export default function AirfoilDeck() {
     }
   };
 
-  // Filter airfoils based on search query
-  const filteredAirfoils = airfoils.filter((airfoil) =>
-    airfoil.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // Filter airfoils based on search query and type
+  const filteredAirfoils = airfoils.filter((airfoil) => {
+    const matchesSearch = airfoil.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+    let matchesFilter = true;
+    if (filterType === "simulated") {
+      // It's simulated if it has simulation data but is NOT optimized
+      const hasSimData = airfoil.cl !== null && airfoil.cd !== null && airfoil.cd !== 0;
+      matchesFilter = hasSimData && !airfoil.is_optimized;
+    } else if (filterType === "optimized") {
+      matchesFilter = airfoil.is_optimized;
+    }
+
+    return matchesSearch && matchesFilter;
+  });
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredAirfoils.length / itemsPerPage);
@@ -450,10 +482,10 @@ export default function AirfoilDeck() {
   const endIndex = startIndex + itemsPerPage;
   const currentAirfoils = filteredAirfoils.slice(startIndex, endIndex);
 
-  // Reset to page 1 when search query changes
+  // Reset to page 1 when search query or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, filterType]);
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -665,7 +697,7 @@ export default function AirfoilDeck() {
 
                       {/* Coefficients */}
                       <div className="flex items-center gap-3">
-                        <div className="text-center px-3 py-1 bg-green-500/10 border border-green-400/30 rounded-lg min-w-[90px]">
+                        <div className="text-center px-3 py-1 bg-green-500/10 border border-green-400/30 rounded-lg min-w-28">
                           <div className="text-green-300 text-xs font-medium">
                             C<sub>L</sub>
                           </div>
@@ -673,7 +705,7 @@ export default function AirfoilDeck() {
                             {formatValue(airfoil.cl)}
                           </div>
                         </div>
-                        <div className="text-center px-3 py-1 bg-orange-500/10 border border-orange-400/30 rounded-lg min-w-[99px]">
+                        <div className="text-center px-3 py-1 bg-orange-500/10 border border-orange-400/30 rounded-lg min-w-28">
                           <div className="text-orange-300 text-xs font-medium">
                             C<sub>D</sub>
                           </div>
@@ -717,24 +749,73 @@ export default function AirfoilDeck() {
                 </div>
               </div>
 
-              {/* Search Bar */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-800/50 border border-blue-500/30 focus:border-cyan-400/60 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-400" />
-                {searchQuery && (
+              {/* Search Bar and Filter Dropdown */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-grow">
+                  <input
+                    type="text"
+                    placeholder="Search by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 bg-slate-800/50 border border-blue-500/30 focus:border-cyan-400/60 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                  />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-400" />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white text-lg"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Dropdown */}
+                <div className="sm:w-52 flex-shrink-0 relative" ref={filterDropdownRef}>
                   <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white text-lg"
+                    onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                    className="w-full h-full flex items-center justify-between pl-10 pr-4 py-2.5 bg-slate-800/50 border border-blue-500/30 hover:border-cyan-400/60 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all font-medium"
                   >
-                    ×
+                    <span>
+                      {filterType === "all"
+                        ? "All Designs"
+                        : filterType === "simulated"
+                          ? "Simulated Only"
+                          : "Optimized Only"}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isFilterDropdownOpen ? "rotate-180" : ""
+                        }`}
+                    />
                   </button>
-                )}
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
+
+                  {/* Dropdown Menu */}
+                  {isFilterDropdownOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-full bg-slate-800 border border-blue-500/30 rounded-lg shadow-xl overflow-hidden z-50">
+                      {[
+                        { value: "all", label: "All Designs" },
+                        { value: "simulated", label: "Simulated Only" },
+                        { value: "optimized", label: "Optimized Only" },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            setFilterType(option.value as FilterType);
+                            setIsFilterDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${filterType === option.value
+                              ? "bg-blue-500/20 text-cyan-400 font-medium"
+                              : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
+                            }`}
+                        >
+                          {option.label}
+                          {filterType === option.value && <Check className="w-4 h-4" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -747,11 +828,11 @@ export default function AirfoilDeck() {
                   <Database className="w-12 h-12 text-blue-400" />
                 </div>
                 <div className="text-gray-300 text-xl font-semibold mb-2">
-                  {searchQuery ? "No matches found" : "No airfoils yet"}
+                  {searchQuery || filterType !== "all" ? "No matches found" : "No airfoils yet"}
                 </div>
                 <div className="text-gray-500 text-sm">
-                  {searchQuery
-                    ? "Try a different search term"
+                  {searchQuery || filterType !== "all"
+                    ? "Try a different search or filter"
                     : "Create your first design!"}
                 </div>
               </div>
@@ -812,7 +893,7 @@ export default function AirfoilDeck() {
 
                       {/* Coefficients */}
                       <div className="flex items-center gap-3">
-                        <div className="text-center px-3 py-1.5 bg-green-500/10 border border-green-400/30 rounded-lg min-w-[90px]">
+                        <div className="text-center px-3 py-1.5 bg-green-500/10 border border-green-400/30 rounded-lg min-w-28">
                           <div className="text-green-300 text-xs font-medium">
                             C<sub>L</sub>
                           </div>
@@ -820,7 +901,7 @@ export default function AirfoilDeck() {
                             {formatValue(airfoil.cl)}
                           </div>
                         </div>
-                        <div className="text-center px-3 py-1.5 bg-orange-500/10 border border-orange-400/30 rounded-lg min-w-[90px]">
+                        <div className="text-center px-3 py-1.5 bg-orange-500/10 border border-orange-400/30 rounded-lg min-w-28">
                           <div className="text-orange-300 text-xs font-medium">
                             C<sub>D</sub>
                           </div>
@@ -828,7 +909,7 @@ export default function AirfoilDeck() {
                             {formatValue(airfoil.cd)}
                           </div>
                         </div>
-                        <div className="text-center px-3 py-1.5 bg-blue-500/10 border border-blue-400/30 rounded-lg min-w-[90px]">
+                        <div className="text-center px-3 py-1.5 bg-blue-500/10 border border-blue-400/30 rounded-lg min-w-28">
                           <div className="text-blue-300 text-xs font-medium">
                             L/D
                           </div>
