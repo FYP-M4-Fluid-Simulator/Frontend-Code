@@ -23,6 +23,7 @@ import { generateCSTAirfoil } from "../../lib/cst";
 import { useRouter } from "next/navigation";
 import { PYTHON_BACKEND_URL } from "@/config";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
+import { auth } from "@/lib/firebase/config";
 
 // Reusable number input component with improved UX
 function EditableNumberInput({
@@ -104,8 +105,7 @@ if (!PYTHON_BACKEND_URL) {
 export default function DesignPage() {
   const router = useRouter();
 
-  // TODO: Replace with actual user ID from authentication context
-  const USER_ID = "dINHzGHWkBNK147w6azLXc5Uc582";
+  const USER_ID = auth?.currentUser?.uid || "anonymous";
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"cst" | "simulation">("cst");
@@ -323,7 +323,6 @@ export default function DesignPage() {
 
       const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values`;
 
- 
       const response = await fetch(apiUrl, {
         method: "POST",
         body: formData,

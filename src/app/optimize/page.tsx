@@ -43,6 +43,8 @@ import { generateCSTAirfoil } from "../../lib/cst";
 import { useOptimization } from "../../lib/socket/OptimizationWebSocket";
 import type { OptSessionConfig } from "../../lib/http/createOptSession";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
+import { auth } from "@/lib/firebase/config";
+import { toast } from "sonner";
 
 export default function OptimizePage() {
   const router = useRouter();
@@ -57,6 +59,8 @@ export default function OptimizePage() {
   const [maxIterations, setMaxIterations] = useState(50);
   const [showResults, setShowResults] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
+  const [isExperimentSaved, setIsExperimentSaved] = useState(false);
+  const [isSavingExperiment, setIsSavingExperiment] = useState(false);
   const [optimizationMetrics, setOptimizationMetrics] = useState({
     cl: 1.2345,
     cd: 0.0156,
@@ -124,6 +128,7 @@ export default function OptimizePage() {
     completedFrame,
     history: optHistory,
     closeConnection: closeOptConnection,
+    sessionId: optSessionId,
   } = useOptimization(optSessionConfig);
 
   // Load state from sessionStorage on mount
@@ -276,53 +281,42 @@ export default function OptimizePage() {
     setShowExportMenu(false);
   };
 
-  const handleSaveExperiment = async () => {
-    const airfoil = generateCSTAirfoil(
-      upperCoefficients,
-      lowerCoefficients,
-      0,
-      100,
-    );
-
-    const experimentData: import("../../lib/exportData").ExperimentData = {
-      name: `Optimization-${new Date().toISOString().slice(0, 10)}`,
-      description: `Optimized airfoil with L/D ratio: ${optimizationMetrics.liftToDragRatio?.toFixed(2) || (optimizationMetrics.cl / optimizationMetrics.cd).toFixed(2)}`,
-      cstParameters: {
-        upperCoefficients,
-        lowerCoefficients,
-      },
-      flowConditions: {
-        velocity,
-        angleOfAttack,
-      },
-      meshQuality: meshDensity,
-      results: {
-        metrics: {
-          liftCoefficient: optimizationMetrics.cl,
-          dragCoefficient: optimizationMetrics.cd,
-          liftToDragRatio:
-            optimizationMetrics.liftToDragRatio ||
-            optimizationMetrics.cl / optimizationMetrics.cd,
-          angleOfAttack,
-          velocity,
-          reynoldsNumber: velocity * 10000,
-        },
-        airfoilCoordinates: {
-          upper: airfoil.upperCoordinates,
-          lower: airfoil.lowerCoordinates ,
-        },
-      },
-    };
+  const handleSaveExperiment = async (name: string) => {
+    const activeSessionId = optSessionId || optSessionConfig?.runId;
+    if (!activeSessionId) {
+      toast.error("No active session to save.");
+      return;
+    }
 
     try {
+      setIsSavingExperiment(true);
       // Backend URL - can be moved to env variable
       const backendUrl =
         process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-      await saveExperimentToBackend(experimentData, backendUrl);
-      alert("Experiment saved successfully!");
+
+      const response = await fetch(`${backendUrl}/save_experiment/${activeSessionId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name,
+          user_id: auth?.currentUser?.uid || "anonymous",
+          is_optimized: true
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save experiment");
+      }
+
+      setIsExperimentSaved(true);
+      toast.success("Experiment saved successfully!");
     } catch (error) {
       console.error("Failed to save experiment:", error);
-      alert("Failed to save experiment. Please try again.");
+      toast.error("Failed to save experiment. Please try again.");
+    } finally {
+      setIsSavingExperiment(false);
     }
   };
 
@@ -373,6 +367,7 @@ export default function OptimizePage() {
     setOptimizationIteration(0);
     setShowResults(false);
     setShowResultsModal(false);
+    setIsExperimentSaved(false);
     setLdRatioHistory([]);
     setIsSidebarOpen(false);
 
@@ -491,11 +486,10 @@ export default function OptimizePage() {
               <div className="flex border-b border-gray-200">
                 <button
                   onClick={() => setActiveSidebarTab("parameters")}
-                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                    activeSidebarTab === "parameters"
-                      ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "parameters"
+                    ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" />
@@ -505,11 +499,10 @@ export default function OptimizePage() {
                 {showResults && (
                   <button
                     onClick={() => setActiveSidebarTab("results")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                      activeSidebarTab === "results"
-                        ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "results"
+                      ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <BarChart3 className="w-4 h-4" />
@@ -1095,6 +1088,8 @@ export default function OptimizePage() {
         }))}
         onSaveExperiment={handleSaveExperiment}
         onDownloadMetrics={handleModalDownloadMetrics}
+        isSaved={isExperimentSaved}
+        isSaving={isSavingExperiment}
       />
     </div>
   );

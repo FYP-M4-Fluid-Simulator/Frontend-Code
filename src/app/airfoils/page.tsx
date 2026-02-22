@@ -17,7 +17,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { PYTHON_BACKEND_URL } from "@/config";
-import { UUID } from "crypto";
+import { auth } from "@/lib/firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
 
 // Backend response structure from /cst endpoint
 interface Airfoil {
@@ -46,9 +47,7 @@ type ViewMode = "home" | "saved";
 export default function AirfoilDeck() {
   const router = useRouter();
 
-  // TODO: Replace with actual user ID from authentication context
-  const USER_ID = "dINHzGHWkBNK147w6azLXc5Uc582";
-
+  const [userId, setUserId] = useState<string | null>(null);
   const [airfoils, setAirfoils] = useState<Airfoil[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,10 +73,23 @@ export default function AirfoilDeck() {
   const [conversionProgress, setConversionProgress] = useState(0);
 
   useEffect(() => {
-    fetchAirfoils();
+    if (!auth) {
+      setUserId("anonymous");
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUserId(user ? user.uid : "anonymous");
+    });
+    return () => unsubscribe();
   }, []);
 
-  const fetchAirfoils = async (append = false, retry = 0) => {
+  useEffect(() => {
+    if (userId) {
+      fetchAirfoils(false, 0, userId);
+    }
+  }, [userId]);
+
+  const fetchAirfoils = async (append = false, retry = 0, currentUserId = userId) => {
     try {
       if (!append) {
         setLoading(true);
@@ -86,7 +98,7 @@ export default function AirfoilDeck() {
         setLoadingMore(true);
       }
 
-      const primaryApiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}cst?user_id=${USER_ID}`;
+      const primaryApiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}cst?user_id=${currentUserId}`;
       const fallbackApiUrl = "/api/airfoil_deck";
 
       let response: Response;
@@ -349,7 +361,7 @@ export default function AirfoilDeck() {
       formData.append("leadingEdgeRadius", leadingEdgeRadius.toString());
       formData.append("numCoefficients", numBernsteinCoefficients.toString());
 
-      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values?user_id=${USER_ID}`;
+      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values?user_id=${userId}`;
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -569,11 +581,10 @@ export default function AirfoilDeck() {
                 <Database className="w-5 h-5 text-cyan-400" />
                 <span className="text-white font-medium">Browse Saved</span>
                 <span
-                  className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-                    usingFallback
-                      ? "bg-yellow-400/30 text-yellow-200"
-                      : "bg-cyan-400/30 text-cyan-200"
-                  }`}
+                  className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${usingFallback
+                    ? "bg-yellow-400/30 text-yellow-200"
+                    : "bg-cyan-400/30 text-cyan-200"
+                    }`}
                 >
                   {airfoils.length}
                   {usingFallback && " (demo)"}
@@ -621,10 +632,17 @@ export default function AirfoilDeck() {
 
                       {/* Name */}
                       <div className="flex-grow">
-                        <h3 className="text-white font-semibold">
-                          {airfoil.name}
-                        </h3>
-                        <p className="text-blue-300/60 text-sm">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-white font-semibold flex-shrink-0">
+                            {airfoil.name}
+                          </h3>
+                          {airfoil.is_optimized && (
+                            <span className="px-2 py-0.5 bg-purple-500/20 border border-purple-400/30 rounded text-[10px] font-bold text-purple-300 uppercase tracking-wider flex-shrink-0 relative -top-px">
+                              Optimized
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-blue-300/60 text-sm mt-0.5">
                           {formatDate(airfoil.airfoil_created_at)}
                         </p>
                       </div>
@@ -765,10 +783,17 @@ export default function AirfoilDeck() {
 
                       {/* Name */}
                       <div className="flex-grow min-w-0">
-                        <h3 className="text-white font-semibold truncate">
-                          {airfoil.name}
-                        </h3>
-                        <p className="text-blue-300/60 text-sm">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-white font-semibold truncate flex-shrink-0">
+                            {airfoil.name}
+                          </h3>
+                          {airfoil.is_optimized && (
+                            <span className="px-2 py-0.5 bg-purple-500/20 border border-purple-400/30 rounded text-[10px] font-bold text-purple-300 uppercase tracking-wider flex-shrink-0 relative -top-px">
+                              Optimized
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-blue-300/60 text-sm mt-0.5">
                           {formatDate(airfoil.airfoil_created_at)}
                         </p>
                       </div>

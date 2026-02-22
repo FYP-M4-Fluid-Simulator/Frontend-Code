@@ -29,9 +29,14 @@ import {
   downloadCSTParameters,
   downloadConfigFile,
   createSimulationConfig,
+  downloadMetricsCSV,
+  downloadMetricsJSON,
+  OptimizationMetrics,
 } from "../../lib/exportData";
 import { generateCSTAirfoil } from "../../lib/cst";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
+import { auth } from "@/lib/firebase/config";
+import { toast } from "sonner";
 
 export default function SimulatePage() {
   const router = useRouter();
@@ -45,6 +50,8 @@ export default function SimulatePage() {
   const [simulationProgress, setSimulationProgress] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
+  const [isExperimentSaved, setIsExperimentSaved] = useState(false);
+  const [isSavingExperiment, setIsSavingExperiment] = useState(false);
   const [sessionConfig, setSessionConfig] = useState<SessionConfig | undefined>(
     undefined,
   );
@@ -88,6 +95,7 @@ export default function SimulatePage() {
     setIsCompleted,
     coefficients,
     closeConnection,
+    sessionId,
   } = useCFD(sessionConfig);
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
@@ -237,11 +245,70 @@ export default function SimulatePage() {
     }
   }, [coefficients, isSimulating]);
 
+  const handleSaveExperiment = async (name: string) => {
+    const activeSessionId = sessionId || sessionConfig?.runId;
+    if (!activeSessionId) {
+      toast.error("No active session to save.");
+      return;
+    }
+
+    try {
+      setIsSavingExperiment(true);
+      const backendUrl =
+        process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+      const response = await fetch(`${backendUrl}/save_experiment/${activeSessionId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name,
+          user_id: auth?.currentUser?.uid || "anonymous",
+          is_optimized: false
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save experiment");
+      }
+
+      setIsExperimentSaved(true);
+      toast.success("Experiment saved successfully!");
+    } catch (error) {
+      console.error("Failed to save experiment:", error);
+      toast.error("Failed to save experiment. Please try again.");
+    } finally {
+      setIsSavingExperiment(false);
+    }
+  };
+
+  const handleModalDownloadMetrics = (format: "csv" | "json") => {
+    const metrics: OptimizationMetrics = {
+      liftCoefficient: simulationMetrics.cl,
+      dragCoefficient: simulationMetrics.cd,
+      liftToDragRatio:
+        simulationMetrics.liftToDragRatio ||
+        (simulationMetrics.cd !== 0 ? simulationMetrics.cl / simulationMetrics.cd : 0),
+      angleOfAttack: angleOfAttack,
+      velocity: velocity,
+      reynoldsNumber: velocity * 10000,
+    };
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    if (format === "csv") {
+      downloadMetricsCSV(metrics, `simulation-metrics-${timestamp}.csv`);
+    } else {
+      downloadMetricsJSON(metrics, `simulation-metrics-${timestamp}.json`);
+    }
+  };
+
   const handleRunSimulation = async () => {
     setIsSimulating(true);
     setSimulationProgress(0);
     setShowResults(false);
     setShowResultsModal(false); // Ensure modal is hidden at start
+    setIsExperimentSaved(false); // Reset saved status
     setCoefficientHistory([]); // Reset coefficient history
     setIsSidebarOpen(false); // Close sidebar when simulation starts
     setVisualizationType("curl"); // Reset to default
@@ -901,6 +968,10 @@ export default function SimulatePage() {
         metrics={simulationMetrics}
         convergenceData={coefficientHistory}
         computationTime={computationDuration}
+        onSaveExperiment={handleSaveExperiment}
+        onDownloadMetrics={handleModalDownloadMetrics}
+        isSaved={isExperimentSaved}
+        isSaving={isSavingExperiment}
       />
     </div>
   );
