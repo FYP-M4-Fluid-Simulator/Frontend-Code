@@ -91,8 +91,8 @@ export default function SimulatePage() {
   >("medium"); // Default mesh density
   const [visualizationType, setVisualizationType] = useState<
     "curl" | "pressure" | "tracer"
-  >("pressure");
-  const [showVectorField, setShowVectorField] = useState(true);
+  >("curl");
+  const [showVectorField, setShowVectorField] = useState(false);
   const [timeStepSize, setTimeStepSize] = useState(0.001);
   const [simulationDuration, setSimulationDuration] = useState(0.2);
 
@@ -228,6 +228,7 @@ export default function SimulatePage() {
     setShowResultsModal(false); // Ensure modal is hidden at start
     setCoefficientHistory([]); // Reset coefficient history
     setIsSidebarOpen(false); // Close sidebar when simulation starts
+    setVisualizationType("curl"); // Reset to default
 
     // Create session config for WebSocket
     const config: SessionConfig = {
@@ -340,10 +341,10 @@ export default function SimulatePage() {
           <div className="flex items-center gap-2 px-4 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg">
             <Wind className="w-4 h-4 text-white" />
             <span className="text-xs font-black text-white tracking-wide">
-               Simulation Mode
+              Simulation Mode
             </span>
           </div>
-          
+
         </div>
 
         {/* Right: User Controls */}
@@ -368,11 +369,10 @@ export default function SimulatePage() {
               <div className="flex border-b border-gray-200">
                 <button
                   onClick={() => setActiveSidebarTab("parameters")}
-                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                    activeSidebarTab === "parameters"
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "parameters"
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" />
@@ -382,11 +382,10 @@ export default function SimulatePage() {
                 {showResults && (
                   <button
                     onClick={() => setActiveSidebarTab("results")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                      activeSidebarTab === "results"
-                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "results"
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <BarChart3 className="w-4 h-4" />
@@ -799,8 +798,8 @@ export default function SimulatePage() {
                   className="px-3 py-1 text-xs font-semibold border border-gray-300 rounded bg-white hover:border-orange-400 transition-colors"
                 >
                   <option value="curl">Curl</option>
-                  <option value="pressure">Pressure</option>
-                  <option value="tracer">Tracer (Density)</option>
+                  <option value="pressure" disabled className="text-gray-400">Pressure</option>
+                  <option value="tracer" disabled className="text-gray-400">Tracer (Density)</option>
                 </select>
               </div>
             </div>
@@ -819,7 +818,11 @@ export default function SimulatePage() {
                 }}
               >
                 {isSimulating || showResults ? (
-                  <CFDCanvas frameRef={frameRef} />
+                  <CFDCanvas
+                    frameRef={frameRef}
+                    showVectorField={showVectorField}
+                    visualizationType={visualizationType}
+                  />
                 ) : (
                   <InteractiveAirfoilCanvas
                     width={canvasSize.width}

@@ -19,8 +19,6 @@ const CST_LOWER = [-0.1, -0.08, -0.06, -0.05, -0.04, -0.03];
 const AIRFOIL_OFFSET_X = 30 * CELL_SIZE;
 const AIRFOIL_OFFSET_Y = (H >> 1) * CELL_SIZE;
 
-const SHOW_VELOCITY = true;
-
 // ── CST maths (JS port of turbodiff/core/airfoil.py) ──────────────────────
 
 /** Binomial coefficient C(n, k) */
@@ -104,9 +102,11 @@ const { sy: afSYL } = toScreenPoints(afX, afYL);
 
 interface CFDCanvasProps {
   frameRef: React.MutableRefObject<any>;
+  showVectorField?: boolean;
+  visualizationType?: "curl" | "pressure" | "tracer";
 }
 
-export default function CFDCanvas({ frameRef }: CFDCanvasProps) {
+export default function CFDCanvas({ frameRef, showVectorField = true, visualizationType = "curl" }: CFDCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -150,7 +150,7 @@ export default function CFDCanvas({ frameRef }: CFDCanvasProps) {
       }
 
       // ── 3. Draw velocity arrows ───────────────────────────────────
-      if (SHOW_VELOCITY) {
+      if (showVectorField) {
         const ARROW_STEP = 4; // group this many cells per arrow
         for (let gi = 0; gi < H; gi += ARROW_STEP) {
           for (let gj = 0; gj < W; gj += ARROW_STEP) {
@@ -234,7 +234,7 @@ export default function CFDCanvas({ frameRef }: CFDCanvasProps) {
 
     loop();
     return () => cancelAnimationFrame(rafId);
-  }, [frameRef]);
+  }, [frameRef, showVectorField, visualizationType]);
 
   return (
     <div className="w-full h-full">
