@@ -16,10 +16,18 @@ export function useCFD(config?: SessionConfig) {
   const [error, setError] = useState<string | null>(null);
   const [coefficients, setCoefficients] = useState<CoefficientData | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const initializedConfigRef = useRef<string | null>(null);
 
   console.log("WS_BACKEND_URL:", WS_BACKEND_URL);
 
   useEffect(() => {
+    const configString = config ? JSON.stringify(config) : null;
+    if (!configString || configString === initializedConfigRef.current) {
+      return;
+    }
+
+    initializedConfigRef.current = configString;
+
     let ws: WebSocket | null = null;
     let mounted = true;
 
@@ -129,7 +137,7 @@ export function useCFD(config?: SessionConfig) {
       start();
     }
 
-    // Cleanup on unmount
+    // Cleanup on unmount or when config changes
     return () => {
       mounted = false;
       if (ws) {
@@ -138,7 +146,7 @@ export function useCFD(config?: SessionConfig) {
         wsRef.current = null;
       }
     };
-  }, [config]);
+  }, [config ? JSON.stringify(config) : null]);
 
   // Function to manually close the connection
   const closeConnection = () => {

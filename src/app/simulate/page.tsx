@@ -30,12 +30,15 @@ import {
   downloadConfigFile,
   createSimulationConfig,
 } from "../../lib/exportData";
-import { generateAirfoil } from "../../lib/cst";
+import { generateCSTAirfoil } from "../../lib/cst";
+import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 
 export default function SimulatePage() {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeSidebarTab, setActiveSidebarTab] = useState<"parameters" | "results">("parameters");
+  const [activeSidebarTab, setActiveSidebarTab] = useState<
+    "parameters" | "results"
+  >("parameters");
 
   // Simulation state
   const [isSimulating, setIsSimulating] = useState(false);
@@ -63,6 +66,7 @@ export default function SimulatePage() {
 
   // Use CFD hook when simulating
   const {
+    frameRef,
     coefficients,
     isConnected,
     isCompleted,
@@ -72,11 +76,11 @@ export default function SimulatePage() {
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.18, 0.22, 0.20, 0.18, 0.15, 0.12,
+    0.18, 0.22, 0.2, 0.18, 0.15, 0.12,
   ]);
 
   const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.10, -0.08, -0.06, -0.05, -0.04, -0.03,
+    -0.1, -0.08, -0.06, -0.05, -0.04, -0.03,
   ]);
 
   const [angleOfAttack, setAngleOfAttack] = useState(0);
@@ -87,8 +91,8 @@ export default function SimulatePage() {
   >("medium"); // Default mesh density
   const [visualizationType, setVisualizationType] = useState<
     "curl" | "pressure" | "tracer"
-  >("pressure");
-  const [showVectorField, setShowVectorField] = useState(true);
+  >("curl");
+  const [showVectorField, setShowVectorField] = useState(false);
   const [timeStepSize, setTimeStepSize] = useState(0.001);
   const [simulationDuration, setSimulationDuration] = useState(0.2);
 
@@ -145,11 +149,16 @@ export default function SimulatePage() {
   }, [showExportMenu]);
 
   const handleDownloadDatFile = () => {
-    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+    const airfoil = generateCSTAirfoil(
+      upperCoefficients,
+      lowerCoefficients,
+      0,
+      100,
+    );
     const timestamp = new Date().toISOString().slice(0, 10);
     downloadDatFile(
-      airfoil.upper,
-      airfoil.lower,
+      airfoil.upperCoordinates,
+      airfoil.lowerCoordinates,
       `optimized-airfoil-${timestamp}`,
     );
     setShowExportMenu(false);
@@ -219,6 +228,7 @@ export default function SimulatePage() {
     setShowResultsModal(false); // Ensure modal is hidden at start
     setCoefficientHistory([]); // Reset coefficient history
     setIsSidebarOpen(false); // Close sidebar when simulation starts
+    setVisualizationType("curl"); // Reset to default
 
     // Create session config for WebSocket
     const config: SessionConfig = {
@@ -229,22 +239,20 @@ export default function SimulatePage() {
       meshDensity,
       timeStepSize,
       simulationDuration,
+      runId: Date.now().toString(),
     };
 
     setSessionConfig(config);
 
     // Simulate progress animation (asymptotic)
-    const progressInterval = setInterval(
-      () => {
-        setSimulationProgress((prev) => {
-          if (prev >= 95) return prev;
-          // Slower increment as it gets higher
-          const increment = Math.max(0.1, (95 - prev) / 100);
-          return prev + increment;
-        });
-      },
-      100,
-    );
+    const progressInterval = setInterval(() => {
+      setSimulationProgress((prev) => {
+        if (prev >= 95) return prev;
+        // Slower increment as it gets higher
+        const increment = Math.max(0.1, (95 - prev) / 100);
+        return prev + increment;
+      });
+    }, 100);
     simulationIntervalRef.current = progressInterval;
   };
 
@@ -298,18 +306,6 @@ export default function SimulatePage() {
     setIsSimulating(false);
   };
 
-  const handleResetSimulation = () => {
-    setIsSimulating(false);
-    setSimulationProgress(0);
-    setShowResults(false);
-    setShowResultsModal(false);
-    setSessionConfig(undefined); // Clear WebSocket connection
-    if (simulationIntervalRef.current) {
-      clearInterval(simulationIntervalRef.current);
-      simulationIntervalRef.current = null;
-    }
-  };
-
   const handleNavigateToOptimize = () => {
     // Save current state to sessionStorage before navigating
     sessionStorage.setItem(
@@ -338,16 +334,6 @@ export default function SimulatePage() {
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Design
           </button>
-
-          <button
-            onClick={handleResetSimulation}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-blue-600"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset
-          </button>
-
-
         </div>
 
         {/* Center: Branding */}
@@ -355,25 +341,15 @@ export default function SimulatePage() {
           <div className="flex items-center gap-2 px-4 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg">
             <Wind className="w-4 h-4 text-white" />
             <span className="text-xs font-black text-white tracking-wide">
-              CFD AIRFOIL PLATFORM
-            </span>
-          </div>
-          <div className="px-3 py-1 bg-cyan-100 rounded-lg border border-cyan-300">
-            <span className="text-xs font-bold text-cyan-800">
               Simulation Mode
             </span>
           </div>
+
         </div>
 
         {/* Right: User Controls */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.push("/")}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-red-50 border border-gray-300 hover:border-red-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-red-600"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Logout
-          </button>
+          <UserProfileDropdown />
         </div>
       </div>
 
@@ -437,7 +413,7 @@ export default function SimulatePage() {
                         <input
                           type="range"
                           min={5}
-                          max={100}
+                          max={30}
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
                           className="flex-1 h-2 accent-cyan-500"
@@ -465,13 +441,17 @@ export default function SimulatePage() {
                           max={25}
                           step={0.5}
                           value={angleOfAttack}
-                          onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                          onChange={(e) =>
+                            setAngleOfAttack(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-purple-500"
                         />
                         <input
                           type="number"
                           value={angleOfAttack.toFixed(1)}
-                          onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                          onChange={(e) =>
+                            setAngleOfAttack(Number(e.target.value))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -506,13 +486,17 @@ export default function SimulatePage() {
                           max={0.01}
                           step={0.0001}
                           value={timeStepSize}
-                          onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                          onChange={(e) =>
+                            setTimeStepSize(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-green-500"
                         />
                         <input
                           type="number"
                           value={timeStepSize}
-                          onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                          onChange={(e) =>
+                            setTimeStepSize(Number(e.target.value))
+                          }
                           step={0.0001}
                           className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -814,8 +798,8 @@ export default function SimulatePage() {
                   className="px-3 py-1 text-xs font-semibold border border-gray-300 rounded bg-white hover:border-orange-400 transition-colors"
                 >
                   <option value="curl">Curl</option>
-                  <option value="pressure">Pressure</option>
-                  <option value="tracer">Tracer (Density)</option>
+                  <option value="pressure" disabled className="text-gray-400">Pressure</option>
+                  <option value="tracer" disabled className="text-gray-400">Tracer (Density)</option>
                 </select>
               </div>
             </div>
@@ -834,7 +818,11 @@ export default function SimulatePage() {
                 }}
               >
                 {isSimulating || showResults ? (
-                  <CFDCanvas config={sessionConfig} />
+                  <CFDCanvas
+                    frameRef={frameRef}
+                    showVectorField={showVectorField}
+                    visualizationType={visualizationType}
+                  />
                 ) : (
                   <InteractiveAirfoilCanvas
                     width={canvasSize.width}
@@ -849,7 +837,6 @@ export default function SimulatePage() {
                     onCoefficientChange={updateCSTCoefficient}
                     showControlPoints={false}
                     showMeshOverlay={false}
-                    allowFullScreen={true}
                     designMode={false}
                     chordLength={chordLength}
                   />

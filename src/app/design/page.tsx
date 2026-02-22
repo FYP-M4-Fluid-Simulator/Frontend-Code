@@ -19,9 +19,10 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
-import { generateAirfoil, generateCSTAirfoil } from "../../lib/cst";
+import { generateCSTAirfoil } from "../../lib/cst";
 import { useRouter } from "next/navigation";
 import { PYTHON_BACKEND_URL } from "@/config";
+import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 
 // Reusable number input component with improved UX
 function EditableNumberInput({
@@ -226,15 +227,15 @@ export default function DesignPage() {
     const newUpperCoeffs =
       surface === "upper"
         ? [...upperCoefficients].map((coeff, i) =>
-            i === index ? value : coeff,
-          )
+          i === index ? value : coeff,
+        )
         : [...upperCoefficients];
 
     const newLowerCoeffs =
       surface === "lower"
         ? [...lowerCoefficients].map((coeff, i) =>
-            i === index ? value : coeff,
-          )
+          i === index ? value : coeff,
+        )
         : [...lowerCoefficients];
 
     // Update state
@@ -266,23 +267,7 @@ export default function DesignPage() {
     }
   };
 
-  const handleResetDesign = () => {
-    // Use symmetric airfoil values matching the Python example
-    const defaultUpperWeights = [
-      0.17104533, 0.15300564, 0.1501825, 0.135824, 0.14169314,
-    ];
-    const defaultLowerWeights = [
-      -0.17104533, -0.15300564, -0.1501825, -0.135824, -0.14169314,
-    ]; // Negative for lower surface
-
-    setUpperCoefficients(defaultUpperWeights);
-    setLowerCoefficients(defaultLowerWeights);
-    setAngleOfAttack(5);
-    setVelocity(15);
-  };
-
   const handleStartWithDefault = () => {
-    handleResetDesign();
     setShowNewDesignModal(false);
   };
 
@@ -519,13 +504,7 @@ export default function DesignPage() {
 
         {/* Right: User */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/")}
-            className="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-            title="Account"
-          >
-            <User className="w-4 h-4" />
-          </button>
+          <UserProfileDropdown />
         </div>
       </div>
 
@@ -547,10 +526,9 @@ export default function DesignPage() {
                 <div className="flex border-b border-gray-200">
                   <button
                     onClick={() => setActiveTab("cst")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                      activeTab === "cst"
-                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeTab === "cst"
+                      ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">
@@ -630,7 +608,7 @@ export default function DesignPage() {
                             </span>
                             <input
                               type="range"
-                              min={-2.0}
+                              min={0.0}
                               max={2.0}
                               step={0.01}
                               value={coeff}
@@ -650,7 +628,7 @@ export default function DesignPage() {
                               }
                               step={0.0001}
                               decimals={4}
-                              min={-2.0}
+                              min={0.0}
                               max={2.0}
                               className="w-28 px-2 py-1.5 text-sm border border-blue-300 rounded font-mono"
                             />
@@ -693,7 +671,7 @@ export default function DesignPage() {
                             <input
                               type="range"
                               min={-2.0}
-                              max={2.0}
+                              max={0.0}
                               step={0.01}
                               value={coeff}
                               onChange={(e) =>
@@ -713,7 +691,7 @@ export default function DesignPage() {
                               step={0.0001}
                               decimals={4}
                               min={-2.0}
-                              max={2.0}
+                              max={0.0}
                               className="w-28 px-2 py-1.5 text-sm border border-green-300 rounded font-mono"
                             />
                             <button
@@ -776,13 +754,6 @@ export default function DesignPage() {
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
               <div className="w-px h-4 bg-gray-300 mx-1" />
-              <button
-                onClick={() => setZoomLevel(100)}
-                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-                title="Reset View"
-              >
-                <Maximize className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
 
@@ -809,7 +780,6 @@ export default function DesignPage() {
                 showPressureField={showPressureField}
                 showVectorField={showVectorField}
                 onCoefficientChange={updateCSTCoefficient}
-                allowFullScreen={true}
                 designMode={true}
                 onControlPointDragStart={handleControlPointDragStart}
                 onControlPointDragEnd={handleControlPointDragEnd}
@@ -837,14 +807,14 @@ export default function DesignPage() {
           <div className="flex gap-3">
             <button
               onClick={handleNavigateToSimulate}
-              className="flex-1 flex justify-center items-center bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-cyan-400"
+              className="flex-1 flex justify-center items-center bg-[#1F91FF] hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-cyan-400"
             >
               <Settings className="w-5 h-5 mr-2" />
               Start Simulation
             </button>
             <button
               onClick={handleNavigateToOptimize}
-              className="flex-1 flex justify-center items-center bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-pink-400"
+              className="flex-1 flex justify-center items-center bg-[#DE3000] hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-pink-400"
             >
               <ArrowRight className="w-5 h-5 mr-2" />
               Start Optimization

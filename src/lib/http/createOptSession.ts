@@ -1,4 +1,5 @@
 import { PYTHON_BACKEND_URL } from "@/config";
+import { auth } from "../firebase/config";
 
 export interface OptSessionConfig {
   userId?: string;
@@ -11,6 +12,7 @@ export interface OptSessionConfig {
   minThickness?: number;
   maxThickness?: number;
   inflow_velocity?: number;
+  runId?: string;
 }
 
 export async function createOptSession(config: OptSessionConfig) {
@@ -34,7 +36,7 @@ export async function createOptSession(config: OptSessionConfig) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      user_id: config.userId || "840c99b5-8322-4404-b345-cb039808e4e2",
+      user_id: config.userId || auth?.currentUser?.uid,
       fidelity,
       cst_upper: config.upperCoefficients,
       cst_lower: config.lowerCoefficients,

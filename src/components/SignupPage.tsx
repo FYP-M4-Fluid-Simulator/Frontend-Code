@@ -3,6 +3,15 @@
 import { Wind, Mail, Lock, User, ArrowLeft, UserPlus } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  updateProfile
+} from "firebase/auth";
+import { auth } from "../lib/firebase/config";
+import { getFirebaseErrorMessage } from "../lib/firebase/errors";
 
 interface SignupPageProps {
   onNavigate: (page: "landing" | "login" | "app") => void;
@@ -13,11 +22,58 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock signup - navigate to app
-    onNavigate("app");
+    setError(null);
+
+    // Basic validation
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, {
+          displayName: name
+        });
+      }
+      onNavigate("app");
+    } catch (err: any) {
+      console.error("Signup Error:", err);
+      setError(getFirebaseErrorMessage(err));
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    setError(null);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      onNavigate("app");
+    } catch (err: any) {
+      console.error("Google Signup Error:", err);
+      setError(getFirebaseErrorMessage(err));
+    }
+  };
+
+  const handleGithubSignup = async () => {
+    setError(null);
+    try {
+      const provider = new GithubAuthProvider();
+      await signInWithPopup(auth, provider);
+      onNavigate("app");
+    } catch (err: any) {
+      console.error("GitHub Signup Error:", err);
+      setError(getFirebaseErrorMessage(err));
+    }
   };
 
   return (
@@ -143,6 +199,13 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
                 </div>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <div className="text-red-400 text-sm font-medium bg-red-400/10 p-3 rounded-lg border border-red-400/20">
+                  {error}
+                </div>
+              )}
+
               {/* Password Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -214,15 +277,22 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
               {/* Submit Button */}
               <motion.button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 transition-all mt-6"
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 transition-all mt-6"
                 whileHover={{
-                  scale: 1.02,
-                  boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)",
+                  scale: loading ? 1 : 1.02,
+                  boxShadow: loading ? "none" : "0 20px 40px rgba(168, 85, 247, 0.4)",
                 }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: loading ? 1 : 0.98 }}
               >
-                <UserPlus className="w-5 h-5" />
-                Create Account
+                {loading ? (
+                  <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <UserPlus className="w-5 h-5" />
+                    Create Account
+                  </>
+                )}
               </motion.button>
             </motion.form>
 
@@ -242,6 +312,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
             <div className="grid grid-cols-2 gap-3">
               <motion.button
                 type="button"
+                onClick={handleGoogleSignup}
                 className="py-2.5 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -250,6 +321,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
               </motion.button>
               <motion.button
                 type="button"
+                onClick={handleGithubSignup}
                 className="py-2.5 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
