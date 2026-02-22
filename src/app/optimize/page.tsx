@@ -307,8 +307,8 @@ export default function OptimizePage() {
           reynoldsNumber: velocity * 10000,
         },
         airfoilCoordinates: {
-          upper: airfoil.upper,
-          lower: airfoil.lower,
+          upper: airfoil.upperCoordinates,
+          lower: airfoil.lowerCoordinates ,
         },
       },
     };
