@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
-import { generateAirfoil, generateCSTAirfoil } from "../../lib/cst";
+import { generateCSTAirfoil } from "../../lib/cst";
 import { useRouter } from "next/navigation";
 import { PYTHON_BACKEND_URL } from "@/config";
 

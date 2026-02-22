@@ -30,12 +30,14 @@ import {
   downloadConfigFile,
   createSimulationConfig,
 } from "../../lib/exportData";
-import { generateAirfoil } from "../../lib/cst";
+import { generateCSTAirfoil } from "../../lib/cst";
 
 export default function SimulatePage() {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeSidebarTab, setActiveSidebarTab] = useState<"parameters" | "results">("parameters");
+  const [activeSidebarTab, setActiveSidebarTab] = useState<
+    "parameters" | "results"
+  >("parameters");
 
   // Simulation state
   const [isSimulating, setIsSimulating] = useState(false);
@@ -72,11 +74,11 @@ export default function SimulatePage() {
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.18, 0.22, 0.20, 0.18, 0.15, 0.12,
+    0.18, 0.22, 0.2, 0.18, 0.15, 0.12,
   ]);
 
   const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.10, -0.08, -0.06, -0.05, -0.04, -0.03,
+    -0.1, -0.08, -0.06, -0.05, -0.04, -0.03,
   ]);
 
   const [angleOfAttack, setAngleOfAttack] = useState(0);
@@ -145,11 +147,16 @@ export default function SimulatePage() {
   }, [showExportMenu]);
 
   const handleDownloadDatFile = () => {
-    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+    const airfoil = generateCSTAirfoil(
+      upperCoefficients,
+      lowerCoefficients,
+      0,
+      100,
+    );
     const timestamp = new Date().toISOString().slice(0, 10);
     downloadDatFile(
-      airfoil.upper,
-      airfoil.lower,
+      airfoil.upperCoordinates,
+      airfoil.lowerCoordinates,
       `optimized-airfoil-${timestamp}`,
     );
     setShowExportMenu(false);
@@ -234,17 +241,14 @@ export default function SimulatePage() {
     setSessionConfig(config);
 
     // Simulate progress animation (asymptotic)
-    const progressInterval = setInterval(
-      () => {
-        setSimulationProgress((prev) => {
-          if (prev >= 95) return prev;
-          // Slower increment as it gets higher
-          const increment = Math.max(0.1, (95 - prev) / 100);
-          return prev + increment;
-        });
-      },
-      100,
-    );
+    const progressInterval = setInterval(() => {
+      setSimulationProgress((prev) => {
+        if (prev >= 95) return prev;
+        // Slower increment as it gets higher
+        const increment = Math.max(0.1, (95 - prev) / 100);
+        return prev + increment;
+      });
+    }, 100);
     simulationIntervalRef.current = progressInterval;
   };
 
@@ -346,8 +350,6 @@ export default function SimulatePage() {
             <RotateCcw className="w-3.5 h-3.5" />
             Reset
           </button>
-
-
         </div>
 
         {/* Center: Branding */}
@@ -393,10 +395,11 @@ export default function SimulatePage() {
               <div className="flex border-b border-gray-200">
                 <button
                   onClick={() => setActiveSidebarTab("parameters")}
-                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "parameters"
-                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                    activeSidebarTab === "parameters"
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" />
@@ -406,10 +409,11 @@ export default function SimulatePage() {
                 {showResults && (
                   <button
                     onClick={() => setActiveSidebarTab("results")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "results"
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                      activeSidebarTab === "results"
+                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <BarChart3 className="w-4 h-4" />
@@ -465,13 +469,17 @@ export default function SimulatePage() {
                           max={25}
                           step={0.5}
                           value={angleOfAttack}
-                          onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                          onChange={(e) =>
+                            setAngleOfAttack(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-purple-500"
                         />
                         <input
                           type="number"
                           value={angleOfAttack.toFixed(1)}
-                          onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                          onChange={(e) =>
+                            setAngleOfAttack(Number(e.target.value))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -506,13 +514,17 @@ export default function SimulatePage() {
                           max={0.01}
                           step={0.0001}
                           value={timeStepSize}
-                          onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                          onChange={(e) =>
+                            setTimeStepSize(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-green-500"
                         />
                         <input
                           type="number"
                           value={timeStepSize}
-                          onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                          onChange={(e) =>
+                            setTimeStepSize(Number(e.target.value))
+                          }
                           step={0.0001}
                           className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />

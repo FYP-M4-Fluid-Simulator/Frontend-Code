@@ -39,14 +39,16 @@ import {
   saveExperimentToBackend,
   type OptimizationMetrics,
 } from "../../lib/exportData";
-import { generateAirfoil } from "../../lib/cst";
+import { generateCSTAirfoil } from "../../lib/cst";
 import { useOptimization } from "../../lib/socket/OptimizationWebSocket";
 import type { OptSessionConfig } from "../../lib/http/createOptSession";
 
 export default function OptimizePage() {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeSidebarTab, setActiveSidebarTab] = useState<"parameters" | "results">("parameters");
+  const [activeSidebarTab, setActiveSidebarTab] = useState<
+    "parameters" | "results"
+  >("parameters");
 
   // Optimization state
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -63,11 +65,11 @@ export default function OptimizePage() {
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
   const [upperCoefficients, setUpperCoefficients] = useState<number[]>([
-    0.18, 0.22, 0.20, 0.18, 0.15, 0.12,
+    0.18, 0.22, 0.2, 0.18, 0.15, 0.12,
   ]);
 
   const [lowerCoefficients, setLowerCoefficients] = useState<number[]>([
-    -0.10, -0.08, -0.06, -0.05, -0.04, -0.03,
+    -0.1, -0.08, -0.06, -0.05, -0.04, -0.03,
   ]);
 
   const [angleOfAttack, setAngleOfAttack] = useState(0);
@@ -107,7 +109,9 @@ export default function OptimizePage() {
   const optimizationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Optimization session config — setting this triggers the hook
-  const [optSessionConfig, setOptSessionConfig] = useState<OptSessionConfig | undefined>(undefined);
+  const [optSessionConfig, setOptSessionConfig] = useState<
+    OptSessionConfig | undefined
+  >(undefined);
 
   // Real optimization hook
   const {
@@ -226,7 +230,6 @@ export default function OptimizePage() {
     }
   }, [optError]);
 
-
   const handleDownloadMetrics = (format: "csv" | "json") => {
     const metrics: OptimizationMetrics = {
       liftCoefficient: bestLiftCoeff,
@@ -247,11 +250,16 @@ export default function OptimizePage() {
   };
 
   const handleDownloadDatFile = () => {
-    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+    const airfoil = generateCSTAirfoil(
+      upperCoefficients,
+      lowerCoefficients,
+      0,
+      100,
+    );
     const timestamp = new Date().toISOString().slice(0, 10);
     downloadDatFile(
-      airfoil.upper,
-      airfoil.lower,
+      airfoil.upperCoordinates,
+      airfoil.lowerCoordinates,
       `optimized-airfoil-${timestamp}`,
     );
     setShowExportMenu(false);
@@ -268,7 +276,12 @@ export default function OptimizePage() {
   };
 
   const handleSaveExperiment = async () => {
-    const airfoil = generateAirfoil(upperCoefficients, lowerCoefficients, 100);
+    const airfoil = generateCSTAirfoil(
+      upperCoefficients,
+      lowerCoefficients,
+      0,
+      100,
+    );
 
     const experimentData: import("../../lib/exportData").ExperimentData = {
       name: `Optimization-${new Date().toISOString().slice(0, 10)}`,
@@ -294,8 +307,8 @@ export default function OptimizePage() {
           reynoldsNumber: velocity * 10000,
         },
         airfoilCoordinates: {
-          upper: airfoil.upper,
-          lower: airfoil.lower,
+          upper: airfoil.upperCoordinates,
+          lower: airfoil.lowerCoordinates ,
         },
       },
     };
@@ -463,8 +476,6 @@ export default function OptimizePage() {
             <RotateCcw className="w-3.5 h-3.5" />
             Reset
           </button>
-
-
         </div>
 
         {/* Center: Branding */}
@@ -505,10 +516,11 @@ export default function OptimizePage() {
               <div className="flex border-b border-gray-200">
                 <button
                   onClick={() => setActiveSidebarTab("parameters")}
-                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "parameters"
-                    ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                    activeSidebarTab === "parameters"
+                      ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" />
@@ -518,10 +530,11 @@ export default function OptimizePage() {
                 {showResults && (
                   <button
                     onClick={() => setActiveSidebarTab("results")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "results"
-                      ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                      activeSidebarTab === "results"
+                        ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <BarChart3 className="w-4 h-4" />
@@ -593,13 +606,17 @@ export default function OptimizePage() {
                           max={25}
                           step={0.5}
                           value={angleOfAttack}
-                          onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                          onChange={(e) =>
+                            setAngleOfAttack(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-purple-500"
                         />
                         <input
                           type="number"
                           value={angleOfAttack.toFixed(1)}
-                          onChange={(e) => setAngleOfAttack(Number(e.target.value))}
+                          onChange={(e) =>
+                            setAngleOfAttack(Number(e.target.value))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -619,13 +636,17 @@ export default function OptimizePage() {
                           max={0.01}
                           step={0.0001}
                           value={timeStepSize}
-                          onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                          onChange={(e) =>
+                            setTimeStepSize(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-green-500"
                         />
                         <input
                           type="number"
                           value={timeStepSize}
-                          onChange={(e) => setTimeStepSize(Number(e.target.value))}
+                          onChange={(e) =>
+                            setTimeStepSize(Number(e.target.value))
+                          }
                           step={0.0001}
                           className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -676,13 +697,17 @@ export default function OptimizePage() {
                           max={200}
                           step={10}
                           value={numIterations}
-                          onChange={(e) => setNumIterations(Number(e.target.value))}
+                          onChange={(e) =>
+                            setNumIterations(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-blue-500"
                         />
                         <input
                           type="number"
                           value={numIterations}
-                          onChange={(e) => setNumIterations(Number(e.target.value))}
+                          onChange={(e) =>
+                            setNumIterations(Number(e.target.value))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -702,13 +727,17 @@ export default function OptimizePage() {
                           max={0.15}
                           step={0.01}
                           value={minThickness}
-                          onChange={(e) => setMinThickness(Number(e.target.value))}
+                          onChange={(e) =>
+                            setMinThickness(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-red-500"
                         />
                         <input
                           type="number"
                           value={minThickness.toFixed(2)}
-                          onChange={(e) => setMinThickness(Number(e.target.value))}
+                          onChange={(e) =>
+                            setMinThickness(Number(e.target.value))
+                          }
                           step={0.01}
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -729,13 +758,17 @@ export default function OptimizePage() {
                           max={0.35}
                           step={0.01}
                           value={maxThickness}
-                          onChange={(e) => setMaxThickness(Number(e.target.value))}
+                          onChange={(e) =>
+                            setMaxThickness(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-pink-500"
                         />
                         <input
                           type="number"
                           value={maxThickness.toFixed(2)}
-                          onChange={(e) => setMaxThickness(Number(e.target.value))}
+                          onChange={(e) =>
+                            setMaxThickness(Number(e.target.value))
+                          }
                           step={0.01}
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -756,13 +789,17 @@ export default function OptimizePage() {
                           max={0.1}
                           step={0.001}
                           value={learningRate}
-                          onChange={(e) => setLearningRate(Number(e.target.value))}
+                          onChange={(e) =>
+                            setLearningRate(Number(e.target.value))
+                          }
                           className="flex-1 h-2 accent-indigo-500"
                         />
                         <input
                           type="number"
                           value={learningRate.toFixed(3)}
-                          onChange={(e) => setLearningRate(Number(e.target.value))}
+                          onChange={(e) =>
+                            setLearningRate(Number(e.target.value))
+                          }
                           step={0.001}
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -852,7 +889,9 @@ export default function OptimizePage() {
                         <span>Best L/D Ratio:</span>
                         <span className="font-black text-green-700">
                           {optimizationMetrics.liftToDragRatio?.toFixed(2) ||
-                            (optimizationMetrics.cl / optimizationMetrics.cd).toFixed(2)}
+                            (
+                              optimizationMetrics.cl / optimizationMetrics.cd
+                            ).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -871,8 +910,15 @@ export default function OptimizePage() {
                         </h5>
                         <ResponsiveContainer width="100%" height={100}>
                           <LineChart data={ldRatioHistory}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#fed7aa" />
-                            <XAxis dataKey="iteration" tick={{ fontSize: 10 }} stroke="#f97316" />
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#fed7aa"
+                            />
+                            <XAxis
+                              dataKey="iteration"
+                              tick={{ fontSize: 10 }}
+                              stroke="#f97316"
+                            />
                             <YAxis tick={{ fontSize: 10 }} stroke="#f97316" />
                             <Tooltip
                               contentStyle={{
@@ -1019,20 +1065,36 @@ export default function OptimizePage() {
                   {/* Real-time Metrics Grid */}
                   <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
                     <div className="bg-orange-50 p-2 rounded-lg border border-orange-100">
-                      <p className="text-[10px] font-black text-orange-800 uppercase tracking-tighter">Loss</p>
-                      <p className="text-sm font-bold text-gray-900">{formatValue(optimizationLoss)}</p>
+                      <p className="text-[10px] font-black text-orange-800 uppercase tracking-tighter">
+                        Loss
+                      </p>
+                      <p className="text-sm font-bold text-gray-900">
+                        {formatValue(optimizationLoss)}
+                      </p>
                     </div>
                     <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                      <p className="text-[10px] font-black text-blue-800 uppercase tracking-tighter">L/D Ratio</p>
-                      <p className="text-sm font-bold text-gray-900 text-green-600">{bestLDRatio.toFixed(2)}</p>
+                      <p className="text-[10px] font-black text-blue-800 uppercase tracking-tighter">
+                        L/D Ratio
+                      </p>
+                      <p className="text-sm font-bold text-gray-900 text-green-600">
+                        {bestLDRatio.toFixed(2)}
+                      </p>
                     </div>
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">C<sub>L</sub></p>
-                      <p className="text-sm font-bold text-gray-900">{formatValue(bestLiftCoeff)}</p>
+                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
+                        C<sub>L</sub>
+                      </p>
+                      <p className="text-sm font-bold text-gray-900">
+                        {formatValue(bestLiftCoeff)}
+                      </p>
                     </div>
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">C<sub>D</sub></p>
-                      <p className="text-sm font-bold text-gray-900">{formatValue(bestDragCoeff)}</p>
+                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
+                        C<sub>D</sub>
+                      </p>
+                      <p className="text-sm font-bold text-gray-900">
+                        {formatValue(bestDragCoeff)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1050,7 +1112,7 @@ export default function OptimizePage() {
         onClose={() => setShowResultsModal(false)}
         type="optimization"
         metrics={optimizationMetrics}
-        convergenceData={optHistory.map(h => ({
+        convergenceData={optHistory.map((h) => ({
           iteration: h.iteration,
           cl: h.cl,
           cd: h.cd,
