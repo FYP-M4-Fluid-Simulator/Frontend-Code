@@ -425,20 +425,6 @@ export default function OptimizePage() {
     }
   };
 
-  const handleResetOptimization = () => {
-    setIsOptimizing(false);
-    setOptimizationIteration(0);
-    setShowResults(false);
-
-    // Reload from session storage
-    const savedState = sessionStorage.getItem("cfdState");
-    if (savedState) {
-      const state = JSON.parse(savedState);
-      setUpperCoefficients(state.upperCoefficients);
-      setLowerCoefficients(state.lowerCoefficients);
-    }
-  };
-
   const formatValue = (val: number | undefined | null) => {
     if (val === undefined || val === null) return "0.0000";
     if (val === 0) return "0.0000";
@@ -467,14 +453,6 @@ export default function OptimizePage() {
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Simulation
-          </button>
-
-          <button
-            onClick={handleResetOptimization}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-orange-50 border border-gray-300 hover:border-orange-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-orange-600"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset
           </button>
         </div>
 

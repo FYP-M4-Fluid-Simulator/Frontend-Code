@@ -157,13 +157,6 @@ export default function FinalizePage() {
                   <ZoomOut className="w-3.5 h-3.5" />
                 </button>
                 <div className="w-px h-4 bg-gray-300 mx-1" />
-                <button
-                  onClick={() => setZoomLevel(100)}
-                  className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-                  title="Reset View"
-                >
-                  <Maximize className="w-3.5 h-3.5" />
-                </button>
               </div>
             </div>
 

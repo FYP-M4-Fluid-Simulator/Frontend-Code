@@ -251,23 +251,7 @@ export default function DesignPage() {
     }
   };
 
-  const handleResetDesign = () => {
-    // Use symmetric airfoil values matching the Python example
-    const defaultUpperWeights = [
-      0.17104533, 0.15300564, 0.1501825, 0.135824, 0.14169314,
-    ];
-    const defaultLowerWeights = [
-      -0.17104533, -0.15300564, -0.1501825, -0.135824, -0.14169314,
-    ]; // Negative for lower surface
-
-    setUpperCoefficients(defaultUpperWeights);
-    setLowerCoefficients(defaultLowerWeights);
-    setAngleOfAttack(5);
-    setVelocity(15);
-  };
-
   const handleStartWithDefault = () => {
-    handleResetDesign();
     setShowNewDesignModal(false);
   };
 
@@ -761,13 +745,6 @@ export default function DesignPage() {
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
               <div className="w-px h-4 bg-gray-300 mx-1" />
-              <button
-                onClick={() => setZoomLevel(100)}
-                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-                title="Reset View"
-              >
-                <Maximize className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
 
