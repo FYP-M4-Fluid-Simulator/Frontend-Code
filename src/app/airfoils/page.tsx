@@ -290,6 +290,22 @@ export default function AirfoilDeck() {
     }
   };
 
+  const formatValue = (val: number | undefined | null) => {
+    if (val === undefined || val === null) return "N/A";
+    if (val === 0) return "0.0000";
+
+    // Use scientific notation for small values
+    if (Math.abs(val) < 0.001 && Math.abs(val) > 0) {
+      const parts = val.toExponential(2).split("e");
+      return (
+        <span>
+          {parts[0]} &times; 10<sup>{parts[1].replace("+", "")}</sup>
+        </span>
+      );
+    }
+    return val.toFixed(4);
+  };
+
   const handleAirfoilClick = (airfoil: Airfoil) => {
     // Store selected airfoil data for design page
     sessionStorage.setItem(
@@ -546,7 +562,7 @@ export default function AirfoilDeck() {
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 text-6xl font-bold mb-3">
-                Turbodiff
+                TurboDiff
               </h1>
               <p className="text-gray-300 text-lg">
                 Design, analyze, and optimize airfoils
@@ -649,24 +665,20 @@ export default function AirfoilDeck() {
 
                       {/* Coefficients */}
                       <div className="flex items-center gap-3">
-                        <div className="text-center px-3 py-1 bg-green-500/10 border border-green-400/30 rounded-lg">
-                          <div className="text-green-300 text-xs">
+                        <div className="text-center px-3 py-1 bg-green-500/10 border border-green-400/30 rounded-lg min-w-[90px]">
+                          <div className="text-green-300 text-xs font-medium">
                             C<sub>L</sub>
                           </div>
                           <div className="text-green-100 text-sm font-bold">
-                            {airfoil.cl !== null
-                              ? airfoil.cl.toFixed(3)
-                              : "N/A"}
+                            {formatValue(airfoil.cl)}
                           </div>
                         </div>
-                        <div className="text-center px-3 py-1 bg-orange-500/10 border border-orange-400/30 rounded-lg">
-                          <div className="text-orange-300 text-xs">
+                        <div className="text-center px-3 py-1 bg-orange-500/10 border border-orange-400/30 rounded-lg min-w-[99px]">
+                          <div className="text-orange-300 text-xs font-medium">
                             C<sub>D</sub>
                           </div>
                           <div className="text-orange-100 text-sm font-bold">
-                            {airfoil.cd !== null
-                              ? airfoil.cd.toFixed(3)
-                              : "N/A"}
+                            {formatValue(airfoil.cd)}
                           </div>
                         </div>
                       </div>
@@ -800,34 +812,28 @@ export default function AirfoilDeck() {
 
                       {/* Coefficients */}
                       <div className="flex items-center gap-3">
-                        <div className="text-center px-3 py-1.5 bg-green-500/10 border border-green-400/30 rounded-lg min-w-[70px]">
+                        <div className="text-center px-3 py-1.5 bg-green-500/10 border border-green-400/30 rounded-lg min-w-[90px]">
                           <div className="text-green-300 text-xs font-medium">
                             C<sub>L</sub>
                           </div>
                           <div className="text-green-100 text-sm font-bold">
-                            {airfoil.cl !== null
-                              ? airfoil.cl.toFixed(3)
-                              : "N/A"}
+                            {formatValue(airfoil.cl)}
                           </div>
                         </div>
-                        <div className="text-center px-3 py-1.5 bg-orange-500/10 border border-orange-400/30 rounded-lg min-w-[70px]">
+                        <div className="text-center px-3 py-1.5 bg-orange-500/10 border border-orange-400/30 rounded-lg min-w-[90px]">
                           <div className="text-orange-300 text-xs font-medium">
                             C<sub>D</sub>
                           </div>
                           <div className="text-orange-100 text-sm font-bold">
-                            {airfoil.cd !== null
-                              ? airfoil.cd.toFixed(3)
-                              : "N/A"}
+                            {formatValue(airfoil.cd)}
                           </div>
                         </div>
-                        <div className="text-center px-3 py-1.5 bg-blue-500/10 border border-blue-400/30 rounded-lg min-w-[70px]">
+                        <div className="text-center px-3 py-1.5 bg-blue-500/10 border border-blue-400/30 rounded-lg min-w-[90px]">
                           <div className="text-blue-300 text-xs font-medium">
                             L/D
                           </div>
                           <div className="text-blue-100 text-sm font-bold">
-                            {liftToDrag !== null
-                              ? liftToDrag.toFixed(1)
-                              : "N/A"}
+                            {formatValue(liftToDrag)}
                           </div>
                         </div>
                       </div>
