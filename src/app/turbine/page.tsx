@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { ProfessionalTurbine } from "../../components/ProfessionalTurbine";
 import { useRouter } from "next/navigation";
+import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 
 export default function TurbinePage() {
   const router = useRouter();
@@ -112,13 +113,7 @@ export default function TurbinePage() {
 
         {/* Right: User Controls */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.push("/")}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-red-50 border border-gray-300 hover:border-red-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-red-600"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Logout
-          </button>
+          <UserProfileDropdown />
         </div>
       </div>
 

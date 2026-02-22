@@ -22,6 +22,7 @@ import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCan
 import { generateCSTAirfoil } from "../../lib/cst";
 import { useRouter } from "next/navigation";
 import { PYTHON_BACKEND_URL } from "@/config";
+import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 
 // Reusable number input component with improved UX
 function EditableNumberInput({
@@ -211,15 +212,15 @@ export default function DesignPage() {
     const newUpperCoeffs =
       surface === "upper"
         ? [...upperCoefficients].map((coeff, i) =>
-            i === index ? value : coeff,
-          )
+          i === index ? value : coeff,
+        )
         : [...upperCoefficients];
 
     const newLowerCoeffs =
       surface === "lower"
         ? [...lowerCoefficients].map((coeff, i) =>
-            i === index ? value : coeff,
-          )
+          i === index ? value : coeff,
+        )
         : [...lowerCoefficients];
 
     // Update state
@@ -488,13 +489,7 @@ export default function DesignPage() {
 
         {/* Right: User */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/")}
-            className="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-            title="Account"
-          >
-            <User className="w-4 h-4" />
-          </button>
+          <UserProfileDropdown />
         </div>
       </div>
 
@@ -516,10 +511,9 @@ export default function DesignPage() {
                 <div className="flex border-b border-gray-200">
                   <button
                     onClick={() => setActiveTab("cst")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
-                      activeTab === "cst"
-                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeTab === "cst"
+                      ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">

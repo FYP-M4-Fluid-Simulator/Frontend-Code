@@ -534,11 +534,10 @@ export default function AirfoilDeck() {
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${
-                    currentPage === 1
-                      ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
-                      : "bg-slate-800/50 text-white hover:bg-blue-600"
-                  }`}
+                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === 1
+                    ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
+                    : "bg-slate-800/50 text-white hover:bg-blue-600"
+                    }`}
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Previous
@@ -561,11 +560,10 @@ export default function AirfoilDeck() {
                       <button
                         key={page}
                         onClick={() => goToPage(page)}
-                        className={`w-10 h-10 rounded-lg font-semibold transition-all ${
-                          currentPage === page
-                            ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                            : "bg-slate-800/50 text-gray-300 hover:bg-slate-700"
-                        }`}
+                        className={`w-10 h-10 rounded-lg font-semibold transition-all ${currentPage === page
+                          ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
+                          : "bg-slate-800/50 text-gray-300 hover:bg-slate-700"
+                          }`}
                       >
                         {page}
                       </button>
@@ -576,11 +574,10 @@ export default function AirfoilDeck() {
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${
-                    currentPage === totalPages
-                      ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
-                      : "bg-slate-800/50 text-white hover:bg-blue-600"
-                  }`}
+                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === totalPages
+                    ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
+                    : "bg-slate-800/50 text-white hover:bg-blue-600"
+                    }`}
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />

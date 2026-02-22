@@ -1,4 +1,5 @@
 import { PYTHON_BACKEND_URL } from "@/config";
+import { auth } from "../firebase/config";
 
 export interface SessionConfig {
   userId?: string;
@@ -9,6 +10,7 @@ export interface SessionConfig {
   meshDensity?: "coarse" | "medium" | "fine" | "ultra";
   timeStepSize?: number;
   simulationDuration?: number;
+  runId?: string;
 }
 
 export async function createSession(config: SessionConfig) {
@@ -44,7 +46,7 @@ export async function createSession(config: SessionConfig) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      user_id: config.userId || "840c99b5-8322-4404-b345-cb039808e4e2",
+      user_id: config.userId || auth?.currentUser?.uid,
       fidelity: fidelity,
       sim_time: config.simulationDuration || 10,
       dt: config.timeStepSize || 0.01,

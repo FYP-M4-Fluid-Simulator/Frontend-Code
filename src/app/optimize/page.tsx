@@ -42,6 +42,7 @@ import {
 import { generateCSTAirfoil } from "../../lib/cst";
 import { useOptimization } from "../../lib/socket/OptimizationWebSocket";
 import type { OptSessionConfig } from "../../lib/http/createOptSession";
+import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 
 export default function OptimizePage() {
   const router = useRouter();
@@ -398,6 +399,7 @@ export default function OptimizePage() {
       maxThickness,
       inflow_velocity: velocity,
       meshDensity,
+      runId: Date.now().toString(),
     });
   };
 
@@ -468,13 +470,7 @@ export default function OptimizePage() {
 
         {/* Right: User Controls */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.push("/")}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-red-50 border border-gray-300 hover:border-red-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-red-600"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Logout
-          </button>
+          <UserProfileDropdown />
         </div>
       </div>
 

@@ -1,5 +1,9 @@
-import CFDCanvas from "@/components/CFD_CANVAS";
+"use client";
 
-export default function Page(){
-  return <CFDCanvas/>;
+import CFDCanvas from "@/components/CFD_CANVAS";
+import { useRef } from "react";
+
+export default function Page() {
+  const frameRef = useRef<any>(null);
+  return <CFDCanvas frameRef={frameRef} />;
 }
