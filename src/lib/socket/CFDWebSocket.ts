@@ -16,6 +16,8 @@ export function useCFD(config?: SessionConfig) {
   const [error, setError] = useState<string | null>(null);
   const [coefficients, setCoefficients] = useState<CoefficientData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [frameStep, setFrameStep] = useState(0);
+  const [totalSteps, setTotalSteps] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const initializedConfigRef = useRef<string | null>(null);
 
@@ -82,6 +84,15 @@ export function useCFD(config?: SessionConfig) {
             }
 
             frameRef.current = data;
+
+            // Extract progress info from meta
+            if (data.meta) {
+              if (typeof data.meta.step !== 'undefined') {
+                setFrameStep(data.meta.step);
+              }
+              // total_steps is sim_time / dt — the server doesn't send it directly,
+              // so we track it from config if available.
+            }
 
             // Extract coefficients from meta if available
             if (data.meta && typeof data.meta.cl !== 'undefined') {
@@ -157,5 +168,5 @@ export function useCFD(config?: SessionConfig) {
     }
   };
 
-  return { frameRef, isConnected, isCompleted, setIsCompleted, error, coefficients, closeConnection, sessionId };
+  return { frameRef, isConnected, isCompleted, setIsCompleted, error, coefficients, closeConnection, sessionId, frameStep, totalSteps, setTotalSteps };
 }

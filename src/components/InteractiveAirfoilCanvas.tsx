@@ -33,6 +33,7 @@ interface InteractiveAirfoilCanvasProps {
     value: number,
   ) => void;
   designMode?: boolean; // NEW: flag for design mode
+  readOnly?: boolean; // NEW: disables drag-and-drop of control points
   onControlPointDragStart?: () => void;
   onControlPointDragEnd?: () => void;
   zoomLevel?: number; // NEW: zoom level (100 = 100%)
@@ -53,6 +54,7 @@ export function InteractiveAirfoilCanvas({
   showVectorField,
   onCoefficientChange,
   designMode = false,
+  readOnly = false,
   onControlPointDragStart,
   onControlPointDragEnd,
   zoomLevel = 100,
@@ -64,6 +66,7 @@ export function InteractiveAirfoilCanvas({
   const [draggedPoint, setDraggedPoint] = useState<ControlPoint | null>(null);
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const animationFrameRef = useRef<number>();
+  const animationTimeRef = useRef<number>(0); // persists across effect re-runs
   const [canvasSize, setCanvasSize] = useState({ width, height });
 
   // Update canvas size when container size changes (e.g., sidebar toggle)
@@ -235,10 +238,11 @@ export function InteractiveAirfoilCanvas({
       ultra: 10,
     }[meshQuality];
 
-    let time = 0;
+    let time = animationTimeRef.current;
 
     const render = () => {
       time += 0.016;
+      animationTimeRef.current = time;
 
       // this means we are on the design page (first page) and not the simulator page (second page)
       if (designMode) {
@@ -652,7 +656,7 @@ export function InteractiveAirfoilCanvas({
   ]);
 
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!showControlPoints) return;
+    if (!showControlPoints || readOnly) return;
 
     const svg = overlayRef.current;
     if (!svg) return;
@@ -673,7 +677,7 @@ export function InteractiveAirfoilCanvas({
   };
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!draggedPoint) return;
+    if (!draggedPoint || readOnly) return;
 
     const svg = overlayRef.current;
     if (!svg) return;
@@ -721,7 +725,7 @@ export function InteractiveAirfoilCanvas({
         width={canvasSize.width}
         height={canvasSize.height}
         className="absolute inset-0"
-        style={{ cursor: showControlPoints ? "crosshair" : "default" }}
+        style={{ cursor: (!readOnly && showControlPoints) ? "crosshair" : "default" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

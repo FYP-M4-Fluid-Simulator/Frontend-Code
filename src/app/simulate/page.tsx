@@ -96,6 +96,9 @@ export default function SimulatePage() {
     coefficients,
     closeConnection,
     sessionId,
+    frameStep,
+    totalSteps,
+    setTotalSteps,
   } = useCFD(sessionConfig);
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
@@ -129,6 +132,14 @@ export default function SimulatePage() {
 
   // Ref for progress interval
   const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Compute progress from actual frame data when simulating
+  useEffect(() => {
+    if (isSimulating && totalSteps > 0) {
+      const pct = Math.min(99, (frameStep / totalSteps) * 100);
+      setSimulationProgress(pct);
+    }
+  }, [frameStep, totalSteps, isSimulating]);
 
   // Load state from sessionStorage on mount
   useEffect(() => {
@@ -341,16 +352,9 @@ export default function SimulatePage() {
 
     setSessionConfig(config);
 
-    // Simulate progress animation (asymptotic)
-    const progressInterval = setInterval(() => {
-      setSimulationProgress((prev) => {
-        if (prev >= 95) return prev;
-        // Slower increment as it gets higher
-        const increment = Math.max(0.1, (95 - prev) / 100);
-        return prev + increment;
-      });
-    }, 100);
-    simulationIntervalRef.current = progressInterval;
+    // Pre-compute expected total steps so the progress bar can be reactive
+    const expectedSteps = Math.round(simulationDuration / timeStepSize);
+    setTotalSteps(expectedSteps);
   };
 
   // Handle simulation completion from WebSocket
@@ -397,7 +401,7 @@ export default function SimulatePage() {
         );
       }
 
-      // Clear interval
+      // Clear interval (kept for cleanup safety)
       if (simulationIntervalRef.current) {
         clearInterval(simulationIntervalRef.current);
         simulationIntervalRef.current = null;
@@ -701,12 +705,17 @@ export default function SimulatePage() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-xs font-bold text-gray-700">
                             <span>Progress</span>
-                            <span>{simulationProgress.toFixed(1)}%</span>
+                            <span>
+                              {totalSteps > 0
+                                ? `${frameStep} / ${totalSteps} frames`
+                                : `${simulationProgress.toFixed(1)}%`
+                              }
+                            </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                             <div
                               className="bg-gradient-to-r from-cyan-500 to-blue-600 h-full transition-all duration-300 rounded-full"
-                              style={{ width: `${simulationProgress}%` }}
+                              style={{ width: `${totalSteps > 0 ? Math.min(100, (frameStep / totalSteps) * 100) : simulationProgress}%` }}
                             />
                           </div>
                         </div>
@@ -969,6 +978,7 @@ export default function SimulatePage() {
                     showControlPoints={false}
                     showMeshOverlay={true}
                     designMode={false}
+                    readOnly={true}
                     chordLength={chordLength}
                   />
                 )}
