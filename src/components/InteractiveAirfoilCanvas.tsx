@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { generateAirfoil, rotateAirfoil } from "@/lib/cst";
+import { generateCSTAirfoil, rotateAirfoil } from "@/lib/cst";
 import { calculatePotentialFlow, getPressureColor } from "@/lib/flowField";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -103,11 +103,15 @@ export function InteractiveAirfoilCanvas({
       return;
     }
 
-    const { upper, lower } = generateAirfoil(
+    const result = generateCSTAirfoil(
       upperCoefficients,
       lowerCoefficients,
-      100,
+      0, // trailing edge thickness
+      100, // number of points
     );
+    const { coordinates, upperCoordinates, lowerCoordinates } = result;
+    const upper = upperCoordinates;
+    const lower = lowerCoordinates;
 
     // Guard: Check if airfoil generation succeeded
     if (!upper?.length || !lower?.length) {
@@ -203,11 +207,8 @@ export function InteractiveAirfoilCanvas({
     canvas.style.height = `${canvasSize.height}px`;
     ctx.scale(dpr, dpr);
 
-    const { upper, lower } = generateAirfoil(
-      upperCoefficients,
-      lowerCoefficients,
-      100,
-    );
+    const { upperCoordinates: upper, lowerCoordinates: lower } =
+      generateCSTAirfoil(upperCoefficients, lowerCoefficients, 0, 100);
 
     // Guard: Check if airfoil generation succeeded
     if (!upper?.length || !lower?.length) {
