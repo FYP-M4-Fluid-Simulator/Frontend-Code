@@ -138,7 +138,7 @@ export default function DesignPage() {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [chordLength, setChordLength] = useState(1.0);
   const [leadingEdgeRadius, setLeadingEdgeRadius] = useState(0.015867);
-  const [numBernsteinCoefficients, setNumBernsteinCoefficients] = useState(8);
+  const [numBernsteinCoefficients, setNumBernsteinCoefficients] = useState(4);
 
   // Modal and file handling states
   const [showNewDesignModal, setShowNewDesignModal] = useState(false);
@@ -316,20 +316,14 @@ export default function DesignPage() {
 
       const formData = new FormData();
       formData.append("file", selectedFile);
-      formData.append("leadingEdgeRadius", leadingEdgeRadius.toString());
-      formData.append("numCoefficients", numBernsteinCoefficients.toString());
+      formData.append("bernenstein_order", numBernsteinCoefficients.toString());
+      formData.append("leading_edge_radius", leadingEdgeRadius.toString());
 
       // Ensure proper URL format with slash
 
-      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values?user_id=${USER_ID}`;
+      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values`;
 
-      console.log("=== API Request Details ===");
-      console.log("URL:", apiUrl);
-      console.log("Leading Edge Radius:", leadingEdgeRadius);
-      console.log("Num Coefficients:", numBernsteinCoefficients);
-      console.log("File:", selectedFile.name);
-      console.log("==========================");
-
+ 
       const response = await fetch(apiUrl, {
         method: "POST",
         body: formData,
