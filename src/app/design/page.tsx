@@ -615,7 +615,7 @@ export default function DesignPage() {
                             </span>
                             <input
                               type="range"
-                              min={-2.0}
+                              min={0.0}
                               max={2.0}
                               step={0.01}
                               value={coeff}
@@ -635,7 +635,7 @@ export default function DesignPage() {
                               }
                               step={0.0001}
                               decimals={4}
-                              min={-2.0}
+                              min={0.0}
                               max={2.0}
                               className="w-28 px-2 py-1.5 text-sm border border-blue-300 rounded font-mono"
                             />
@@ -678,7 +678,7 @@ export default function DesignPage() {
                             <input
                               type="range"
                               min={-2.0}
-                              max={2.0}
+                              max={0.0}
                               step={0.01}
                               value={coeff}
                               onChange={(e) =>
@@ -698,7 +698,7 @@ export default function DesignPage() {
                               step={0.0001}
                               decimals={4}
                               min={-2.0}
-                              max={2.0}
+                              max={0.0}
                               className="w-28 px-2 py-1.5 text-sm border border-green-300 rounded font-mono"
                             />
                             <button

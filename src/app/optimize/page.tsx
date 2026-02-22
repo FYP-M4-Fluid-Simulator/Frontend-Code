@@ -578,7 +578,7 @@ export default function OptimizePage() {
                         <input
                           type="range"
                           min={5}
-                          max={100}
+                          max={30}
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
                           className="flex-1 h-2 accent-cyan-500"
