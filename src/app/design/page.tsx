@@ -822,14 +822,14 @@ export default function DesignPage() {
           <div className="flex gap-3">
             <button
               onClick={handleNavigateToSimulate}
-              className="flex-1 flex justify-center items-center bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-cyan-400"
+              className="flex-1 flex justify-center items-center bg-[#1F91FF] hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-cyan-400"
             >
               <Settings className="w-5 h-5 mr-2" />
               Start Simulation
             </button>
             <button
               onClick={handleNavigateToOptimize}
-              className="flex-1 flex justify-center items-center bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-pink-400"
+              className="flex-1 flex justify-center items-center bg-[#DE3000] hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-lg text-sm border border-pink-400"
             >
               <ArrowRight className="w-5 h-5 mr-2" />
               Start Optimization
