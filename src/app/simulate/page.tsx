@@ -357,14 +357,10 @@ export default function SimulatePage() {
           <div className="flex items-center gap-2 px-4 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg">
             <Wind className="w-4 h-4 text-white" />
             <span className="text-xs font-black text-white tracking-wide">
-              CFD AIRFOIL PLATFORM
+               Simulation Mode
             </span>
           </div>
-          <div className="px-3 py-1 bg-cyan-100 rounded-lg border border-cyan-300">
-            <span className="text-xs font-bold text-cyan-800">
-              Simulation Mode
-            </span>
-          </div>
+          
         </div>
 
         {/* Right: User Controls */}
