@@ -9,10 +9,6 @@ const CELL = 4; // display pixels per grid cell
 const CELL_SIZE = 0.01; // metres per grid cell
 const CHORD_LENGTH = 40 * CELL_SIZE; // 0.4 m  (server default: 40 * cell_size)
 
-// Default RAE2822-like CST weights
-const CST_UPPER = [0.18, 0.22, 0.2, 0.18, 0.15, 0.12];
-const CST_LOWER = [-0.1, -0.08, -0.06, -0.05, -0.04, -0.03];
-
 // Airfoil leading-edge position in world coords (metres) – matches server defaults:
 //   airfoil_offset_x = 30 * cell_size
 //   airfoil_offset_y = (height // 2) * cell_size
@@ -75,28 +71,18 @@ function generateCSTCoords(
 
 /**
  * Convert normalised airfoil coords → world coords (m) → grid cell index → screen pixels.
- * Mirrors the Python logic exactly:
- *   world_x  = offset_x + x_norm * chord
- *   world_y  = offset_y + y_norm * chord
- *   grid     = world / cell_size
- *   screen   = grid  * CELL (pixels per cell)
+ * The canvas is rendered flipped vertically (row 0 = bottom), so sy is mirrored:
+ *   sy = (H * CELL) - raw_sy
  */
 function toScreenPoints(
   xs: number[],
   ys: number[]
 ): { sx: number[]; sy: number[] } {
   const sx = xs.map((x) => ((AIRFOIL_OFFSET_X + x * CHORD_LENGTH) / CELL_SIZE) * CELL);
-  const sy = ys.map((y) => ((AIRFOIL_OFFSET_Y + y * CHORD_LENGTH) / CELL_SIZE) * CELL);
+  // Mirror y so that the canvas is physically correct (y increases upward)
+  const sy = ys.map((y) => H * CELL - ((AIRFOIL_OFFSET_Y + y * CHORD_LENGTH) / CELL_SIZE) * CELL);
   return { sx, sy };
 }
-
-// Pre-compute airfoil outline once (it never changes between frames)
-const { x: afX, yUpper: afYU, yLower: afYL } = generateCSTCoords(
-  CST_UPPER,
-  CST_LOWER
-);
-const { sx: afSX, sy: afSYU } = toScreenPoints(afX, afYU);
-const { sy: afSYL } = toScreenPoints(afX, afYL);
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -104,14 +90,32 @@ interface CFDCanvasProps {
   frameRef: React.MutableRefObject<any>;
   showVectorField?: boolean;
   visualizationType?: "curl" | "pressure" | "tracer";
+  upperCoefficients?: number[];
+  lowerCoefficients?: number[];
+  angleOfAttack?: number;
 }
 
-export default function CFDCanvas({ frameRef, showVectorField = true, visualizationType = "curl" }: CFDCanvasProps) {
+export default function CFDCanvas({
+  frameRef,
+  showVectorField = true,
+  visualizationType = "curl",
+  upperCoefficients = [0.18, 0.22, 0.2, 0.18, 0.15, 0.12],
+  lowerCoefficients = [-0.1, -0.08, -0.06, -0.05, -0.04, -0.03],
+  angleOfAttack = 0,
+}: CFDCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
+
+    // Compute airfoil outline from the current CST coefficients
+    const { x: afX, yUpper: afYU, yLower: afYL } = generateCSTCoords(
+      upperCoefficients,
+      lowerCoefficients
+    );
+    const { sx: afSX, sy: afSYU } = toScreenPoints(afX, afYU);
+    const { sy: afSYL } = toScreenPoints(afX, afYL);
 
     let rafId: number;
 
@@ -134,18 +138,18 @@ export default function CFDCanvas({ frameRef, showVectorField = true, visualizat
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, W * CELL, H * CELL);
 
-      // ── 2. Draw cells: solid (grey) or curl (red/blue) ───────────
+      // ── 2. Draw cells: curl (red/blue) for all cells ─────────────
+      // Canvas row 0 is at the top; grid row 0 is also at the top in memory,
+      // but we want to display it flipped (physics y increases upward).
+      // We mirror by drawing row i at canvas row (H - 1 - i).
       for (let i = 0; i < H; i++) {
+        const screenRow = H - 1 - i; // vertical flip
         for (let j = 0; j < W; j++) {
-          if (solid[i][j]) {
-            ctx.fillStyle = "rgb(128,128,128)";
-          } else {
-            const c = curl[i][j];
-            const r = Math.max(0, Math.min(255, Math.round(c * 5)));
-            const b = Math.max(0, Math.min(255, Math.round(-c * 5)));
-            ctx.fillStyle = `rgb(${r},0,${b})`;
-          }
-          ctx.fillRect(j * CELL, i * CELL, CELL, CELL);
+          const c = curl[i][j];
+          const r = Math.max(0, Math.min(255, Math.round(c * 5)));
+          const b = Math.max(0, Math.min(255, Math.round(-c * 5)));
+          ctx.fillStyle = `rgb(${r},0,${b})`;
+          ctx.fillRect(j * CELL, screenRow * CELL, CELL, CELL);
         }
       }
 
@@ -172,7 +176,8 @@ export default function CFDCanvas({ frameRef, showVectorField = true, visualizat
             const clampedMag = Math.min(mag, 1.0);
             const magSafe = Math.max(mag, 1e-6);
             const uDir = uij / magSafe;
-            const vDir = vij / magSafe;
+            // Flip v direction since canvas y-axis is inverted
+            const vDir = -(vij / magSafe);
 
             const r = Math.round(255 * clampedMag);
             const b = Math.round(255 * (1 - clampedMag));
@@ -182,7 +187,8 @@ export default function CFDCanvas({ frameRef, showVectorField = true, visualizat
             // Arrow spans ~70% of the group cell size
             const scale = ARROW_STEP * CELL * 0.7 * clampedMag;
             const cx = (gj + ARROW_STEP / 2) * CELL;
-            const cy = (gi + ARROW_STEP / 2) * CELL;
+            // Mirror the group centre y
+            const cy = (H - 1 - gi - ARROW_STEP / 2) * CELL;
             const endX = cx + scale * uDir;
             const endY = cy + scale * vDir;
 
@@ -215,26 +221,45 @@ export default function CFDCanvas({ frameRef, showVectorField = true, visualizat
       ctx.strokeStyle = "white";
       ctx.lineWidth = 2;
 
-      // Upper surface
+      // Rotate the outline around the chord midpoint to match angle of attack.
+      // Canvas y is inverted (after our vertical flip the visual y increases
+      // upward), so a positive AoA must use a negative canvas rotation angle.
+      const midIdx = Math.floor(afSX.length / 2); // index closest to x_norm = 0.5
+      const pivotX = afSX[midIdx];
+      const pivotY = (afSYU[midIdx] + afSYL[midIdx]) / 2; // mid-thickness point
+      const aoaRad = -(angleOfAttack * Math.PI) / 180;
+
+      ctx.save();
+      ctx.translate(pivotX, pivotY);
+      ctx.rotate(aoaRad);
+
+      // Build the full closed airfoil path (upper TE→LE, lower LE→TE)
       ctx.beginPath();
-      ctx.moveTo(afSX[0], afSYU[0]);
+      ctx.moveTo(afSX[0] - pivotX, afSYU[0] - pivotY);
       for (let k = 1; k < afSX.length; k++) {
-        ctx.lineTo(afSX[k], afSYU[k]);
+        ctx.lineTo(afSX[k] - pivotX, afSYU[k] - pivotY);
       }
+      // trace lower surface back to leading edge to close the shape
+      for (let k = afSX.length - 1; k >= 0; k--) {
+        ctx.lineTo(afSX[k] - pivotX, afSYL[k] - pivotY);
+      }
+      ctx.closePath();
+
+      // Light-gray fill
+      ctx.fillStyle = "rgba(200, 200, 200, 0.75)";
+      ctx.fill();
+
+      // White outline
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Lower surface
-      ctx.beginPath();
-      ctx.moveTo(afSX[0], afSYL[0]);
-      for (let k = 1; k < afSX.length; k++) {
-        ctx.lineTo(afSX[k], afSYL[k]);
-      }
-      ctx.stroke();
+      ctx.restore();
     }
 
     loop();
     return () => cancelAnimationFrame(rafId);
-  }, [frameRef, showVectorField, visualizationType]);
+  }, [frameRef, showVectorField, visualizationType, upperCoefficients, lowerCoefficients, angleOfAttack]);
 
   return (
     <div className="w-full h-full">
