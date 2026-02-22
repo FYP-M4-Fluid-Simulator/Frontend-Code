@@ -84,6 +84,12 @@ export function generateCSTAirfoil(
   const y = [...yl, ...yu];
 
 
+  console.log("=== CST Airfoil Generation ===");
+  for (let i = 0; i < y.length; i++) {
+      console.log(`x[${i}] = ${x[i].toFixed(6)}, y[${i}] = ${y[i].toFixed(6)}`);
+  }
+
+
 
   // Create coordinate arrays
   const coordinates = x.map((xi, i) => ({ x: xi, y: y[i] }));
