@@ -857,7 +857,6 @@ export default function SimulatePage() {
                     onCoefficientChange={updateCSTCoefficient}
                     showControlPoints={false}
                     showMeshOverlay={false}
-                    allowFullScreen={true}
                     designMode={false}
                     chordLength={chordLength}
                   />

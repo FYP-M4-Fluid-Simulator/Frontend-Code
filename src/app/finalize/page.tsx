@@ -191,7 +191,6 @@ export default function FinalizePage() {
                   showPressureField={showPressureField}
                   showVectorField={showVectorField}
                   onCoefficientChange={() => {}} // No editing allowed
-                  allowFullScreen={true}
                   designMode={false} // Read-only mode (means we are not on design page (first page) )
                   onControlPointDragStart={() => {}}
                   onControlPointDragEnd={() => {}}

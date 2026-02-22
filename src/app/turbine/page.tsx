@@ -18,7 +18,6 @@ export default function TurbinePage() {
   const router = useRouter();
 
   // Turbine state
-  const [turbineFullscreen, setTurbineFullscreen] = useState(false);
   const [liftToDragRatio, setLiftToDragRatio] = useState(45.0);
 
   // Load L/D ratio from sessionStorage if available
@@ -34,10 +33,6 @@ export default function TurbinePage() {
       setLiftToDragRatio(results.liftToDragRatio || 36.5);
     }
   }, []);
-
-  const handleResetView = () => {
-    setTurbineFullscreen(false);
-  };
 
   const handleExportResults = () => {
     const results = {
@@ -73,14 +68,6 @@ export default function TurbinePage() {
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Design
-          </button>
-
-          <button
-            onClick={handleResetView}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 border border-gray-300 hover:border-blue-400 rounded-lg transition-all text-xs font-semibold text-gray-700 hover:text-blue-600"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset View
           </button>
 
           <button
@@ -202,28 +189,11 @@ export default function TurbinePage() {
           </div>
         </div>
 
-        {/* Fullscreen Toggle */}
-        <div className="absolute top-4 left-4 z-30">
-          <button
-            onClick={() => setTurbineFullscreen(!turbineFullscreen)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md hover:bg-white border border-gray-300 hover:border-green-400 rounded-lg transition-all text-xs font-bold shadow-lg"
-          >
-            <Maximize2 className="w-4 h-4" />
-            <span>
-              {turbineFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
-            </span>
-          </button>
-        </div>
-
         {/* Turbine Component */}
         <div className="flex-1 relative">
           <div className="absolute inset-4 rounded-xl shadow-2xl overflow-hidden border-2 border-gray-300">
             <ProfessionalTurbine
               liftToDragRatio={liftToDragRatio}
-              isFullscreen={turbineFullscreen}
-              onToggleFullscreen={() =>
-                setTurbineFullscreen(!turbineFullscreen)
-              }
             />
           </div>
         </div>

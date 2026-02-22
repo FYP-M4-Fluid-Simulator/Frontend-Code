@@ -5,14 +5,10 @@ import { Maximize2, Minimize2 } from "lucide-react";
 
 interface ProfessionalTurbineProps {
   liftToDragRatio: number;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
 }
 
 export function ProfessionalTurbine({
   liftToDragRatio,
-  isFullscreen,
-  onToggleFullscreen,
 }: ProfessionalTurbineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
@@ -464,7 +460,7 @@ export function ProfessionalTurbine({
 
   return (
     <div
-      className={`flex-1 flex items-center justify-center bg-[#0a0e1a] relative ${isFullscreen ? "fixed inset-0 z-50" : ""}`}
+      className={`flex-1 flex items-center justify-center bg-[#0a0e1a] relative}`}
     >
       <canvas
         ref={canvasRef}
@@ -472,17 +468,6 @@ export function ProfessionalTurbine({
         height={800}
         className="max-w-full max-h-full"
       />
-      <button
-        onClick={onToggleFullscreen}
-        className="absolute top-4 right-4 p-2 bg-gray-800/90 hover:bg-gray-700 text-white rounded-lg shadow-lg transition-colors border border-gray-600"
-        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-      >
-        {isFullscreen ? (
-          <Minimize2 className="w-5 h-5" />
-        ) : (
-          <Maximize2 className="w-5 h-5" />
-        )}
-      </button>
     </div>
   );
 }

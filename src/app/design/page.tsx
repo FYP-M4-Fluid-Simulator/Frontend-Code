@@ -794,7 +794,6 @@ export default function DesignPage() {
                 showPressureField={showPressureField}
                 showVectorField={showVectorField}
                 onCoefficientChange={updateCSTCoefficient}
-                allowFullScreen={true}
                 designMode={true}
                 onControlPointDragStart={handleControlPointDragStart}
                 onControlPointDragEnd={handleControlPointDragEnd}

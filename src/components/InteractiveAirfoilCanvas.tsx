@@ -32,7 +32,6 @@ interface InteractiveAirfoilCanvasProps {
     index: number,
     value: number,
   ) => void;
-  allowFullScreen: boolean;
   designMode?: boolean; // NEW: flag for design mode
   onControlPointDragStart?: () => void;
   onControlPointDragEnd?: () => void;
@@ -53,7 +52,6 @@ export function InteractiveAirfoilCanvas({
   showPressureField,
   showVectorField,
   onCoefficientChange,
-  allowFullScreen,
   designMode = false,
   onControlPointDragStart,
   onControlPointDragEnd,
@@ -63,7 +61,6 @@ export function InteractiveAirfoilCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<SVGSVGElement>(null);
-  const [isFullScreen, setIsFullScreen] = useState(false);
   const [draggedPoint, setDraggedPoint] = useState<ControlPoint | null>(null);
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const animationFrameRef = useRef<number>();
@@ -769,67 +766,13 @@ export function InteractiveAirfoilCanvas({
     setDraggedPoint(null);
   };
 
-  const toggleFullScreen = () => {
-    if (!containerRef.current) return;
-
-    try {
-      if (!isFullScreen) {
-        // Request fullscreen on document body for better compatibility
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement
-            .requestFullscreen()
-            .then(() => {
-              setIsFullScreen(true);
-            })
-            .catch((err) => {
-              console.warn("Fullscreen request failed:", err);
-              setIsFullScreen(true); // Fallback visual state
-            });
-        } else {
-          // Fallback for browsers without fullscreen API
-          setIsFullScreen(true);
-        }
-      } else {
-        // Exit fullscreen
-        if (document.fullscreenElement) {
-          document
-            .exitFullscreen()
-            .then(() => {
-              setIsFullScreen(false);
-            })
-            .catch((err) => {
-              console.warn("Exit fullscreen failed:", err);
-              setIsFullScreen(false);
-            });
-        } else {
-          setIsFullScreen(false);
-        }
-      }
-    } catch (error) {
-      console.warn("Fullscreen not supported or blocked:", error);
-      setIsFullScreen(!isFullScreen);
-    }
-  };
-
-  useEffect(() => {
-    const handleFullScreenChange = () => {
-      setIsFullScreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullScreenChange);
-    return () =>
-      document.removeEventListener("fullscreenchange", handleFullScreenChange);
-  }, []);
 
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full ${isFullScreen && !document.fullscreenElement ? "fixed inset-0 z-[9999] bg-gray-900" : ""}`}
+      className={`relative w-full h-full`}
       style={{
-        backgroundColor:
-          isFullScreen && !document.fullscreenElement
-            ? "#0B1628"
-            : "transparent",
+        backgroundColor: "transparent",
         minWidth: 0,
         minHeight: 0,
       }}
@@ -986,35 +929,6 @@ export function InteractiveAirfoilCanvas({
             </g>
           ))}
       </svg>
-
-      {/* Glassmorphism Full-screen toggle */}
-      {allowFullScreen && (
-        <motion.button
-          onClick={toggleFullScreen}
-          className="absolute top-4 right-4 p-3 rounded-xl shadow-2xl transition-all z-10 backdrop-blur-md"
-          style={{
-            background: "rgba(255, 255, 255, 0.85)",
-            border: "2px solid rgba(59, 130, 246, 0.3)",
-            boxShadow: "0 8px 32px rgba(59, 130, 246, 0.2)",
-          }}
-          whileHover={{
-            scale: 1.05,
-            boxShadow: "0 12px 48px rgba(59, 130, 246, 0.4)",
-            borderColor: "#3b82f6",
-          }}
-          whileTap={{ scale: 0.95 }}
-          initial={false}
-          animate={isFullScreen ? { rotate: 180 } : { rotate: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          title={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-        >
-          {isFullScreen ? (
-            <Minimize2 className="w-5 h-5 text-blue-600" />
-          ) : (
-            <Maximize2 className="w-5 h-5 text-blue-600" />
-          )}
-        </motion.button>
-      )}
     </div>
   );
 }
