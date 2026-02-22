@@ -17,20 +17,38 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { PYTHON_BACKEND_URL } from "@/config";
+import { UUID } from "crypto";
 
+// Backend response structure from /cst endpoint
 interface Airfoil {
-  id: string;
-  name: string;
-  imageUrl: string;
-  cl: number;
-  cd: number;
-  dateModified: string;
+  id: string; // CST ID (UUID as string)
+  weights_upper: number[];
+  weights_lower: number[];
+  chord_length: number;
+  cst_created_at: string; // ISO datetime string
+  airfoil_created_at: string; // ISO datetime string
+  cl: number | null; // Can be null if not yet simulated
+  cd: number | null; // Can be null if not yet simulated
+  lift: number | null; // Can be null if not yet simulated
+  drag: number | null; // Can be null if not yet simulated
+  angle_of_attack: number;
+  created_by_user_id: string; // UUID as string
+  is_optimized: boolean;
+
+  // Display fields (added during transformation)
+  name: string; // Generated from ID
+  imageUrl?: string; // Optional - may not always be present
+  // created_at?: string; // Alias for cst_created_at for compatibility
 }
 
 type ViewMode = "home" | "saved";
 
 export default function AirfoilDeck() {
   const router = useRouter();
+
+  // TODO: Replace with actual user ID from authentication context
+  const USER_ID = "dINHzGHWkBNK147w6azLXc5Uc582";
+
   const [airfoils, setAirfoils] = useState<Airfoil[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +56,13 @@ export default function AirfoilDeck() {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("home");
   const itemsPerPage = 10;
+
+  // Lazy loading states
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [usingFallback, setUsingFallback] = useState(false);
+  const maxRetries = 3;
 
   // File import states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,39 +77,222 @@ export default function AirfoilDeck() {
     fetchAirfoils();
   }, []);
 
-  const fetchAirfoils = async () => {
+  const fetchAirfoils = async (append = false, retry = 0) => {
     try {
-      setLoading(true);
-      setError(null);
-      // Fetch from the correct API endpoint
-      const response = await fetch("/api/airfoil_deck");
+      if (!append) {
+        setLoading(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const primaryApiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}cst?user_id=${USER_ID}`;
+      const fallbackApiUrl = "/api/airfoil_deck";
+
+      let response: Response;
+      let usedFallback = false;
+
+      // Add timeout to fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      try {
+        // Try primary API first
+        console.log(`Attempting to fetch from: ${primaryApiUrl}`);
+
+        response = await fetch(primaryApiUrl, {
+          signal: controller.signal,
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        console.log(`Primary API response status: ${response.status}`);
+        console.log(`Primary API response ok: ${response.ok}`);
+        console.log(
+          `Primary API response headers:`,
+          Object.fromEntries(response.headers.entries()),
+        );
+
+        clearTimeout(timeoutId);
+
+        // If primary API fails, try fallback
+        if (!response.ok) {
+          console.warn(
+            `Primary API failed with status ${response.status}, falling back to local API`,
+          );
+
+          // Try to log error details before falling back
+          try {
+            const errorText = await response.clone().text();
+            console.error(`Primary API error response body:`, errorText);
+          } catch (e) {
+            console.error(`Could not read error response body`);
+          }
+
+          response = await fetch(fallbackApiUrl);
+          usedFallback = true;
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        console.warn(
+          "Primary API fetch failed, falling back to local API:",
+          fetchError,
+        );
+
+        // Try fallback API
+        response = await fetch(fallbackApiUrl);
+        usedFallback = true;
+      }
 
       if (!response.ok) {
-        throw new Error("Failed to fetch airfoils");
+        let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+
+        // Try to get more detailed error message
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+        } catch (e) {
+          // If JSON parsing fails, try text
+          try {
+            const errorText = await response.text();
+            if (errorText) errorMessage = errorText;
+          } catch (e2) {
+            // Use default error message
+          }
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      setAirfoils(data);
+
+      // Handle both direct array response and object with items property
+      let airfoilsArray: any[];
+
+      if (Array.isArray(data)) {
+        // Direct array response (for backward compatibility)
+        airfoilsArray = data;
+      } else if (
+        data &&
+        typeof data === "object" &&
+        "items" in data &&
+        Array.isArray(data.items)
+      ) {
+        // Object with items array (current backend response format)
+        airfoilsArray = data.items;
+      } else {
+        console.error("Invalid response structure. Type:", typeof data);
+        console.error("Data value:", data);
+        throw new Error(
+          "Invalid response format: Expected array or object with 'items' array",
+        );
+      }
+
+      // Transform data to add display fields and handle null values
+      const transformedData: Airfoil[] = airfoilsArray.map(
+        (item: any, index: number) => ({
+          ...item,
+          // Add a generated name if not present
+          name: item.name || `Airfoil ${item.id.substring(0, 8)}`,
+          // Add created_at alias for compatibility
+          created_at: item.cst_created_at,
+        }),
+      );
+
+      if (append) {
+        setAirfoils((prev) => [...prev, ...transformedData]);
+      } else {
+        setAirfoils(transformedData);
+      }
+
+      // Update fallback state
+      setUsingFallback(usedFallback);
+
+      // Check if there's more data (you can adjust this logic based on your API)
+      setHasMore(airfoilsArray.length >= itemsPerPage && !usedFallback); // Don't allow load more for dummy data
+      setRetryCount(0); // Reset retry count on success
     } catch (err) {
       console.error("Error fetching airfoils:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
+
+      let errorMessage = "Failed to load airfoils";
+
+      if (err instanceof Error) {
+        if (err.name === "AbortError") {
+          errorMessage = "Request timeout: Server took too long to respond";
+        } else if (err.message.includes("fetch")) {
+          errorMessage = "Network error: Please check your connection";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+
+      setError(errorMessage);
+
+      // Retry logic with exponential backoff
+      if (retry < maxRetries) {
+        const retryDelay = Math.min(1000 * Math.pow(2, retry), 10000); // Max 10 seconds
+        setRetryCount(retry + 1);
+
+        console.log(
+          `Retrying in ${retryDelay}ms... (Attempt ${retry + 1}/${maxRetries})`,
+        );
+
+        setTimeout(() => {
+          fetchAirfoils(append, retry + 1);
+        }, retryDelay);
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(0);
+    setUsingFallback(false);
+    fetchAirfoils();
+  };
+
+  const loadMoreAirfoils = () => {
+    if (!loadingMore && hasMore) {
+      fetchAirfoils(true);
     }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "Invalid date";
+      }
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid date";
+    }
   };
 
   const handleAirfoilClick = (airfoil: Airfoil) => {
-    // Store selected airfoil in sessionStorage and navigate to design page
-    sessionStorage.setItem("selectedAirfoil", JSON.stringify(airfoil));
+    // Store selected airfoil data for design page
+    sessionStorage.setItem(
+      "selectedAirfoil",
+      JSON.stringify({
+        id: airfoil.id,
+        name: airfoil.name,
+        upperCoefficients: airfoil.weights_upper,
+        lowerCoefficients: airfoil.weights_lower,
+        chordLength: airfoil.chord_length,
+        angleOfAttack: airfoil.angle_of_attack,
+        cl: airfoil.cl,
+        cd: airfoil.cd,
+      }),
+    );
     router.push("/design");
   };
 
@@ -141,7 +349,7 @@ export default function AirfoilDeck() {
       formData.append("leadingEdgeRadius", leadingEdgeRadius.toString());
       formData.append("numCoefficients", numBernsteinCoefficients.toString());
 
-      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values`;
+      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values?user_id=${USER_ID}`;
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -229,8 +437,7 @@ export default function AirfoilDeck() {
     return [...airfoils]
       .sort(
         (a, b) =>
-          new Date(b.dateModified).getTime() -
-          new Date(a.dateModified).getTime(),
+          new Date(b.airfoil_created_at).getTime() - new Date(a.airfoil_created_at).getTime(),
       )
       .slice(0, 3);
   };
@@ -239,9 +446,16 @@ export default function AirfoilDeck() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-white text-xl font-semibold">
-            Loading airfoils...
+          <div className="w-20 h-20 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <div className="text-white text-xl font-semibold mb-2">
+            {retryCount > 0
+              ? `Retrying... (${retryCount}/${maxRetries})`
+              : "Loading airfoils..."}
+          </div>
+          <div className="text-blue-300/60 text-sm">
+            {retryCount > 0
+              ? "Previous attempt failed, trying again"
+              : "Please wait while we fetch your designs"}
           </div>
         </div>
       </div>
@@ -250,12 +464,34 @@ export default function AirfoilDeck() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-400 text-xl font-semibold mb-2">
-            ⚠️ Error
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/10 border-2 border-red-400/30 flex items-center justify-center">
+            <div className="text-red-400 text-4xl">⚠️</div>
           </div>
-          <div className="text-red-300">{error}</div>
+          <div className="text-red-400 text-xl font-semibold mb-3">
+            Failed to Load Airfoils
+          </div>
+          <div className="text-red-300/80 mb-6 text-sm bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+            {error}
+          </div>
+          {retryCount > 0 && retryCount < maxRetries && (
+            <div className="text-yellow-300 text-sm mb-4">
+              Retrying... (Attempt {retryCount}/{maxRetries})
+            </div>
+          )}
+          <button
+            onClick={handleRetry}
+            disabled={retryCount > 0 && retryCount < maxRetries}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all shadow-lg"
+          >
+            {retryCount > 0 && retryCount < maxRetries
+              ? "Retrying..."
+              : "Try Again"}
+          </button>
+          <div className="mt-4 text-gray-400 text-xs">
+            Make sure your backend server is running
+          </div>
         </div>
       </div>
     );
@@ -263,6 +499,34 @@ export default function AirfoilDeck() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      {/* Fallback Data Warning Banner */}
+      {usingFallback && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/30 backdrop-blur-sm">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
+              <span className="text-yellow-400 text-sm">⚠</span>
+            </div>
+            <div className="flex-grow">
+              <p className="text-yellow-200 text-sm font-medium">
+                Using demo data - Backend server unavailable
+              </p>
+              <p className="text-yellow-300/70 text-xs">
+                Displaying sample airfoils for demonstration purposes
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setUsingFallback(false);
+                fetchAirfoils();
+              }}
+              className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-yellow-200 hover:text-yellow-100 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 rounded-lg transition-colors"
+            >
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      )}
+
       {viewMode === "home" ? (
         // HOME VIEW
         <div className="min-h-screen flex items-center justify-center px-4 py-12">
@@ -304,8 +568,15 @@ export default function AirfoilDeck() {
               >
                 <Database className="w-5 h-5 text-cyan-400" />
                 <span className="text-white font-medium">Browse Saved</span>
-                <span className="ml-1 px-2 py-0.5 bg-cyan-400/30 rounded-full text-cyan-200 text-xs font-bold">
+                <span
+                  className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                    usingFallback
+                      ? "bg-yellow-400/30 text-yellow-200"
+                      : "bg-cyan-400/30 text-cyan-200"
+                  }`}
+                >
                   {airfoils.length}
+                  {usingFallback && " (demo)"}
                 </span>
               </button>
             </div>
@@ -354,7 +625,7 @@ export default function AirfoilDeck() {
                           {airfoil.name}
                         </h3>
                         <p className="text-blue-300/60 text-sm">
-                          {formatDate(airfoil.dateModified)}
+                          {formatDate(airfoil.airfoil_created_at)}
                         </p>
                       </div>
 
@@ -365,7 +636,9 @@ export default function AirfoilDeck() {
                             C<sub>L</sub>
                           </div>
                           <div className="text-green-100 text-sm font-bold">
-                            {airfoil.cl.toFixed(3)}
+                            {airfoil.cl !== null
+                              ? airfoil.cl.toFixed(3)
+                              : "N/A"}
                           </div>
                         </div>
                         <div className="text-center px-3 py-1 bg-orange-500/10 border border-orange-400/30 rounded-lg">
@@ -373,7 +646,9 @@ export default function AirfoilDeck() {
                             C<sub>D</sub>
                           </div>
                           <div className="text-orange-100 text-sm font-bold">
-                            {airfoil.cd.toFixed(3)}
+                            {airfoil.cd !== null
+                              ? airfoil.cd.toFixed(3)
+                              : "N/A"}
                           </div>
                         </div>
                       </div>
@@ -454,8 +729,13 @@ export default function AirfoilDeck() {
               <div className="space-y-2">
                 {currentAirfoils.map((airfoil, index) => {
                   const globalIndex = startIndex + index + 1;
-                  const liftToDrag =
-                    airfoil.cd !== 0 ? airfoil.cl / airfoil.cd : 0;
+                  const hasSimulationData =
+                    airfoil.cl !== null &&
+                    airfoil.cd !== null &&
+                    airfoil.cd !== 0;
+                  const liftToDrag = hasSimulationData
+                    ? airfoil.cl! / airfoil.cd!
+                    : null;
 
                   return (
                     <div
@@ -489,7 +769,7 @@ export default function AirfoilDeck() {
                           {airfoil.name}
                         </h3>
                         <p className="text-blue-300/60 text-sm">
-                          {formatDate(airfoil.dateModified)}
+                          {formatDate(airfoil.airfoil_created_at)}
                         </p>
                       </div>
 
@@ -500,7 +780,9 @@ export default function AirfoilDeck() {
                             C<sub>L</sub>
                           </div>
                           <div className="text-green-100 text-sm font-bold">
-                            {airfoil.cl.toFixed(3)}
+                            {airfoil.cl !== null
+                              ? airfoil.cl.toFixed(3)
+                              : "N/A"}
                           </div>
                         </div>
                         <div className="text-center px-3 py-1.5 bg-orange-500/10 border border-orange-400/30 rounded-lg min-w-[70px]">
@@ -508,7 +790,9 @@ export default function AirfoilDeck() {
                             C<sub>D</sub>
                           </div>
                           <div className="text-orange-100 text-sm font-bold">
-                            {airfoil.cd.toFixed(3)}
+                            {airfoil.cd !== null
+                              ? airfoil.cd.toFixed(3)
+                              : "N/A"}
                           </div>
                         </div>
                         <div className="text-center px-3 py-1.5 bg-blue-500/10 border border-blue-400/30 rounded-lg min-w-[70px]">
@@ -516,7 +800,9 @@ export default function AirfoilDeck() {
                             L/D
                           </div>
                           <div className="text-blue-100 text-sm font-bold">
-                            {liftToDrag.toFixed(1)}
+                            {liftToDrag !== null
+                              ? liftToDrag.toFixed(1)
+                              : "N/A"}
                           </div>
                         </div>
                       </div>
@@ -525,6 +811,29 @@ export default function AirfoilDeck() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Load More Button */}
+            {currentAirfoils.length > 0 && hasMore && !searchQuery && (
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={loadMoreAirfoils}
+                  disabled={loadingMore}
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all shadow-lg"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="w-5 h-5" />
+                      <span>Load More Airfoils</span>
+                    </>
+                  )}
+                </button>
               </div>
             )}
 
@@ -591,6 +900,11 @@ export default function AirfoilDeck() {
                 Showing {startIndex + 1} to{" "}
                 {Math.min(endIndex, filteredAirfoils.length)} of{" "}
                 {filteredAirfoils.length}
+                {!hasMore && !searchQuery && (
+                  <div className="text-green-400 mt-2">
+                    ✓ All airfoils loaded
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -103,6 +103,10 @@ if (!PYTHON_BACKEND_URL) {
 
 export default function DesignPage() {
   const router = useRouter();
+
+  // TODO: Replace with actual user ID from authentication context
+  const USER_ID = "dINHzGHWkBNK147w6azLXc5Uc582";
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"cst" | "simulation">("cst");
 
@@ -171,11 +175,22 @@ export default function DesignPage() {
     if (selectedAirfoil) {
       try {
         const airfoil = JSON.parse(selectedAirfoil);
+        console.log("Loading selected airfoil:", airfoil);
+
         // If the airfoil has CST coefficients, load them
         if (airfoil.upperCoefficients && airfoil.lowerCoefficients) {
           setUpperCoefficients(airfoil.upperCoefficients);
           setLowerCoefficients(airfoil.lowerCoefficients);
         }
+
+        // Load other parameters if available
+        if (airfoil.chordLength !== undefined) {
+          setChordLength(airfoil.chordLength);
+        }
+        if (airfoil.angleOfAttack !== undefined) {
+          setAngleOfAttack(airfoil.angleOfAttack);
+        }
+
         // Clear the stored data after loading
         sessionStorage.removeItem("selectedAirfoil");
       } catch (error) {
@@ -306,7 +321,7 @@ export default function DesignPage() {
 
       // Ensure proper URL format with slash
 
-      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values`;
+      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values?user_id=${USER_ID}`;
 
       console.log("=== API Request Details ===");
       console.log("URL:", apiUrl);
