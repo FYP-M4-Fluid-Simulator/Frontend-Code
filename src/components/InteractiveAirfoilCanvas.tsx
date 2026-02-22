@@ -156,11 +156,21 @@ export function InteractiveAirfoilCanvas({
       });
     });
 
+    // lowerCoordinates runs TE→LE (x decreasing), so we sample in reverse
+    // so that idx=0 → leading edge (x≈0), matching upper surface convention.
+    // NOTE: lower[] stops at x≈0.0012 (never includes x=0 due to cosine spacing),
+    // so for idx=0 we use upper[0] which IS at exactly x=0, y=0.
     lowerCoefficients.forEach((coeff, idx) => {
-      const t = idx / Math.max(lowerCoefficients.length - 1, 1);
-      const sampleIdx = Math.floor(t * (lower.length - 1));
-      const point = rotated.lower[sampleIdx];
-      if (!point) return; // Skip if point is undefined
+      let point: { x: number; y: number } | undefined;
+      if (idx === 0) {
+        // Leading edge is shared by both surfaces; upper[0] is the exact x=0 point
+        point = rotated.upper[0];
+      } else {
+        const t = idx / Math.max(lowerCoefficients.length - 1, 1);
+        const sampleIdx = Math.floor((1 - t) * (lower.length - 1));
+        point = rotated.lower[sampleIdx];
+      }
+      if (!point) return;
       const pt = transformPoint(point);
       points.push({
         id: `lower-${idx}`,
@@ -691,8 +701,12 @@ export function InteractiveAirfoilCanvas({
     const offsetY = canvasSize.height / 2;
     const newCoefficient = (offsetY - y) / scale;
 
-    // Clamp to reasonable range
-    const clampedCoeff = Math.max(-0.5, Math.min(0.5, newCoefficient));
+    // Clamp per-surface to match sidebar bounds:
+    //   upper: [0.0, 2.0]
+    //   lower: [-2.0, 0.0]
+    const [minCoeff, maxCoeff] =
+      draggedPoint.surface === "upper" ? [0.0, 2.0] : [-2.0, 0.0];
+    const clampedCoeff = Math.max(minCoeff, Math.min(maxCoeff, newCoefficient));
 
     // Update coefficient (triggers re-render)
     onCoefficientChange(draggedPoint.surface, draggedPoint.index, clampedCoeff);
