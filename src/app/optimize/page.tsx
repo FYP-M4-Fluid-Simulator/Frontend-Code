@@ -446,11 +446,11 @@ export default function OptimizePage() {
         {/* Left: Navigation */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => router.push("/simulate")}
+            onClick={() => router.push("/design")}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-300 rounded-lg transition-all text-xs font-semibold text-gray-700"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Simulation
+            Back to Design
           </button>
         </div>
 
@@ -529,7 +529,8 @@ export default function OptimizePage() {
                       <select
                         value={meshDensity}
                         onChange={(e) => setMeshDensity(e.target.value as any)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                        disabled={isOptimizing}
+                        className={`w-full px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                       >
                         <option value="coarse">Coarse (Fast)</option>
                         <option value="medium">Medium (Balanced)</option>
@@ -549,7 +550,8 @@ export default function OptimizePage() {
                           max={30}
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
-                          className="flex-1 h-2 accent-cyan-500"
+                          disabled={isOptimizing}
+                          className={`flex-1 h-2 accent-cyan-500 ${isOptimizing ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -558,7 +560,8 @@ export default function OptimizePage() {
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
                           onBlur={(e) => setVelocity(Math.min(30, Math.max(5, Number(e.target.value))))}
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isOptimizing}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -580,7 +583,8 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setAngleOfAttack(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-purple-500"
+                          disabled={isOptimizing}
+                          className={`flex-1 h-2 accent-purple-500 ${isOptimizing ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -594,7 +598,8 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setAngleOfAttack(Math.min(25, Math.max(-15, Number(e.target.value))))
                           }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isOptimizing}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -616,7 +621,8 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setTimeStepSize(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-green-500"
+                          disabled={isOptimizing}
+                          className={`flex-1 h-2 accent-green-500 ${isOptimizing ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -630,7 +636,8 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setTimeStepSize(Math.min(0.005, Math.max(0, Number(e.target.value))))
                           }
-                          className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isOptimizing}
+                          className={`w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -652,7 +659,8 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-orange-500"
+                          disabled={isOptimizing}
+                          className={`flex-1 h-2 accent-orange-500 ${isOptimizing ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -666,7 +674,8 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setSimulationDuration(Math.min(60, Math.max(1, Number(e.target.value))))
                           }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isOptimizing}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -688,7 +697,8 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setNumIterations(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-blue-500"
+                          disabled={isOptimizing}
+                          className={`flex-1 h-2 accent-blue-500 ${isOptimizing ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -702,7 +712,8 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setNumIterations(Math.min(200, Math.max(10, Number(e.target.value))))
                           }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isOptimizing}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -724,7 +735,8 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setMinThickness(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-red-500"
+                          disabled={isOptimizing}
+                          className={`flex-1 h-2 accent-red-500 ${isOptimizing ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -738,7 +750,8 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setMinThickness(Math.min(0.15, Math.max(0.01, Number(e.target.value))))
                           }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isOptimizing}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -760,7 +773,8 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setMaxThickness(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-pink-500"
+                          disabled={isOptimizing}
+                          className={`flex-1 h-2 accent-pink-500 ${isOptimizing ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -774,7 +788,8 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setMaxThickness(Math.min(0.35, Math.max(0.15, Number(e.target.value))))
                           }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isOptimizing}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -796,7 +811,8 @@ export default function OptimizePage() {
                           onChange={(e) =>
                             setLearningRate(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-indigo-500"
+                          disabled={isOptimizing}
+                          className={`flex-1 h-2 accent-indigo-500 ${isOptimizing ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -810,7 +826,8 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setLearningRate(Math.min(0.1, Math.max(0.001, Number(e.target.value))))
                           }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isOptimizing}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -847,13 +864,6 @@ export default function OptimizePage() {
                         >
                           <X className="w-5 h-5" />
                           Stop Optimization
-                        </button>
-                        <button
-                          onClick={handleStartOptimization}
-                          className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-bold shadow-lg text-sm"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                          Restart Optimization
                         </button>
                       </div>
                     )}

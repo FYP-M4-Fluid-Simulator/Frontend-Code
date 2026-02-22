@@ -156,8 +156,9 @@ export default function CFDCanvas({
 
       // Resize canvas only when the grid resolution changes
       if (W !== lastW || H !== lastH || CELL !== lastCellPx) {
-        canvas.width  = W * CELL;
-        canvas.height = H * CELL;
+        canvas.width = W * CELL;
+        // The visible canvas height omits 2 top + 2 bottom rows
+        canvas.height = (H - 4) * CELL;
         lastW = W;
         lastH = H;
         lastCellPx = CELL;
@@ -181,32 +182,50 @@ export default function CFDCanvas({
         afX, afYL, cellSize, chordLength, offsetX, offsetY, H, CELL
       );
 
+      const Y_OFFSET = 2 * CELL;
+      for (let i = 0; i < afSYU.length; i++) {
+        afSYU[i] -= Y_OFFSET;
+        afSYL[i] -= Y_OFFSET;
+      }
+
       // ── 1. Clear ──────────────────────────────────────────────────
-      ctx.fillStyle = "black";
-      ctx.fillRect(0, 0, W * CELL, H * CELL);
+      const visibleH = H - 4;
+      const gradient = ctx.createLinearGradient(0, 0, W * CELL, visibleH * CELL);
+      gradient.addColorStop(0, "#0B1628");
+      gradient.addColorStop(0.5, "#1a2942");
+      gradient.addColorStop(1, "#0B1628");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, W * CELL, visibleH * CELL);
 
       // ── 2. Draw cells (curl / pressure / solid) ───────────────────
       // Canvas row 0 is top; physics row 0 is also top in memory,
       // but we want to display flipped so physics y increases upward.
       // We mirror by drawing row i at canvas row (H - 1 - i).
       for (let i = 0; i < H; i++) {
-        const screenRow = H - 1 - i;
+        // Skip rendering the top and bottom 2 rows to hide the solid boundaries
+        if (i < 2 || i >= H - 2) continue;
+        const screenRow = H - 1 - i - 2; // Shift up by 2 to account for missing top rows
         for (let j = 0; j < W; j++) {
           let r = 0, g = 0, b = 0;
+          let alpha = 0;
 
           if (visualizationType === "pressure") {
             const p = frame.fields.pressure?.[i]?.[j] ?? 0;
             r = Math.max(0, Math.min(255, Math.round(p * 50)));
             b = Math.max(0, Math.min(255, Math.round(-p * 50)));
+            alpha = Math.min(0.85, (r + b) / 200);
           } else {
             // Default: curl (vorticity)
             const c = curl[i][j];
             r = Math.max(0, Math.min(255, Math.round(c * 5)));
             b = Math.max(0, Math.min(255, Math.round(-c * 5)));
+            alpha = Math.min(0.85, (r + b) / 200);
           }
 
-          ctx.fillStyle = `rgb(${r},${g},${b})`;
-          ctx.fillRect(j * CELL, screenRow * CELL, CELL, CELL);
+          if (alpha > 0.01) {
+            ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+            ctx.fillRect(j * CELL, screenRow * CELL, CELL, CELL);
+          }
         }
       }
 
@@ -215,7 +234,14 @@ export default function CFDCanvas({
         // Arrow step scales with cell pixel size so arrows don't crowd on
         // large grids or vanish on small ones.
         const ARROW_STEP = Math.max(4, Math.round(16 / CELL));
+        ctx.strokeStyle = "rgba(0, 200, 255, 0.85)";
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "rgba(0, 200, 255, 0.35)";
+
         for (let gi = 0; gi < H; gi += ARROW_STEP) {
+          // Skip rendering the top and bottom 2 rows
+          if (gi < 2 || gi >= H - 2) continue;
           for (let gj = 0; gj < W; gj += ARROW_STEP) {
             let sumU = 0, sumV = 0, count = 0;
             for (let di = 0; di < ARROW_STEP && gi + di < H; di++) {
@@ -235,12 +261,10 @@ export default function CFDCanvas({
             const uDir = uij / magSafe;
             const vDir = -(vij / magSafe); // flip v for canvas coords
 
-            ctx.strokeStyle = `rgb(${Math.round(255 * clampedMag)},128,${Math.round(255 * (1 - clampedMag))})`;
-            ctx.lineWidth = 1.5;
-
             const scale = ARROW_STEP * CELL * 0.7 * clampedMag;
             const cx = (gj + ARROW_STEP / 2) * CELL;
-            const cy = (H - 1 - gi - ARROW_STEP / 2) * CELL;
+            // Shift up by 2 to account for missing top rows
+            const cy = (H - 1 - gi - ARROW_STEP / 2 - 2) * CELL;
             const endX = cx + scale * uDir;
             const endY = cy + scale * vDir;
 
@@ -259,6 +283,7 @@ export default function CFDCanvas({
             ctx.stroke();
           }
         }
+        ctx.shadowBlur = 0;
       }
 
       // ── 4. Draw CST airfoil outline ───────────────────────────────
@@ -281,10 +306,20 @@ export default function CFDCanvas({
       }
       ctx.closePath();
 
-      ctx.fillStyle = "rgba(200, 200, 200, 0.75)";
-      ctx.fill();
-      ctx.strokeStyle = "white";
+      // Outer glow (Deep Blue)
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = "rgba(59, 130, 246, 0.7)";
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = "rgba(59, 130, 246, 0.4)";
+      ctx.stroke();
+
+      // Main body
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "rgba(59, 130, 246, 0.6)";
+      ctx.fillStyle = "rgba(59, 130, 246, 0.85)";
+      ctx.strokeStyle = "rgba(96, 165, 250, 0.9)";
       ctx.lineWidth = 2;
+      ctx.fill();
       ctx.stroke();
 
       ctx.restore();
@@ -302,7 +337,7 @@ export default function CFDCanvas({
   ]);
 
   return (
-    <div className="w-full h-full bg-black">
+    <div className="w-full h-full bg-transparent">
       <canvas
         ref={canvasRef}
         // Internal buffer size — overwritten by the render loop once the first
