@@ -66,9 +66,6 @@ export function InteractiveAirfoilCanvas({
   const animationFrameRef = useRef<number>();
   const [canvasSize, setCanvasSize] = useState({ width, height });
 
-  let maxThickness = 0;
-  let maxThicknessX = 0;
-
   // Update canvas size when container size changes (e.g., sidebar toggle)
   useEffect(() => {
     const container = containerRef.current;
@@ -416,6 +413,9 @@ export function InteractiveAirfoilCanvas({
           ultra: 0.6,
         }[meshQuality];
 
+        // Arrow length scales linearly with inflow velocity (5 m/s → 8px, 30 m/s → 28px)
+        const baseArrowLength = 8 + ((velocity - 5) / 25) * 20;
+
         for (
           let x = arrowSpacing;
           x < canvasSize.width - arrowSpacing;
@@ -426,82 +426,44 @@ export function InteractiveAirfoilCanvas({
             y < canvasSize.height - arrowSpacing;
             y += arrowSpacing
           ) {
-            const ax = (x - offsetX) / scale + 0.5;
-            const ay = (offsetY - y) / scale;
-
-            const flow = calculatePotentialFlow(
-              ax,
-              ay,
-              airfoilPoints,
-              angleOfAttack,
-              velocity,
-            );
-
-            if (flow.speed === 0) continue;
-
-            const angle = Math.atan2(flow.vy, flow.vx);
-            const magnitude =
-              Math.min(flow.speed / velocity, 2) * 12 * arrowScale;
-
             const pulse =
               0.88 + Math.sin(time * 2 + x * 0.02 + y * 0.02) * 0.12;
-            const arrowLength = magnitude * pulse;
+            const arrowLength = baseArrowLength * arrowScale * pulse;
 
-            const endX = x + Math.cos(angle) * arrowLength;
-            const endY = y + Math.sin(angle) * arrowLength;
+            // Arrows always point right (uniform inflow)
+            const endX = x + arrowLength;
+            const endY = y;
 
-            // Color: Red (stagnation) → Orange → Yellow → Cyan (fast)
-            const speedRatio = Math.min(flow.speed / (velocity * 1.5), 1);
-            let arrowColor;
-            let arrowGlow;
-
-            if (speedRatio > 0.75) {
-              // Very fast - Electric Cyan
-              arrowColor = "rgba(0, 200, 255, 0.9)";
-              arrowGlow = "rgba(0, 200, 255, 0.4)";
-            } else if (speedRatio > 0.5) {
-              // Fast - Cyan to Yellow
-              const t = (speedRatio - 0.5) / 0.25;
-              const r = Math.floor(255 - t * 255);
-              const g = Math.floor(220 - t * 20);
-              const b = Math.floor(50 + t * 205);
-              arrowColor = `rgba(${r}, ${g}, ${b}, 0.85)`;
-              arrowGlow = `rgba(${r}, ${g}, ${b}, 0.3)`;
-            } else if (speedRatio > 0.3) {
-              // Medium - Orange/Yellow
-              arrowColor = "rgba(255, 180, 50, 0.85)";
-              arrowGlow = "rgba(255, 180, 50, 0.3)";
-            } else {
-              // Slow - Vibrant Red
-              arrowColor = "rgba(240, 60, 50, 0.9)";
-              arrowGlow = "rgba(240, 60, 50, 0.4)";
-            }
+            const arrowColor = "rgba(0, 200, 255, 0.85)";
+            const arrowGlow = "rgba(0, 200, 255, 0.35)";
 
             ctx.strokeStyle = arrowColor;
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 8;
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 6;
             ctx.shadowColor = arrowGlow;
 
+            // Shaft
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(endX, endY);
-            // ctx.stroke();
+            ctx.stroke();
 
+            // Arrowhead
             const headLength = 5 * arrowScale;
             const headAngle = Math.PI / 7;
 
             ctx.beginPath();
             ctx.moveTo(endX, endY);
             ctx.lineTo(
-              endX - headLength * Math.cos(angle - headAngle),
-              endY - headLength * Math.sin(angle - headAngle),
+              endX - headLength * Math.cos(-headAngle),
+              endY - headLength * Math.sin(-headAngle),
             );
             ctx.moveTo(endX, endY);
             ctx.lineTo(
-              endX - headLength * Math.cos(angle + headAngle),
-              endY - headLength * Math.sin(angle + headAngle),
+              endX - headLength * Math.cos(headAngle),
+              endY - headLength * Math.sin(headAngle),
             );
-            // ctx.stroke();
+            ctx.stroke();
 
             ctx.shadowBlur = 0;
           }
@@ -622,41 +584,12 @@ export function InteractiveAirfoilCanvas({
         // const leadingEdge = transformPoint({ x: 0, y: 0 });
         // const trailingEdge = transformPoint({ x: 1, y: 0 });
 
-        // Calculate thickness for display
-        if (rotated.upper.length === rotated.lower.length) {
-          for (let i = 0; i < rotated.upper.length; i++) {
-            if (rotated.upper[i] && rotated.lower[i]) {
-              const thickness = rotated.upper[i].y - rotated.lower[i].y;
-              if (thickness > maxThickness) {
-                maxThickness = thickness;
-                maxThicknessX = rotated.upper[i].x;
-              }
-            }
-          }
-        }
-
-        // Display airfoil information as text only
+        // Display chord length
         ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
         ctx.font = "14px sans-serif";
         ctx.textAlign = "left";
-
-        // Chord length
         ctx.fillText(
           `Chord: ${chordLength.toFixed(2)} m`,
-          20,
-          canvasSize.height - 60,
-        );
-
-        // Maximum thickness
-        ctx.fillText(
-          `Max Thickness: ${(maxThickness * 100).toFixed(1)}%`,
-          20,
-          canvasSize.height - 40,
-        );
-
-        // Thickness location
-        ctx.fillText(
-          `Thickness at: ${(maxThicknessX * 100).toFixed(1)}% chord`,
           20,
           canvasSize.height - 20,
         );

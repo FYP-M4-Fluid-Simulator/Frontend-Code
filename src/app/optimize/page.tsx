@@ -560,8 +560,11 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
+                          min={5}
+                          max={30}
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
+                          onBlur={(e) => setVelocity(Math.min(30, Math.max(5, Number(e.target.value))))}
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -588,9 +591,15 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
+                          min={-15}
+                          max={25}
+                          step={0.5}
                           value={angleOfAttack.toFixed(1)}
                           onChange={(e) =>
                             setAngleOfAttack(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setAngleOfAttack(Math.min(25, Math.max(-15, Number(e.target.value))))
                           }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -607,9 +616,9 @@ export default function OptimizePage() {
                       <div className="flex items-center gap-3 mb-2">
                         <input
                           type="range"
-                          min={0.0001}
-                          max={0.01}
-                          step={0.0001}
+                          min={0}
+                          max={0.005}
+                          step={0.001}
                           value={timeStepSize}
                           onChange={(e) =>
                             setTimeStepSize(Number(e.target.value))
@@ -618,11 +627,16 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
+                          min={0}
+                          max={0.005}
+                          step={0.001}
                           value={timeStepSize}
                           onChange={(e) =>
                             setTimeStepSize(Number(e.target.value))
                           }
-                          step={0.0001}
+                          onBlur={(e) =>
+                            setTimeStepSize(Math.min(0.005, Math.max(0, Number(e.target.value))))
+                          }
                           className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -649,9 +663,15 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
+                          min={1}
+                          max={60}
+                          step={1}
                           value={simulationDuration}
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setSimulationDuration(Math.min(60, Math.max(1, Number(e.target.value))))
                           }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -679,9 +699,15 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
+                          min={10}
+                          max={200}
+                          step={10}
                           value={numIterations}
                           onChange={(e) =>
                             setNumIterations(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setNumIterations(Math.min(200, Math.max(10, Number(e.target.value))))
                           }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
@@ -709,11 +735,16 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
+                          min={0.01}
+                          max={0.15}
+                          step={0.01}
                           value={minThickness.toFixed(2)}
                           onChange={(e) =>
                             setMinThickness(Number(e.target.value))
                           }
-                          step={0.01}
+                          onBlur={(e) =>
+                            setMinThickness(Math.min(0.15, Math.max(0.01, Number(e.target.value))))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -740,11 +771,16 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
+                          min={0.15}
+                          max={0.35}
+                          step={0.01}
                           value={maxThickness.toFixed(2)}
                           onChange={(e) =>
                             setMaxThickness(Number(e.target.value))
                           }
-                          step={0.01}
+                          onBlur={(e) =>
+                            setMaxThickness(Math.min(0.35, Math.max(0.15, Number(e.target.value))))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -771,11 +807,16 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
+                          min={0.001}
+                          max={0.1}
+                          step={0.001}
                           value={learningRate.toFixed(3)}
                           onChange={(e) =>
                             setLearningRate(Number(e.target.value))
                           }
-                          step={0.001}
+                          onBlur={(e) =>
+                            setLearningRate(Math.min(0.1, Math.max(0.001, Number(e.target.value))))
+                          }
                           className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
                         />
                       </div>
@@ -1002,7 +1043,7 @@ export default function OptimizePage() {
                   velocity={velocity}
                   meshQuality={meshDensity}
                   showControlPoints={showControlPoints}
-                  showMeshOverlay={false}
+                  showMeshOverlay={true}
                   showPressureField={false}
                   showVectorField={true}
                   onCoefficientChange={updateCSTCoefficient}

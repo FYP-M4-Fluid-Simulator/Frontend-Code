@@ -459,6 +459,9 @@ export default function SimulatePage() {
                           type="number"
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
+                          onBlur={(e) => setVelocity(Math.min(30, Math.max(5, Number(e.target.value))))}
+                          min={5}
+                          max={30}
                           disabled={isSimulating}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
@@ -487,9 +490,15 @@ export default function SimulatePage() {
                         />
                         <input
                           type="number"
+                          min={-15}
+                          max={25}
+                          step={0.5}
                           value={angleOfAttack.toFixed(1)}
                           onChange={(e) =>
                             setAngleOfAttack(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setAngleOfAttack(Math.min(25, Math.max(-15, Number(e.target.value))))
                           }
                           disabled={isSimulating}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -523,9 +532,9 @@ export default function SimulatePage() {
                       <div className="flex items-center gap-3 mb-2">
                         <input
                           type="range"
-                          min={0.0001}
-                          max={0.01}
-                          step={0.0001}
+                          min={0}
+                          max={0.005}
+                          step={0.001}
                           value={timeStepSize}
                           onChange={(e) =>
                             setTimeStepSize(Number(e.target.value))
@@ -535,11 +544,16 @@ export default function SimulatePage() {
                         />
                         <input
                           type="number"
+                          min={0}
+                          max={0.005}
+                          step={0.001}
                           value={timeStepSize}
                           onChange={(e) =>
                             setTimeStepSize(Number(e.target.value))
                           }
-                          step={0.0001}
+                          onBlur={(e) =>
+                            setTimeStepSize(Math.min(0.005, Math.max(0, Number(e.target.value))))
+                          }
                           disabled={isSimulating}
                           className={`w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
@@ -556,9 +570,9 @@ export default function SimulatePage() {
                       <div className="flex items-center gap-3 mb-2">
                         <input
                           type="range"
-                          min={1}
-                          max={60}
-                          step={1}
+                          min={0.05}
+                          max={10}
+                          step={0.01}
                           value={simulationDuration}
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
@@ -568,9 +582,15 @@ export default function SimulatePage() {
                         />
                         <input
                           type="number"
+                          min={0.05}
+                          max={10}
+                          step={0.01}
                           value={simulationDuration}
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
+                          }
+                          onBlur={(e) =>
+                            setSimulationDuration(Math.min(10, Math.max(0.05, Number(e.target.value))))
                           }
                           disabled={isSimulating}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -880,7 +900,7 @@ export default function SimulatePage() {
                     showVectorField={true}
                     onCoefficientChange={updateCSTCoefficient}
                     showControlPoints={false}
-                    showMeshOverlay={false}
+                    showMeshOverlay={true}
                     designMode={false}
                     chordLength={chordLength}
                   />
