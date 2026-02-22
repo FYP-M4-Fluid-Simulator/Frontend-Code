@@ -36,9 +36,9 @@ interface Airfoil {
   is_optimized: boolean;
 
   // Display fields (added during transformation)
-  name?: string; // Generated from ID
+  name: string; // Generated from ID
   imageUrl?: string; // Optional - may not always be present
-  created_at?: string; // Alias for cst_created_at for compatibility
+  // created_at?: string; // Alias for cst_created_at for compatibility
 }
 
 type ViewMode = "home" | "saved";
@@ -437,7 +437,7 @@ export default function AirfoilDeck() {
     return [...airfoils]
       .sort(
         (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          new Date(b.airfoil_created_at).getTime() - new Date(a.airfoil_created_at).getTime(),
       )
       .slice(0, 3);
   };
@@ -599,62 +599,62 @@ export default function AirfoilDeck() {
 
                 <div className="space-y-3">
                   {getRecentAirfoils().map((airfoil) => (
-                      <div
-                        key={airfoil.id}
-                        onClick={() => handleAirfoilClick(airfoil)}
-                        className="group flex items-center gap-4 p-3 bg-slate-800/50 hover:bg-slate-700/50 border border-blue-500/20 hover:border-cyan-400/40 rounded-xl cursor-pointer transition-all"
-                      >
-                        {/* Thumbnail */}
-                        <div className="flex-shrink-0 w-20 h-14 border border-blue-400/30 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center">
-                          {airfoil.imageUrl ? (
-                            <Image
-                              src={airfoil.imageUrl}
-                              alt={airfoil.name}
-                              width={80}
-                              height={56}
-                              className="object-contain"
-                            />
-                          ) : (
-                            <Wind className="w-6 h-6 text-blue-400/50" />
-                          )}
-                        </div>
-
-                        {/* Name */}
-                        <div className="flex-grow">
-                          <h3 className="text-white font-semibold">
-                            {airfoil.name}
-                          </h3>
-                          <p className="text-blue-300/60 text-sm">
-                            {formatDate(airfoil.created_at)}
-                          </p>
-                        </div>
-
-                        {/* Coefficients */}
-                        <div className="flex items-center gap-3">
-                          <div className="text-center px-3 py-1 bg-green-500/10 border border-green-400/30 rounded-lg">
-                            <div className="text-green-300 text-xs">
-                              C<sub>L</sub>
-                            </div>
-                            <div className="text-green-100 text-sm font-bold">
-                              {airfoil.cl !== null
-                                ? airfoil.cl.toFixed(3)
-                                : "N/A"}
-                            </div>
-                          </div>
-                          <div className="text-center px-3 py-1 bg-orange-500/10 border border-orange-400/30 rounded-lg">
-                            <div className="text-orange-300 text-xs">
-                              C<sub>D</sub>
-                            </div>
-                            <div className="text-orange-100 text-sm font-bold">
-                              {airfoil.cd !== null
-                                ? airfoil.cd.toFixed(3)
-                                : "N/A"}
-                            </div>
-                          </div>
-                        </div>
-
-                        <ChevronRight className="w-5 h-5 text-blue-400/50 group-hover:text-cyan-400 transition-colors" />
+                    <div
+                      key={airfoil.id}
+                      onClick={() => handleAirfoilClick(airfoil)}
+                      className="group flex items-center gap-4 p-3 bg-slate-800/50 hover:bg-slate-700/50 border border-blue-500/20 hover:border-cyan-400/40 rounded-xl cursor-pointer transition-all"
+                    >
+                      {/* Thumbnail */}
+                      <div className="flex-shrink-0 w-20 h-14 border border-blue-400/30 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center">
+                        {airfoil.imageUrl ? (
+                          <Image
+                            src={airfoil.imageUrl}
+                            alt={airfoil.name}
+                            width={80}
+                            height={56}
+                            className="object-contain"
+                          />
+                        ) : (
+                          <Wind className="w-6 h-6 text-blue-400/50" />
+                        )}
                       </div>
+
+                      {/* Name */}
+                      <div className="flex-grow">
+                        <h3 className="text-white font-semibold">
+                          {airfoil.name}
+                        </h3>
+                        <p className="text-blue-300/60 text-sm">
+                          {formatDate(airfoil.airfoil_created_at)}
+                        </p>
+                      </div>
+
+                      {/* Coefficients */}
+                      <div className="flex items-center gap-3">
+                        <div className="text-center px-3 py-1 bg-green-500/10 border border-green-400/30 rounded-lg">
+                          <div className="text-green-300 text-xs">
+                            C<sub>L</sub>
+                          </div>
+                          <div className="text-green-100 text-sm font-bold">
+                            {airfoil.cl !== null
+                              ? airfoil.cl.toFixed(3)
+                              : "N/A"}
+                          </div>
+                        </div>
+                        <div className="text-center px-3 py-1 bg-orange-500/10 border border-orange-400/30 rounded-lg">
+                          <div className="text-orange-300 text-xs">
+                            C<sub>D</sub>
+                          </div>
+                          <div className="text-orange-100 text-sm font-bold">
+                            {airfoil.cd !== null
+                              ? airfoil.cd.toFixed(3)
+                              : "N/A"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <ChevronRight className="w-5 h-5 text-blue-400/50 group-hover:text-cyan-400 transition-colors" />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -769,7 +769,7 @@ export default function AirfoilDeck() {
                           {airfoil.name}
                         </h3>
                         <p className="text-blue-300/60 text-sm">
-                          {formatDate(airfoil.created_at)}
+                          {formatDate(airfoil.airfoil_created_at)}
                         </p>
                       </div>
 
