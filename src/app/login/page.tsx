@@ -8,7 +8,7 @@ export default function LoginRoute() {
 
   const handleNavigate = (page: "landing" | "signup" | "app") => {
     if (page === "app") {
-      router.push("/airfoil_deck");
+      router.push("/airfoils");
     } else if (page === "landing") {
       router.push("/");
     } else if (page === "signup") {

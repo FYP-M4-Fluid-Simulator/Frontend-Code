@@ -53,6 +53,23 @@ export default function SimulatePage() {
     cd: 0,
     liftToDragRatio: 0,
   });
+  const [computationDuration, setComputationDuration] = useState(0);
+
+  const formatValue = (val: number | undefined | null) => {
+    if (val === undefined || val === null) return "0.0000";
+    if (val === 0) return "0.0000";
+
+    // Use scientific notation for small values
+    if (Math.abs(val) < 0.001 && Math.abs(val) > 0) {
+      const parts = val.toExponential(2).split("e");
+      return (
+        <span>
+          {parts[0]} &times; 10<sup>{parts[1].replace("+", "")}</sup>
+        </span>
+      );
+    }
+    return val.toFixed(4);
+  };
 
   // Track coefficient history for graphing
   const [coefficientHistory, setCoefficientHistory] = useState<
@@ -67,10 +84,9 @@ export default function SimulatePage() {
   // Use CFD hook when simulating
   const {
     frameRef,
-    coefficients,
-    isConnected,
     isCompleted,
-    error: cfdError,
+    setIsCompleted,
+    coefficients,
     closeConnection,
   } = useCFD(sessionConfig);
 
@@ -229,6 +245,19 @@ export default function SimulatePage() {
     setCoefficientHistory([]); // Reset coefficient history
     setIsSidebarOpen(false); // Close sidebar when simulation starts
     setVisualizationType("curl"); // Reset to default
+    setComputationDuration(0);
+    setSimulationMetrics({
+      cl: 0,
+      cd: 0,
+      liftToDragRatio: 0,
+    });
+    sessionStorage.removeItem("simulationResults");
+
+    setIsCompleted(false);
+
+    // Save start time
+    const startTime = performance.now();
+    sessionStorage.setItem("simulationStartTime", startTime.toString());
 
     // Create session config for WebSocket
     const config: SessionConfig = {
@@ -261,6 +290,13 @@ export default function SimulatePage() {
     if (isCompleted && isSimulating) {
       setSimulationProgress(100);
       setIsSimulating(false);
+      // Calculate actual computation time
+      const startTimeStr = sessionStorage.getItem("simulationStartTime");
+      if (startTimeStr) {
+        const startTime = parseFloat(startTimeStr);
+        const durationSeconds = (performance.now() - startTime) / 1000;
+        setComputationDuration(durationSeconds);
+      }
 
       // Update metrics with final coefficient values
       if (coefficients) {
@@ -288,8 +324,7 @@ export default function SimulatePage() {
             liftToDragRatio: coefficients.l_d,
             liftCoefficient: coefficients.cl,
             dragCoefficient: coefficients.cd,
-            maxPressure: 1.45,
-            computationTime: simulationDuration,
+            computationTime: computationDuration,
           }),
         );
       }
@@ -302,7 +337,7 @@ export default function SimulatePage() {
     }
   }, [isCompleted, isSimulating, coefficients, simulationDuration]);
 
-  const handlePauseSimulation = () => {
+  const handleStopSimulation = () => {
     setIsSimulating(false);
   };
 
@@ -416,13 +451,15 @@ export default function SimulatePage() {
                           max={30}
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
-                          className="flex-1 h-2 accent-cyan-500"
+                          disabled={isSimulating}
+                          className={`flex-1 h-2 accent-cyan-500 ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isSimulating}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -444,7 +481,8 @@ export default function SimulatePage() {
                           onChange={(e) =>
                             setAngleOfAttack(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-purple-500"
+                          disabled={isSimulating}
+                          className={`flex-1 h-2 accent-purple-500 ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -452,7 +490,8 @@ export default function SimulatePage() {
                           onChange={(e) =>
                             setAngleOfAttack(Number(e.target.value))
                           }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isSimulating}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -467,7 +506,8 @@ export default function SimulatePage() {
                       <select
                         value={meshDensity}
                         onChange={(e) => setMeshDensity(e.target.value as any)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                        disabled={isSimulating}
+                        className={`w-full px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                       >
                         <option value="coarse">Coarse (Fast)</option>
                         <option value="medium">Medium (Balanced)</option>
@@ -489,7 +529,8 @@ export default function SimulatePage() {
                           onChange={(e) =>
                             setTimeStepSize(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-green-500"
+                          disabled={isSimulating}
+                          className={`flex-1 h-2 accent-green-500 ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -498,7 +539,8 @@ export default function SimulatePage() {
                             setTimeStepSize(Number(e.target.value))
                           }
                           step={0.0001}
-                          className="w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isSimulating}
+                          className={`w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -520,7 +562,8 @@ export default function SimulatePage() {
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
                           }
-                          className="flex-1 h-2 accent-orange-500"
+                          disabled={isSimulating}
+                          className={`flex-1 h-2 accent-orange-500 ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
                         />
                         <input
                           type="number"
@@ -528,7 +571,8 @@ export default function SimulatePage() {
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
                           }
-                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold"
+                          disabled={isSimulating}
+                          className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -560,11 +604,11 @@ export default function SimulatePage() {
                     {isSimulating && (
                       <div className="space-y-3">
                         <button
-                          onClick={handlePauseSimulation}
+                          onClick={handleStopSimulation}
                           className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
                         >
                           <Pause className="w-5 h-5" />
-                          Pause Simulation
+                          Stop Simulation
                         </button>
                         <div className="space-y-2">
                           <div className="flex justify-between text-xs font-bold text-gray-700">
@@ -605,7 +649,7 @@ export default function SimulatePage() {
                           Lift Coefficient (C<sub>L</sub>):
                         </span>
                         <span className="font-black">
-                          {simulationMetrics.cl.toFixed(4)}
+                          {formatValue(simulationMetrics.cl)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -613,13 +657,13 @@ export default function SimulatePage() {
                           Drag Coefficient (C<sub>D</sub>):
                         </span>
                         <span className="font-black">
-                          {simulationMetrics.cd.toFixed(4)}
+                          {formatValue(simulationMetrics.cd)}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>L/D Ratio:</span>
                         <span className="font-black">
-                          {simulationMetrics.liftToDragRatio.toFixed(2)}
+                          {formatValue(simulationMetrics.liftToDragRatio)}
                         </span>
                       </div>
                     </div>
@@ -637,7 +681,7 @@ export default function SimulatePage() {
                             C<sub>L</sub>
                           </span>
                           <span className="font-black text-cyan-900">
-                            {simulationMetrics.cl.toFixed(4)}
+                            {formatValue(simulationMetrics.cl)}
                           </span>
                         </div>
                         <div className="w-full bg-cyan-100 rounded-full h-4 overflow-hidden">
@@ -661,7 +705,7 @@ export default function SimulatePage() {
                             C<sub>D</sub>
                           </span>
                           <span className="font-black text-cyan-900">
-                            {simulationMetrics.cd.toFixed(4)}
+                            {formatValue(simulationMetrics.cd)}
                           </span>
                         </div>
                         <div className="w-full bg-red-100 rounded-full h-4 overflow-hidden">
@@ -685,7 +729,7 @@ export default function SimulatePage() {
                             L/D Ratio
                           </span>
                           <span className="font-black text-cyan-900">
-                            {simulationMetrics.liftToDragRatio.toFixed(2)}
+                            {formatValue(simulationMetrics.liftToDragRatio)}
                           </span>
                         </div>
                         <div className="w-full bg-green-100 rounded-full h-4 overflow-hidden">
@@ -706,12 +750,8 @@ export default function SimulatePage() {
                     {/* Additional Metrics */}
                     <div className="space-y-2 pt-2 border-t border-cyan-200 text-xs font-medium text-cyan-800">
                       <div className="flex justify-between">
-                        <span>Max Pressure:</span>
-                        <span className="font-black">1.45 atm</span>
-                      </div>
-                      <div className="flex justify-between">
                         <span>Computation Time:</span>
-                        <span className="font-black">2.1s</span>
+                        <span className="font-black">{computationDuration.toFixed(1)}s</span>
                       </div>
                     </div>
 
@@ -859,6 +899,7 @@ export default function SimulatePage() {
         type="simulation"
         metrics={simulationMetrics}
         convergenceData={coefficientHistory}
+        computationTime={computationDuration}
       />
     </div>
   );

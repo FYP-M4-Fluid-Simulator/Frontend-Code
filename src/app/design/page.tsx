@@ -889,7 +889,7 @@ export default function DesignPage() {
                 </button>
                 {/* View all airfoils */}
                 <button
-                  onClick={() => router.push("/airfoil_deck")}
+                  onClick={() => router.push("/airfoils")}
                   className="w-full p-4 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-2 border-green-200 hover:border-green-300 rounded-xl transition-all group"
                 >
                   <div className="flex items-center gap-3">
