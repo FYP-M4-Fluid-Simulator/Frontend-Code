@@ -1031,7 +1031,6 @@ export default function OptimizePage() {
                   showPressureField={false}
                   showVectorField={true}
                   onCoefficientChange={updateCSTCoefficient}
-                  allowFullScreen={true}
                   designMode={false}
                 />
               </div>
