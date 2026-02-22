@@ -33,6 +33,7 @@ interface InteractiveAirfoilCanvasProps {
     value: number,
   ) => void;
   designMode?: boolean; // NEW: flag for design mode
+  readOnly?: boolean; // NEW: disables drag-and-drop of control points
   onControlPointDragStart?: () => void;
   onControlPointDragEnd?: () => void;
   zoomLevel?: number; // NEW: zoom level (100 = 100%)
@@ -53,6 +54,7 @@ export function InteractiveAirfoilCanvas({
   showVectorField,
   onCoefficientChange,
   designMode = false,
+  readOnly = false,
   onControlPointDragStart,
   onControlPointDragEnd,
   zoomLevel = 100,
@@ -64,6 +66,7 @@ export function InteractiveAirfoilCanvas({
   const [draggedPoint, setDraggedPoint] = useState<ControlPoint | null>(null);
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const animationFrameRef = useRef<number>();
+  const animationTimeRef = useRef<number>(0); // persists across effect re-runs
   const [canvasSize, setCanvasSize] = useState({ width, height });
 
   // Update canvas size when container size changes (e.g., sidebar toggle)
@@ -153,11 +156,21 @@ export function InteractiveAirfoilCanvas({
       });
     });
 
+    // lowerCoordinates runs TE→LE (x decreasing), so we sample in reverse
+    // so that idx=0 → leading edge (x≈0), matching upper surface convention.
+    // NOTE: lower[] stops at x≈0.0012 (never includes x=0 due to cosine spacing),
+    // so for idx=0 we use upper[0] which IS at exactly x=0, y=0.
     lowerCoefficients.forEach((coeff, idx) => {
-      const t = idx / Math.max(lowerCoefficients.length - 1, 1);
-      const sampleIdx = Math.floor(t * (lower.length - 1));
-      const point = rotated.lower[sampleIdx];
-      if (!point) return; // Skip if point is undefined
+      let point: { x: number; y: number } | undefined;
+      if (idx === 0) {
+        // Leading edge is shared by both surfaces; upper[0] is the exact x=0 point
+        point = rotated.upper[0];
+      } else {
+        const t = idx / Math.max(lowerCoefficients.length - 1, 1);
+        const sampleIdx = Math.floor((1 - t) * (lower.length - 1));
+        point = rotated.lower[sampleIdx];
+      }
+      if (!point) return;
       const pt = transformPoint(point);
       points.push({
         id: `lower-${idx}`,
@@ -235,10 +248,11 @@ export function InteractiveAirfoilCanvas({
       ultra: 10,
     }[meshQuality];
 
-    let time = 0;
+    let time = animationTimeRef.current;
 
     const render = () => {
       time += 0.016;
+      animationTimeRef.current = time;
 
       // this means we are on the design page (first page) and not the simulator page (second page)
       if (designMode) {
@@ -652,7 +666,7 @@ export function InteractiveAirfoilCanvas({
   ]);
 
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!showControlPoints) return;
+    if (!showControlPoints || readOnly) return;
 
     const svg = overlayRef.current;
     if (!svg) return;
@@ -673,7 +687,7 @@ export function InteractiveAirfoilCanvas({
   };
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!draggedPoint) return;
+    if (!draggedPoint || readOnly) return;
 
     const svg = overlayRef.current;
     if (!svg) return;
@@ -687,8 +701,12 @@ export function InteractiveAirfoilCanvas({
     const offsetY = canvasSize.height / 2;
     const newCoefficient = (offsetY - y) / scale;
 
-    // Clamp to reasonable range
-    const clampedCoeff = Math.max(-0.5, Math.min(0.5, newCoefficient));
+    // Clamp per-surface to match sidebar bounds:
+    //   upper: [0.0, 2.0]
+    //   lower: [-2.0, 0.0]
+    const [minCoeff, maxCoeff] =
+      draggedPoint.surface === "upper" ? [0.0, 2.0] : [-2.0, 0.0];
+    const clampedCoeff = Math.max(minCoeff, Math.min(maxCoeff, newCoefficient));
 
     // Update coefficient (triggers re-render)
     onCoefficientChange(draggedPoint.surface, draggedPoint.index, clampedCoeff);
@@ -721,7 +739,7 @@ export function InteractiveAirfoilCanvas({
         width={canvasSize.width}
         height={canvasSize.height}
         className="absolute inset-0"
-        style={{ cursor: showControlPoints ? "crosshair" : "default" }}
+        style={{ cursor: (!readOnly && showControlPoints) ? "crosshair" : "default" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

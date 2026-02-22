@@ -170,6 +170,22 @@ export default function DesignPage() {
 
   // Load airfoil data from sessionStorage if available
   useEffect(() => {
+    // Check for prior simulation state (if returning from simulate/optimize)
+    const cfdState = sessionStorage.getItem("cfdState");
+    if (cfdState) {
+      try {
+        const state = JSON.parse(cfdState);
+        if (state.upperCoefficients) setUpperCoefficients(state.upperCoefficients);
+        if (state.lowerCoefficients) setLowerCoefficients(state.lowerCoefficients);
+        if (state.angleOfAttack !== undefined) setAngleOfAttack(state.angleOfAttack);
+        if (state.velocity !== undefined) setVelocity(state.velocity);
+        if (state.meshDensity) setMeshDensity(state.meshDensity);
+        if (state.chordLength !== undefined) setChordLength(state.chordLength);
+      } catch (error) {
+        console.error("Error loading cfdState:", error);
+      }
+    }
+
     // Check for CST coefficients from imported file
     const storedCoefficients = sessionStorage.getItem("cstCoefficients");
     if (storedCoefficients) {
@@ -284,6 +300,19 @@ export default function DesignPage() {
   };
 
   const handleStartWithDefault = () => {
+    // Reset to defaults
+    setUpperCoefficients([0.17104533, 0.15300564, 0.1501825, 0.135824, 0.14169314]);
+    setLowerCoefficients([-0.17104533, -0.15300564, -0.1501825, -0.135824, -0.14169314]);
+    setAngleOfAttack(0);
+    setVelocity(15);
+    setMeshDensity("medium");
+    setChordLength(1.0);
+    
+    // Clear previously stored state to avoid unexpected persistence
+    sessionStorage.removeItem("cfdState");
+    sessionStorage.removeItem("cstCoefficients");
+    sessionStorage.removeItem("selectedAirfoil");
+
     setShowNewDesignModal(false);
   };
 

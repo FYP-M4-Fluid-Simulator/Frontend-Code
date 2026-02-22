@@ -1051,6 +1051,7 @@ export default function OptimizePage() {
                   showVectorField={true}
                   onCoefficientChange={updateCSTCoefficient}
                   designMode={false}
+                  readOnly={true}
                 />
               </div>
 
