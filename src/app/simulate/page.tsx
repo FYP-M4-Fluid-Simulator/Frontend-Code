@@ -900,7 +900,7 @@ export default function SimulatePage() {
                     showVectorField={true}
                     onCoefficientChange={updateCSTCoefficient}
                     showControlPoints={false}
-                    showMeshOverlay={false}
+                    showMeshOverlay={true}
                     designMode={false}
                     chordLength={chordLength}
                   />

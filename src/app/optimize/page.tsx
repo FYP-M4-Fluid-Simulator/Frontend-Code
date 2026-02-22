@@ -1043,7 +1043,7 @@ export default function OptimizePage() {
                   velocity={velocity}
                   meshQuality={meshDensity}
                   showControlPoints={showControlPoints}
-                  showMeshOverlay={false}
+                  showMeshOverlay={true}
                   showPressureField={false}
                   showVectorField={true}
                   onCoefficientChange={updateCSTCoefficient}
