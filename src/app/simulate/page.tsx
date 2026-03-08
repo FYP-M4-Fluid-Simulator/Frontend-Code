@@ -266,7 +266,7 @@ export default function SimulatePage() {
     try {
       setIsSavingExperiment(true);
       const backendUrl =
-        process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+        process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000";
 
       const response = await fetch(`${backendUrl}/save_experiment/${activeSessionId}`, {
         method: "POST",
