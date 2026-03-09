@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createSession, SessionConfig } from "../http/createSession";
 import { WS_BACKEND_URL } from "@/config";
+import { auth } from "../firebase/config";
 
 export interface CoefficientData {
   cl: number;
@@ -56,8 +57,11 @@ export function useCFD(config?: SessionConfig) {
         if (!mounted) return;
         setSessionId(session.session_id);
 
+        const token = await auth.currentUser?.getIdToken();
+        const tokenParam = token ? `?token=${token}` : '';
+
         // Create WebSocket connection
-        const wsUrl = `${WS_BACKEND_URL}/ws/${session.session_id}`;
+        const wsUrl = `${WS_BACKEND_URL}/ws/${session.session_id}${tokenParam}`;
         console.log("🔌 Connecting to WebSocket:", wsUrl);
         ws = new WebSocket(wsUrl);
         wsRef.current = ws;

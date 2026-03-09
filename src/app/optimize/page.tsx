@@ -290,6 +290,8 @@ export default function OptimizePage() {
 
     try {
       setIsSavingExperiment(true);
+      const token = await auth.currentUser?.getIdToken();
+
       // Backend URL - can be moved to env variable
       const backendUrl =
         process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000";
@@ -298,6 +300,7 @@ export default function OptimizePage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           name: name,

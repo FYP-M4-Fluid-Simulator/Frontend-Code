@@ -368,8 +368,13 @@ export default function DesignPage() {
 
       const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values`;
 
+      const token = auth?.currentUser ? await auth.currentUser.getIdToken() : "";
+
       const response = await fetch(apiUrl, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
         body: formData,
       });
 

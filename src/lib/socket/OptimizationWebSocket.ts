@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createOptSession, OptSessionConfig } from "../http/createOptSession";
 import { WS_BACKEND_URL } from "@/config";
+import { auth } from "../firebase/config";
 
 // ── Types matching the server's JSON schema ──────────────────────────────────
 
@@ -105,8 +106,11 @@ export function useOptimization(config?: OptSessionConfig) {
         if (!mounted) return;
         setSessionId(session.session_id);
 
+        const token = await auth.currentUser?.getIdToken();
+        const tokenParam = token ? `?token=${token}` : '';
+
         // 2. Open WebSocket
-        const wsUrl = `${WS_BACKEND_URL}/optimize/ws/${session.session_id}`;
+        const wsUrl = `${WS_BACKEND_URL}/optimize/ws/${session.session_id}${tokenParam}`;
         console.log("🔌 Connecting to optimization WebSocket:", wsUrl);
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;

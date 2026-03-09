@@ -36,11 +36,15 @@ export async function createOptSession(config: OptSessionConfig) {
   const density = config.meshDensity || "coarse";
   const fidelity = fidelityMap[density];
 
+  const token = await auth.currentUser?.getIdToken();
+
   const res = await fetch(`${PYTHON_BACKEND_URL}/optimize/sessions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
     body: JSON.stringify({
-      user_id: config.userId || auth?.currentUser?.uid,
       fidelity,
       chord_length: config.chordLength ?? 1.0,
       cst_upper: config.upperCoefficients,

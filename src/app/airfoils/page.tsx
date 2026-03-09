@@ -129,6 +129,8 @@ export default function AirfoilDeck() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
+      const token = auth?.currentUser ? await auth.currentUser.getIdToken() : "";
+
       try {
         // Try primary API first
         console.log(`Attempting to fetch from: ${primaryApiUrl}`);
@@ -138,6 +140,7 @@ export default function AirfoilDeck() {
           method: "GET",
           headers: {
             Accept: "application/json",
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -400,8 +403,13 @@ export default function AirfoilDeck() {
 
       const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}get_cst_values?user_id=${userId}`;
 
+      const token = auth?.currentUser ? await auth.currentUser.getIdToken() : "";
+
       const response = await fetch(apiUrl, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
         body: formData,
       });
 

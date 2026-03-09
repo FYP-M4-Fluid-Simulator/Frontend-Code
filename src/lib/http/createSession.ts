@@ -45,11 +45,15 @@ export async function createSession(config: SessionConfig) {
   const density = config.meshDensity || "medium";
   const fidelity = fidelityMap[density];
 
+  const token = await auth.currentUser?.getIdToken();
+
   const res = await fetch(`${PYTHON_BACKEND_URL}/sessions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
     body: JSON.stringify({
-      user_id: config.userId || auth?.currentUser?.uid,
       fidelity: fidelity,
       chord_length: config.chordLength ?? 1.0,
       sim_time: config.simulationDuration || 10,
