@@ -2,12 +2,13 @@
 
 import { Wind, Mail, Lock, ArrowLeft, LogIn } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { PYTHON_BACKEND_URL } from "@/config";
+import { useState, useEffect } from "react";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  GithubAuthProvider
+  GithubAuthProvider,
 } from "firebase/auth";
 import { auth } from "../lib/firebase/config";
 import { getFirebaseErrorMessage } from "../lib/firebase/errors";
@@ -21,6 +22,31 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const wakeUpBackend = async () => {
+   
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, 5000); // 5 second timeout
+
+      try {
+
+        fetch(`${PYTHON_BACKEND_URL}/health`).catch((err) => {
+          console.error("Backend Health Check Failed:", err);
+        });
+      } catch (err) {
+        console.error("Unexpected Error During Backend Health Check:", err);
+      }
+      finally {
+        clearTimeout(timeoutId);
+      }
+  };
+
+  // Wake up backend on component mount
+  useEffect(() => {
+    wakeUpBackend();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
