@@ -55,6 +55,7 @@ export default function AirfoilDeck() {
   const [airfoils, setAirfoils] = useState<Airfoil[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [checkingBackend, setCheckingBackend] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
@@ -92,7 +93,46 @@ export default function AirfoilDeck() {
 
   useEffect(() => {
     if (userId) {
-      fetchAirfoils(false, 0, userId);
+      // Async function to handle backend health check and airfoil fetching
+      const checkBackendAndFetchAirfoils = async () => {
+        setCheckingBackend(true);
+        setLoading(true);
+        setError(null);
+
+        try {
+          // Check if backend is healthy
+          const isHealthy = await isBackendHealthy();
+
+          if (isHealthy) {
+            // Backend is healthy, fetch airfoils directly
+            setCheckingBackend(false);
+            fetchAirfoils(false, 0, userId);
+          } else {
+            // Backend is not healthy, wake it up and retry after delay
+            console.log("Backend not healthy, waking up backend...");
+            await wakeUpBackend();
+
+            // Wait a few seconds for backend to wake up
+            setTimeout(async () => {
+              const retryHealthy = await isBackendHealthy();
+              setCheckingBackend(false);
+              if (retryHealthy) {
+                fetchAirfoils(false, 0, userId);
+              } else {
+                // Still not healthy after wake up attempt, proceed with fallback
+                fetchAirfoils(false, 0, userId);
+              }
+            }, 3000); // Wait 3 seconds before retry
+          }
+        } catch (error) {
+          console.error("Error during backend health check:", error);
+          setCheckingBackend(false);
+          // Proceed with fetch attempt anyway (will use fallback if needed)
+          fetchAirfoils(false, 0, userId);
+        }
+      };
+
+      checkBackendAndFetchAirfoils();
     }
   }, [userId]);
 
@@ -109,6 +149,44 @@ export default function AirfoilDeck() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+const isBackendHealthy = async (): Promise<boolean> => {
+    try {
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, 5000); // 5 second timeout
+
+      const response = await fetch(`${PYTHON_BACKEND_URL}/health`, {
+        signal: abortController.signal,
+        method: "GET",
+      });
+
+      clearTimeout(timeoutId);
+      return response.ok;
+    } catch (err) {
+      console.error("Backend health check failed:", err);
+      return false;
+    }
+  };
+
+  const wakeUpBackend = async () => {
+    try {
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, 5000); // 5 second timeout
+
+      fetch(`${PYTHON_BACKEND_URL}/health`, {
+        signal: abortController.signal,
+      }).catch((err) => {
+        console.error("Backend Health Check Failed:", err);
+      });
+
+      clearTimeout(timeoutId);
+    } catch (err) {
+      console.error("Unexpected Error During Backend Health Check:", err);
+    }
+  };
 
   const fetchAirfoils = async (append = false, retry = 0, currentUserId = userId) => {
     try {
@@ -518,12 +596,16 @@ export default function AirfoilDeck() {
           <div className="text-white text-xl font-semibold mb-2">
             {retryCount > 0
               ? `Retrying... (${retryCount}/${maxRetries})`
-              : "Loading airfoils..."}
+              : checkingBackend
+                ? "Checking backend..."
+                : "Loading airfoils..."}
           </div>
           <div className="text-blue-300/60 text-sm">
             {retryCount > 0
               ? "Previous attempt failed, trying again"
-              : "Please wait while we fetch your designs"}
+              : checkingBackend
+                ? "Verifying backend connection and waking up service if needed"
+                : "Please wait while we fetch your designs"}
           </div>
         </div>
       </div>
@@ -637,10 +719,11 @@ export default function AirfoilDeck() {
                 <Database className="w-5 h-5 text-cyan-400" />
                 <span className="text-white font-medium">Browse Saved</span>
                 <span
-                  className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${usingFallback
-                    ? "bg-yellow-400/30 text-yellow-200"
-                    : "bg-cyan-400/30 text-cyan-200"
-                    }`}
+                  className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                    usingFallback
+                      ? "bg-yellow-400/30 text-yellow-200"
+                      : "bg-cyan-400/30 text-cyan-200"
+                  }`}
                 >
                   {airfoils.length}
                   {usingFallback && " (demo)"}
@@ -779,9 +862,14 @@ export default function AirfoilDeck() {
                 </div>
 
                 {/* Filter Dropdown */}
-                <div className="sm:w-52 flex-shrink-0 relative" ref={filterDropdownRef}>
+                <div
+                  className="sm:w-52 flex-shrink-0 relative"
+                  ref={filterDropdownRef}
+                >
                   <button
-                    onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                    onClick={() =>
+                      setIsFilterDropdownOpen(!isFilterDropdownOpen)
+                    }
                     className="w-full h-full flex items-center justify-between pl-10 pr-4 py-2.5 bg-slate-800/50 border border-blue-500/30 hover:border-cyan-400/60 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all font-medium"
                   >
                     <span>
@@ -792,8 +880,9 @@ export default function AirfoilDeck() {
                           : "Optimized Only"}
                     </span>
                     <ChevronDown
-                      className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isFilterDropdownOpen ? "rotate-180" : ""
-                        }`}
+                      className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                        isFilterDropdownOpen ? "rotate-180" : ""
+                      }`}
                     />
                   </button>
                   <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
@@ -812,13 +901,16 @@ export default function AirfoilDeck() {
                             setFilterType(option.value as FilterType);
                             setIsFilterDropdownOpen(false);
                           }}
-                          className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${filterType === option.value
+                          className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${
+                            filterType === option.value
                               ? "bg-blue-500/20 text-cyan-400 font-medium"
                               : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
-                            }`}
+                          }`}
                         >
                           {option.label}
-                          {filterType === option.value && <Check className="w-4 h-4" />}
+                          {filterType === option.value && (
+                            <Check className="w-4 h-4" />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -836,7 +928,9 @@ export default function AirfoilDeck() {
                   <Database className="w-12 h-12 text-blue-400" />
                 </div>
                 <div className="text-gray-300 text-xl font-semibold mb-2">
-                  {searchQuery || filterType !== "all" ? "No matches found" : "No airfoils yet"}
+                  {searchQuery || filterType !== "all"
+                    ? "No matches found"
+                    : "No airfoils yet"}
                 </div>
                 <div className="text-gray-500 text-sm">
                   {searchQuery || filterType !== "all"
@@ -963,10 +1057,11 @@ export default function AirfoilDeck() {
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === 1
-                    ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
-                    : "bg-slate-800/50 text-white hover:bg-blue-600"
-                    }`}
+                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === 1
+                      ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
+                      : "bg-slate-800/50 text-white hover:bg-blue-600"
+                  }`}
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Previous
@@ -989,10 +1084,11 @@ export default function AirfoilDeck() {
                       <button
                         key={page}
                         onClick={() => goToPage(page)}
-                        className={`w-10 h-10 rounded-lg font-semibold transition-all ${currentPage === page
-                          ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                          : "bg-slate-800/50 text-gray-300 hover:bg-slate-700"
-                          }`}
+                        className={`w-10 h-10 rounded-lg font-semibold transition-all ${
+                          currentPage === page
+                            ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
+                            : "bg-slate-800/50 text-gray-300 hover:bg-slate-700"
+                        }`}
                       >
                         {page}
                       </button>
@@ -1003,10 +1099,11 @@ export default function AirfoilDeck() {
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === totalPages
-                    ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
-                    : "bg-slate-800/50 text-white hover:bg-blue-600"
-                    }`}
+                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === totalPages
+                      ? "bg-slate-800/30 text-slate-600 cursor-not-allowed"
+                      : "bg-slate-800/50 text-white hover:bg-blue-600"
+                  }`}
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />
