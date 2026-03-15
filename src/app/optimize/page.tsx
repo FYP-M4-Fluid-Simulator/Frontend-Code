@@ -296,18 +296,21 @@ export default function OptimizePage() {
       const backendUrl =
         process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000";
 
-      const response = await fetch(`${backendUrl}/save_experiment/${activeSessionId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+      const response = await fetch(
+        `${backendUrl}/save_experiment/${activeSessionId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: name,
+            user_id: auth?.currentUser?.uid || "anonymous",
+            is_optimized: true,
+          }),
         },
-        body: JSON.stringify({
-          name: name,
-          user_id: auth?.currentUser?.uid || "anonymous",
-          is_optimized: true
-        }),
-      });
+      );
 
       if (!response.ok) {
         throw new Error("Failed to save experiment");
@@ -489,10 +492,11 @@ export default function OptimizePage() {
               <div className="flex border-b border-gray-200">
                 <button
                   onClick={() => setActiveSidebarTab("parameters")}
-                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "parameters"
-                    ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                    activeSidebarTab === "parameters"
+                      ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" />
@@ -502,10 +506,11 @@ export default function OptimizePage() {
                 {showResults && (
                   <button
                     onClick={() => setActiveSidebarTab("results")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "results"
-                      ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                      activeSidebarTab === "results"
+                        ? "bg-gradient-to-r from-orange-600 to-pink-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <BarChart3 className="w-4 h-4" />
@@ -562,7 +567,11 @@ export default function OptimizePage() {
                           max={30}
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
-                          onBlur={(e) => setVelocity(Math.min(30, Math.max(5, Number(e.target.value))))}
+                          onBlur={(e) =>
+                            setVelocity(
+                              Math.min(30, Math.max(5, Number(e.target.value))),
+                            )
+                          }
                           disabled={isOptimizing}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
@@ -599,7 +608,12 @@ export default function OptimizePage() {
                             setAngleOfAttack(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setAngleOfAttack(Math.min(25, Math.max(-15, Number(e.target.value))))
+                            setAngleOfAttack(
+                              Math.min(
+                                25,
+                                Math.max(-15, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isOptimizing}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -637,7 +651,12 @@ export default function OptimizePage() {
                             setTimeStepSize(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setTimeStepSize(Math.min(0.005, Math.max(0, Number(e.target.value))))
+                            setTimeStepSize(
+                              Math.min(
+                                0.005,
+                                Math.max(0, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isOptimizing}
                           className={`w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -675,7 +694,9 @@ export default function OptimizePage() {
                             setSimulationDuration(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setSimulationDuration(Math.min(60, Math.max(1, Number(e.target.value))))
+                            setSimulationDuration(
+                              Math.min(60, Math.max(1, Number(e.target.value))),
+                            )
                           }
                           disabled={isOptimizing}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -713,7 +734,12 @@ export default function OptimizePage() {
                             setNumIterations(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setNumIterations(Math.min(200, Math.max(10, Number(e.target.value))))
+                            setNumIterations(
+                              Math.min(
+                                200,
+                                Math.max(10, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isOptimizing}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -751,7 +777,12 @@ export default function OptimizePage() {
                             setMinThickness(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setMinThickness(Math.min(0.15, Math.max(0.01, Number(e.target.value))))
+                            setMinThickness(
+                              Math.min(
+                                0.15,
+                                Math.max(0.01, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isOptimizing}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -789,7 +820,12 @@ export default function OptimizePage() {
                             setMaxThickness(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setMaxThickness(Math.min(0.35, Math.max(0.15, Number(e.target.value))))
+                            setMaxThickness(
+                              Math.min(
+                                0.35,
+                                Math.max(0.15, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isOptimizing}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -827,7 +863,12 @@ export default function OptimizePage() {
                             setLearningRate(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setLearningRate(Math.min(0.1, Math.max(0.001, Number(e.target.value))))
+                            setLearningRate(
+                              Math.min(
+                                0.1,
+                                Math.max(0.001, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isOptimizing}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -1143,6 +1184,7 @@ export default function OptimizePage() {
         }))}
         onSaveExperiment={handleSaveExperiment}
         onDownloadMetrics={handleModalDownloadMetrics}
+        onDownloadDatFile={handleDownloadDatFile}
         isSaved={isExperimentSaved}
         isSaving={isSavingExperiment}
       />

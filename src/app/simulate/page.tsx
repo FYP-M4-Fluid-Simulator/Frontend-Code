@@ -269,18 +269,21 @@ export default function SimulatePage() {
       const backendUrl =
         process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000";
 
-      const response = await fetch(`${backendUrl}/save_experiment/${activeSessionId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+      const response = await fetch(
+        `${backendUrl}/save_experiment/${activeSessionId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: name,
+            user_id: auth?.currentUser?.uid || "anonymous",
+            is_optimized: false,
+          }),
         },
-        body: JSON.stringify({
-          name: name,
-          user_id: auth?.currentUser?.uid || "anonymous",
-          is_optimized: false
-        }),
-      });
+      );
 
       if (!response.ok) {
         throw new Error("Failed to save experiment");
@@ -302,7 +305,9 @@ export default function SimulatePage() {
       dragCoefficient: simulationMetrics.cd,
       liftToDragRatio:
         simulationMetrics.liftToDragRatio ||
-        (simulationMetrics.cd !== 0 ? simulationMetrics.cl / simulationMetrics.cd : 0),
+        (simulationMetrics.cd !== 0
+          ? simulationMetrics.cl / simulationMetrics.cd
+          : 0),
       angleOfAttack: angleOfAttack,
       velocity: velocity,
       reynoldsNumber: velocity * 10000,
@@ -453,7 +458,6 @@ export default function SimulatePage() {
               Simulation Mode
             </span>
           </div>
-
         </div>
 
         {/* Right: User Controls */}
@@ -478,10 +482,11 @@ export default function SimulatePage() {
               <div className="flex border-b border-gray-200">
                 <button
                   onClick={() => setActiveSidebarTab("parameters")}
-                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "parameters"
-                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                  className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                    activeSidebarTab === "parameters"
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" />
@@ -491,10 +496,11 @@ export default function SimulatePage() {
                 {showResults && (
                   <button
                     onClick={() => setActiveSidebarTab("results")}
-                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeSidebarTab === "results"
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${
+                      activeSidebarTab === "results"
+                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <BarChart3 className="w-4 h-4" />
@@ -532,7 +538,11 @@ export default function SimulatePage() {
                           type="number"
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
-                          onBlur={(e) => setVelocity(Math.min(30, Math.max(5, Number(e.target.value))))}
+                          onBlur={(e) =>
+                            setVelocity(
+                              Math.min(30, Math.max(5, Number(e.target.value))),
+                            )
+                          }
                           min={5}
                           max={30}
                           disabled={isSimulating}
@@ -571,7 +581,12 @@ export default function SimulatePage() {
                             setAngleOfAttack(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setAngleOfAttack(Math.min(25, Math.max(-15, Number(e.target.value))))
+                            setAngleOfAttack(
+                              Math.min(
+                                25,
+                                Math.max(-15, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isSimulating}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -625,7 +640,12 @@ export default function SimulatePage() {
                             setTimeStepSize(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setTimeStepSize(Math.min(0.005, Math.max(0, Number(e.target.value))))
+                            setTimeStepSize(
+                              Math.min(
+                                0.005,
+                                Math.max(0, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isSimulating}
                           className={`w-24 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -663,7 +683,12 @@ export default function SimulatePage() {
                             setSimulationDuration(Number(e.target.value))
                           }
                           onBlur={(e) =>
-                            setSimulationDuration(Math.min(10, Math.max(0.05, Number(e.target.value))))
+                            setSimulationDuration(
+                              Math.min(
+                                10,
+                                Math.max(0.05, Number(e.target.value)),
+                              ),
+                            )
                           }
                           disabled={isSimulating}
                           className={`w-20 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
@@ -710,14 +735,15 @@ export default function SimulatePage() {
                             <span>
                               {totalSteps > 0
                                 ? `${frameStep} / ${totalSteps} frames`
-                                : `${simulationProgress.toFixed(1)}%`
-                              }
+                                : `${simulationProgress.toFixed(1)}%`}
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                             <div
                               className="bg-gradient-to-r from-cyan-500 to-blue-600 h-full transition-all duration-300 rounded-full"
-                              style={{ width: `${totalSteps > 0 ? Math.min(100, (frameStep / totalSteps) * 100) : simulationProgress}%` }}
+                              style={{
+                                width: `${totalSteps > 0 ? Math.min(100, (frameStep / totalSteps) * 100) : simulationProgress}%`,
+                              }}
                             />
                           </div>
                         </div>
@@ -850,7 +876,9 @@ export default function SimulatePage() {
                     <div className="space-y-2 pt-2 border-t border-cyan-200 text-xs font-medium text-cyan-800">
                       <div className="flex justify-between">
                         <span>Computation Time:</span>
-                        <span className="font-black">{computationDuration.toFixed(1)}s</span>
+                        <span className="font-black">
+                          {computationDuration.toFixed(1)}s
+                        </span>
                       </div>
                     </div>
 
@@ -937,8 +965,12 @@ export default function SimulatePage() {
                   className="px-3 py-1 text-xs font-semibold border border-gray-300 rounded bg-white hover:border-orange-400 transition-colors"
                 >
                   <option value="curl">Curl</option>
-                  <option value="pressure" disabled className="text-gray-400">Pressure</option>
-                  <option value="tracer" disabled className="text-gray-400">Tracer (Density)</option>
+                  <option value="pressure" disabled className="text-gray-400">
+                    Pressure
+                  </option>
+                  <option value="tracer" disabled className="text-gray-400">
+                    Tracer (Density)
+                  </option>
                 </select>
               </div>
             </div>
@@ -1002,6 +1034,7 @@ export default function SimulatePage() {
         computationTime={computationDuration}
         onSaveExperiment={handleSaveExperiment}
         onDownloadMetrics={handleModalDownloadMetrics}
+        onDownloadDatFile={handleDownloadDatFile}
         isSaved={isExperimentSaved}
         isSaving={isSavingExperiment}
       />

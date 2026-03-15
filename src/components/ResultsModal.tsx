@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 
-import { X, Download, Save, FileText, BarChart3, Loader2 } from "lucide-react";
+import {
+  X,
+  Download,
+  Save,
+  FileText,
+  BarChart3,
+  Loader2,
+  FileDown,
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -35,6 +43,7 @@ interface ResultsModalProps {
   }>;
   onSaveExperiment?: (name: string) => void;
   onDownloadMetrics?: (format: "csv" | "json") => void;
+  onDownloadDatFile?: () => void;
   computationTime?: number;
   isSaved?: boolean;
   isSaving?: boolean;
@@ -48,6 +57,7 @@ export default function ResultsModal({
   convergenceData = [],
   onSaveExperiment,
   onDownloadMetrics,
+  onDownloadDatFile,
   computationTime,
   isSaved = false,
   isSaving = false,
@@ -61,14 +71,16 @@ export default function ResultsModal({
     convergenceData.length > 0
       ? convergenceData
       : Array.from({ length: 20 }, (_, i) => ({
-        iteration: i + 1,
-        cl: metrics.cl * (0.7 + Math.random() * 0.3),
-        cd: metrics.cd * (0.8 + Math.random() * 0.4),
-        ldRatio: (metrics.cl * (0.7 + Math.random() * 0.3)) / (metrics.cd * (0.8 + Math.random() * 0.4)),
-        ...(type === "optimization" && {
-          loss: (metrics.loss || 0.5) * Math.exp(-i / 8),
-        }),
-      }));
+          iteration: i + 1,
+          cl: metrics.cl * (0.7 + Math.random() * 0.3),
+          cd: metrics.cd * (0.8 + Math.random() * 0.4),
+          ldRatio:
+            (metrics.cl * (0.7 + Math.random() * 0.3)) /
+            (metrics.cd * (0.8 + Math.random() * 0.4)),
+          ...(type === "optimization" && {
+            loss: (metrics.loss || 0.5) * Math.exp(-i / 8),
+          }),
+        }));
 
   const formatValue = (val: number | undefined | null) => {
     if (val === undefined || val === null) return "0.0000";
@@ -136,7 +148,9 @@ export default function ResultsModal({
                 {type === "optimization" ? "L/D Ratio" : "Lift-to-Drag"}
               </div>
               <div className="text-blue-100 text-2xl font-bold">
-                {formatValue(metrics.liftToDragRatio || metrics.cl / metrics.cd)}
+                {formatValue(
+                  metrics.liftToDragRatio || metrics.cl / metrics.cd,
+                )}
               </div>
             </div>
 
@@ -251,7 +265,9 @@ export default function ResultsModal({
             )}
 
             {/* L/D Ratio Evolution (Both) */}
-            <div className={`bg-slate-800/50 border border-blue-500/30 rounded-xl p-6 ${type !== "optimization" ? "md:col-span-2" : ""}`}>
+            <div
+              className={`bg-slate-800/50 border border-blue-500/30 rounded-xl p-6 ${type !== "optimization" ? "md:col-span-2" : ""}`}
+            >
               <h3 className="text-xl font-bold text-blue-200 mb-4">
                 L/D Ratio Evolution
               </h3>
@@ -280,8 +296,6 @@ export default function ResultsModal({
             </div>
           </div>
 
-
-
           {/* Action Buttons */}
           <div className="space-y-4 pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -292,11 +306,15 @@ export default function ResultsModal({
                       <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/50">
                         <Save className="w-5 h-5 text-emerald-400" />
                       </div>
-                      <span className="text-emerald-400 font-semibold text-sm">Experiment Saved Successfully</span>
+                      <span className="text-emerald-400 font-semibold text-sm">
+                        Experiment Saved Successfully
+                      </span>
                     </div>
                   ) : (
                     <>
-                      <label className="text-xs font-semibold text-blue-200 uppercase tracking-wider">Save Design</label>
+                      <label className="text-xs font-semibold text-blue-200 uppercase tracking-wider">
+                        Save Design
+                      </label>
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -331,9 +349,26 @@ export default function ResultsModal({
                 </div>
               )}
 
+              {onDownloadDatFile && (
+                <div className="flex flex-col gap-2 p-4 bg-slate-800/80 border border-blue-500/30 rounded-xl">
+                  <label className="text-xs font-semibold text-cyan-200 uppercase tracking-wider">
+                    Export Airfoil
+                  </label>
+                  <button
+                    onClick={onDownloadDatFile}
+                    className="w-full flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg font-semibold shadow-lg hover:shadow-cyan-500/30 transition-all text-sm"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    Download Airfoil (.dat)
+                  </button>
+                </div>
+              )}
+
               {onDownloadMetrics && (
                 <div className="relative group flex flex-col gap-2 p-4 bg-slate-800/80 border border-blue-500/30 rounded-xl">
-                  <label className="text-xs font-semibold text-orange-200 uppercase tracking-wider">Export Results</label>
+                  <label className="text-xs font-semibold text-orange-200 uppercase tracking-wider">
+                    Export Results
+                  </label>
                   <button
                     onClick={() => onDownloadMetrics("csv")}
                     className="w-full flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-lg font-semibold shadow-lg hover:shadow-orange-500/30 transition-all text-sm"
