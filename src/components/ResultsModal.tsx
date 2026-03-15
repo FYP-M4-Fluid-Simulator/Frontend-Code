@@ -98,6 +98,11 @@ export default function ResultsModal({
     return val.toFixed(4);
   };
 
+  const formatScientificTick = (value: number) => {
+    if (value === 0) return "0";
+    return Number(value).toExponential(0).replace("+", "");
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 rounded-2xl shadow-2xl border-2 border-blue-500/30">
@@ -199,8 +204,11 @@ export default function ResultsModal({
                     value: "Coefficient Value",
                     angle: -90,
                     position: "insideLeft",
+                    offset: 0,
                     fill: "#94a3b8",
                   }}
+                  tickFormatter={(value) => formatScientificTick(Number(value))}
+                  tick={{ fontSize: 11 }}
                 />
                 <Tooltip
                   contentStyle={{
