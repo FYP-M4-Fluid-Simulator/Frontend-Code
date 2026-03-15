@@ -184,6 +184,39 @@ export function generateMeshCoordinates(
 /**
  * Export airfoil coordinates as .dat file (Selig format)
  */
+export function formatSeligDat(
+  coordinates: { x: number; y: number }[],
+  airfoilName: string,
+) {
+  let datContent = `${airfoilName}\n`;
+
+  coordinates.forEach((coord) => {
+    datContent += `  ${coord.x.toFixed(6)}  ${coord.y.toFixed(6)}\n`;
+  });
+
+  return datContent;
+}
+
+/**
+ * Export airfoil coordinates as .dat file (Selig format) from full coordinate list
+ */
+export function downloadDatFileFromCoordinates(
+  coordinates: { x: number; y: number }[],
+  airfoilName: string = "Custom Airfoil",
+) {
+  const datContent = formatSeligDat(coordinates, airfoilName);
+
+  const blob = new Blob([datContent], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${airfoilName.replace(/\s+/g, "_")}.dat`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function downloadDatFile(
   upperCoords: { x: number; y: number }[],
   lowerCoords: { x: number; y: number }[],
@@ -265,10 +298,14 @@ export function downloadMetricsCSV(
 ) {
   const metricsArray = Array.isArray(metrics) ? metrics : [metrics];
 
-  let csvContent = "Angle of Attack (deg),Velocity (m/s),Lift Coefficient (C_L),Drag Coefficient (C_D),Moment Coefficient (C_M),Lift-to-Drag Ratio (L/D),Reynolds Number\n";
+  let csvContent =
+    "Angle of Attack (deg),Velocity (m/s),Lift Coefficient (C_L),Drag Coefficient (C_D),Moment Coefficient (C_M),Lift-to-Drag Ratio (L/D),Reynolds Number\n";
 
   metricsArray.forEach((m) => {
-    const cmVal = m.momentCoefficient !== undefined ? m.momentCoefficient.toFixed(6) : "N/A";
+    const cmVal =
+      m.momentCoefficient !== undefined
+        ? m.momentCoefficient.toFixed(6)
+        : "N/A";
     csvContent += `${m.angleOfAttack},${m.velocity},${m.liftCoefficient.toFixed(6)},${m.dragCoefficient.toFixed(6)},${cmVal},${m.liftToDragRatio.toFixed(3)},${m.reynoldsNumber || "N/A"}\n`;
   });
 

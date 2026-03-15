@@ -26,6 +26,7 @@ import { useCFD } from "../../lib/socket/CFDWebSocket";
 import { useRouter } from "next/navigation";
 import {
   downloadDatFile,
+  downloadDatFileFromCoordinates,
   downloadCSTParameters,
   downloadConfigFile,
   createSimulationConfig,
@@ -191,10 +192,9 @@ export default function SimulatePage() {
       100,
     );
     const timestamp = new Date().toISOString().slice(0, 10);
-    downloadDatFile(
-      airfoil.upperCoordinates,
-      airfoil.lowerCoordinates,
-      `optimized-airfoil-${timestamp}`,
+    downloadDatFileFromCoordinates(
+      airfoil.coordinates,
+      `simulation-airfoil-${timestamp}`,
     );
     setShowExportMenu(false);
   };

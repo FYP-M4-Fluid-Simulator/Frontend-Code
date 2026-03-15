@@ -35,6 +35,7 @@ import {
   downloadMetricsCSV,
   downloadMetricsJSON,
   downloadDatFile,
+  downloadDatFileFromCoordinates,
   downloadCSTParameters,
   saveExperimentToBackend,
   type OptimizationMetrics,
@@ -263,9 +264,8 @@ export default function OptimizePage() {
       100,
     );
     const timestamp = new Date().toISOString().slice(0, 10);
-    downloadDatFile(
-      airfoil.upperCoordinates,
-      airfoil.lowerCoordinates,
+    downloadDatFileFromCoordinates(
+      airfoil.coordinates,
       `optimized-airfoil-${timestamp}`,
     );
     setShowExportMenu(false);
