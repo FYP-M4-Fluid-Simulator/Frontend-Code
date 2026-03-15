@@ -138,14 +138,16 @@ export default function CFDCanvas({
       const frame = frameRef.current;
       if (!frame?.fields || !frame?.meta) return;
 
-      const { u, v, curl, solid } = frame.fields as {
+      const { u, v, curl, solid, pressure, tracer } = frame.fields as {
         u: number[][];
         v: number[][];
         curl: number[][];
         solid: number[][];
+        pressure: number[][];
+        tracer: number[][];
       };
 
-      if (!curl || !solid || !u || !v) return;
+      if (!curl || !solid || !u || !v || !pressure || !tracer) return;
 
       // ── Derive grid dimensions from the live frame metadata ──────────
       const W: number = frame.meta.width;
@@ -209,10 +211,17 @@ export default function CFDCanvas({
           let r = 0, g = 0, b = 0;
           let alpha = 0;
 
-          if (visualizationType === "pressure") {
-            const p = frame.fields.pressure?.[i]?.[j] ?? 0;
-            r = Math.max(0, Math.min(255, Math.round(p * 50)));
-            b = Math.max(0, Math.min(255, Math.round(-p * 50)));
+          if (visualizationType === "tracer") {
+            const d = tracer[i][j];
+            const GRAY_VALUE = 30;
+            const intensity = Math.round((d * 225) * 5);
+            const val = Math.max(GRAY_VALUE, Math.min(255, GRAY_VALUE + intensity));
+            r = val; g = val; b = val;
+            alpha = Math.min(0.85, Math.max(0, intensity) / 200);
+          } else if (visualizationType === "pressure") {
+            const p = pressure[i][j] * 200;
+            r = Math.max(0, Math.min(255, Math.round(p * 5)));
+            b = Math.max(0, Math.min(255, Math.round(-p * 5)));
             alpha = Math.min(0.85, (r + b) / 200);
           } else {
             // Default: curl (vorticity)

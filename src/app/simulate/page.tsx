@@ -965,10 +965,10 @@ export default function SimulatePage() {
                   className="px-3 py-1 text-xs font-semibold border border-gray-300 rounded bg-white hover:border-orange-400 transition-colors"
                 >
                   <option value="curl">Curl</option>
-                  <option value="pressure" disabled className="text-gray-400">
+                  <option value="pressure">
                     Pressure
                   </option>
-                  <option value="tracer" disabled className="text-gray-400">
+                  <option value="tracer">
                     Tracer (Density)
                   </option>
                 </select>
