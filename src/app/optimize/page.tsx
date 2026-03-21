@@ -46,6 +46,7 @@ import type { OptSessionConfig } from "../../lib/http/createOptSession";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
+import { PYTHON_BACKEND_URL } from "@/config";
 
 export default function OptimizePage() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export default function OptimizePage() {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [isExperimentSaved, setIsExperimentSaved] = useState(false);
   const [isSavingExperiment, setIsSavingExperiment] = useState(false);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [optimizationMetrics, setOptimizationMetrics] = useState({
     cl: 1.2345,
     cd: 0.0156,
@@ -145,6 +147,126 @@ export default function OptimizePage() {
     }
   }, []);
 
+  // Store sessionId in sessionStorage when it becomes available
+  useEffect(() => {
+    if (optSessionId) {
+      sessionStorage.setItem("optimizationSessionId", optSessionId);
+    }
+  }, [optSessionId]);
+
+  // On mount: if sessionId is in the URL, load results from localStorage or fetch from backend
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSessionId = urlParams.get("sessionId");
+    if (!urlSessionId) return;
+
+    // 1. Check localStorage for cached results first
+    setIsLoadingResults(true);
+    const cachedRaw = localStorage.getItem(`opt_result_${urlSessionId}`);
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw);
+        const finalMetrics = {
+          cl: cached.cl ?? 0,
+          cd: cached.cd ?? 0,
+          liftToDragRatio: cached.liftToDragRatio ?? 0,
+          loss: cached.loss ?? 0,
+        };
+        setOptimizationMetrics(finalMetrics);
+        setBestLiftCoeff(cached.cl ?? 0);
+        setBestDragCoeff(cached.cd ?? 0);
+        setBestLDRatio(cached.liftToDragRatio ?? 0);
+        setOptimizationLoss(cached.loss ?? 0);
+        if (cached.totalIterations) {
+          setMaxIterations(cached.totalIterations);
+          setOptimizationIteration(cached.totalIterations);
+        }
+        if (cached.cst_upper) setUpperCoefficients(cached.cst_upper);
+        if (cached.cst_lower) setLowerCoefficients(cached.cst_lower);
+
+        setShowResults(true);
+        setActiveSidebarTab("results");
+        setIsSidebarOpen(true);
+        setIsLoadingResults(false);
+        toast.success("Loaded results from local cache.");
+        return; // skip API call
+      } catch {
+        // corrupted cache, fall through to API
+        localStorage.removeItem(`opt_result_${urlSessionId}`);
+      }
+    }
+
+    // 2. Fall back to backend API — wait for Firebase auth to be ready
+    let cancelled = false;
+
+    const unsubscribe = auth.onAuthStateChanged(async (user: import("firebase/auth").User | null) => {
+      if (cancelled) return;
+      try {
+        const token = await user?.getIdToken();
+        if (!token) {
+          console.warn("No auth token available, skipping optimization fetch.");
+          return;
+        }
+        const backendUrl = PYTHON_BACKEND_URL || "http://localhost:8000";
+        const response = await fetch(
+          `${backendUrl}/optimize/sessions/${urlSessionId}/result`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch optimization result: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (cancelled) return;
+
+        // Populate metrics from the response
+        if (data.meta) {
+          const finalMetrics = {
+            cl: data.meta.final_cl ?? 0,
+            cd: data.meta.final_cd ?? 0,
+            liftToDragRatio: data.meta.final_cl_cd ?? 0,
+            loss: data.meta.final_loss ?? 0,
+          };
+          setOptimizationMetrics(finalMetrics);
+          setBestLiftCoeff(data.meta.final_cl ?? 0);
+          setBestDragCoeff(data.meta.final_cd ?? 0);
+          setBestLDRatio(data.meta.final_cl_cd ?? 0);
+          setOptimizationLoss(data.meta.final_loss ?? 0);
+          setMaxIterations(data.meta.total_iterations ?? 0);
+          setOptimizationIteration(data.meta.total_iterations ?? 0);
+        }
+
+        // Update CST coefficients with the optimized shape
+        if (data.shape) {
+          if (data.shape.cst_upper) setUpperCoefficients(data.shape.cst_upper);
+          if (data.shape.cst_lower) setLowerCoefficients(data.shape.cst_lower);
+        }
+
+        // Show results UI
+        setShowResults(true);
+        setActiveSidebarTab("results");
+        setIsSidebarOpen(true);
+
+        toast.success("Loaded results from server.");
+      } catch (error) {
+        console.error("Failed to fetch optimization result:", error);
+        toast.error("Could not load results for this session.");
+      } finally {
+        setIsLoadingResults(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const updateSize = () => {
       if (canvasRef.current) {
@@ -212,6 +334,13 @@ export default function OptimizePage() {
     setActiveSidebarTab("results");
     setIsSidebarOpen(true);
 
+    // Update URL with sessionId so the link can be shared / revisited
+    if (optSessionId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("sessionId", optSessionId);
+      window.history.replaceState({}, "", url.toString());
+    }
+
     // Store for turbine page
     sessionStorage.setItem(
       "optimizationResults",
@@ -225,6 +354,22 @@ export default function OptimizePage() {
         improvementPercent: 0,
       }),
     );
+
+    // Also store in localStorage keyed by sessionId (persists across tabs)
+    if (optSessionId) {
+      localStorage.setItem(
+        `opt_result_${optSessionId}`,
+        JSON.stringify({
+          cl: meta.final_cl,
+          cd: meta.final_cd,
+          liftToDragRatio: meta.final_cl_cd,
+          loss: meta.final_loss,
+          totalIterations: meta.total_iterations,
+          cst_upper: shape.cst_upper,
+          cst_lower: shape.cst_lower,
+        }),
+      );
+    }
 
     setTimeout(() => setShowResultsModal(true), 500);
   }, [optComplete, completedFrame]);
@@ -1098,6 +1243,16 @@ export default function OptimizePage() {
                   readOnly={true}
                 />
               </div>
+
+              {/* Loading overlay when fetching results */}
+              {isLoadingResults && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-white font-bold text-sm tracking-wide">Loading optimization results…</p>
+                  </div>
+                </div>
+              )}
 
               {/* Optimization Progress Overlay */}
               {isOptimizing && (
