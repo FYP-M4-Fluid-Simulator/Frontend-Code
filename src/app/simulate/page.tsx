@@ -38,6 +38,7 @@ import { generateCSTAirfoil } from "../../lib/cst";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
+import { PYTHON_BACKEND_URL } from "@/config";
 
 export default function SimulatePage() {
   const router = useRouter();
@@ -53,6 +54,7 @@ export default function SimulatePage() {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [isExperimentSaved, setIsExperimentSaved] = useState(false);
   const [isSavingExperiment, setIsSavingExperiment] = useState(false);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [sessionConfig, setSessionConfig] = useState<SessionConfig | undefined>(
     undefined,
   );
@@ -155,6 +157,109 @@ export default function SimulatePage() {
       setChordLength(state.chordLength || chordLength);
     }
   }, []);
+
+  // Store sessionId in sessionStorage when it becomes available
+  useEffect(() => {
+    if (sessionId) {
+      sessionStorage.setItem("simulationSessionId", sessionId);
+    }
+  }, [sessionId]);
+
+  // On mount: if sessionId is in the URL, load results from localStorage or fetch from backend
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSessionId = urlParams.get("sessionId");
+    if (!urlSessionId) return;
+
+    // 1. Check localStorage for cached results first
+    setIsLoadingResults(true);
+    const cachedRaw = localStorage.getItem(`sim_result_${urlSessionId}`);
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw);
+        setSimulationMetrics({
+          cl: cached.liftCoefficient ?? 0,
+          cd: cached.dragCoefficient ?? 0,
+          liftToDragRatio: cached.liftToDragRatio ?? 0,
+        });
+        if (cached.computationTime) {
+          setComputationDuration(cached.computationTime);
+        }
+        setShowResults(true);
+        setSimulationProgress(100);
+        setActiveSidebarTab("results");
+        setIsSidebarOpen(true);
+        setIsLoadingResults(false);
+        toast.success("Loaded results from local cache.");
+        return; // skip API call
+      } catch {
+        // corrupted cache, fall through to API
+        localStorage.removeItem(`sim_result_${urlSessionId}`);
+      }
+    }
+
+    // 2. Fall back to backend API — wait for Firebase auth to be ready
+    let cancelled = false;
+
+    const unsubscribe = auth.onAuthStateChanged(async (user: import("firebase/auth").User | null) => {
+      if (cancelled) return;
+      try {
+        const token = await user?.getIdToken();
+        if (!token) {
+          console.warn("No auth token available, skipping session fetch.");
+          return;
+        }
+        const backendUrl = PYTHON_BACKEND_URL || "http://localhost:8000";
+        const response = await fetch(
+          `${backendUrl}/sessions/${urlSessionId}/result`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch session result: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (cancelled) return;
+
+        // Populate metrics from the response
+        if (data.meta) {
+          setSimulationMetrics({
+            cl: data.meta.cl ?? 0,
+            cd: data.meta.cd ?? 0,
+            liftToDragRatio: data.meta.l_d ?? 0,
+          });
+        }
+
+        // If we got field data, put it in the frame ref
+        if (data.fields) {
+          frameRef.current = data;
+        }
+
+        // Show results UI
+        setShowResults(true);
+        setSimulationProgress(100);
+        setActiveSidebarTab("results");
+        setIsSidebarOpen(true);
+
+        toast.success("Loaded results from server.");
+      } catch (error) {
+        console.error("Failed to fetch session result:", error);
+        toast.error("Could not load results for this session.");
+      } finally {
+        setIsLoadingResults(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const updateSize = () => {
@@ -390,22 +495,38 @@ export default function SimulatePage() {
       setActiveSidebarTab("results");
       setIsSidebarOpen(true);
 
+      // Update URL with sessionId so the link can be shared / revisited
+      if (sessionId) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("sessionId", sessionId);
+        window.history.replaceState({}, "", url.toString());
+      }
+
       // Show modal after a short delay
       setTimeout(() => {
         setShowResultsModal(true);
       }, 500);
 
-      // Store final results
+      // Store final results in sessionStorage (for in-tab use)
       if (coefficients) {
+        const resultData = {
+          liftToDragRatio: coefficients.l_d,
+          liftCoefficient: coefficients.cl,
+          dragCoefficient: coefficients.cd,
+          computationTime: computationDuration,
+        };
         sessionStorage.setItem(
           "simulationResults",
-          JSON.stringify({
-            liftToDragRatio: coefficients.l_d,
-            liftCoefficient: coefficients.cl,
-            dragCoefficient: coefficients.cd,
-            computationTime: computationDuration,
-          }),
+          JSON.stringify(resultData),
         );
+
+        // Also store in localStorage keyed by sessionId (persists across tabs)
+        if (sessionId) {
+          localStorage.setItem(
+            `sim_result_${sessionId}`,
+            JSON.stringify(resultData),
+          );
+        }
       }
 
       // Clear interval (kept for cleanup safety)
@@ -965,12 +1086,8 @@ export default function SimulatePage() {
                   className="px-3 py-1 text-xs font-semibold border border-gray-300 rounded bg-white hover:border-orange-400 transition-colors"
                 >
                   <option value="curl">Curl</option>
-                  <option value="pressure">
-                    Pressure
-                  </option>
-                  <option value="tracer">
-                    Tracer (Density)
-                  </option>
+                  <option value="pressure">Pressure</option>
+                  <option value="tracer">Tracer (Density)</option>
                 </select>
               </div>
             </div>
@@ -1015,6 +1132,16 @@ export default function SimulatePage() {
                     readOnly={true}
                     chordLength={chordLength}
                   />
+                )}
+
+                {/* Loading overlay when fetching results */}
+                {isLoadingResults && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-white font-bold text-sm tracking-wide">Loading session results…</p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

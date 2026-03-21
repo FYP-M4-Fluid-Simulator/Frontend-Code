@@ -79,6 +79,8 @@ export function useCFD(config?: SessionConfig) {
           try {
             const data = JSON.parse(e.data);
 
+            console.log("📩 Received WebSocket message:", data);
+
             // Log first frame structure for debugging
             if (!frameRef.current) {
               console.log("📦 First frame structure:", {

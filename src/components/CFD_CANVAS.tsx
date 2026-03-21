@@ -148,6 +148,8 @@ export default function CFDCanvas({
       };
 
       if (!curl || !solid || !u || !v || !pressure || !tracer) return;
+      // Guard against empty arrays (e.g. loaded from DB without raw grid data)
+      if (!curl.length || !curl[0] || !u.length || !u[0]) return;
 
       // ── Derive grid dimensions from the live frame metadata ──────────
       const W: number = frame.meta.width;

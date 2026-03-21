@@ -1,0 +1,964 @@
+[33mcommit 213ec8f7b9d785f314b012a1f5b8095e83908e2a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32manas_branch[m[33m)[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Mar 20 22:00:46 2026 +0500
+
+    Add slider b/w CFD Canvas and Interactive Canvas on simulation page
+    - Add loading results from local storage in simulation page
+
+[33mcommit b0f0474ad6b6d21c7636e90f108af56e4d8e6836[m[33m ([m[1;32mmain[m[33m)[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Mar 20 21:08:49 2026 +0500
+
+    Add Loading the Previous Results from SessionStorage in Simulation page
+
+[33mcommit 59d6e40e0d15f46ca301f94e6953b0f23ce0e9c4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/dev[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Mon Mar 16 01:34:14 2026 +0500
+
+    Add pressure and density visualization
+
+[33mcommit 16ed26d6ab6b5ea06532466f27bd2d04be79e9b6[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Mar 16 00:21:54 2026 +0500
+
+    Enhance README with detailed setup instructions
+    
+    Expanded README with quick start, configuration, notes, and API endpoints.
+
+[33mcommit 3af4992f16b3bf307f578ff6acc8bb58d92c40d5[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Mar 16 00:13:39 2026 +0500
+
+    fix y-values overlapping issue in results modal on optimization page
+
+[33mcommit 13f27ab195cec4a93fcb5064d879e09c177c8dba[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Mar 16 00:03:39 2026 +0500
+
+    Add Selig format .dat downloader function in optimization and simulation page
+
+[33mcommit 75f3613b4e7ca1440a315365f9233920a7c7fc31[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Mar 15 23:52:49 2026 +0500
+
+    Add Download .dat button in Results' Optimize and Simulate Page
+
+[33mcommit 7ba7f4eb2193eb9d91011dd40f258544e9775505[m
+Merge: 0673734 7ca17bd
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Wed Mar 11 10:22:32 2026 +0500
+
+    Merge pull request #24 from FYP-M4-Fluid-Simulator/anas_branch
+    
+    Add backend health check & wake-up logic on Login and Airfoils Page
+
+[33mcommit 7ca17bd89c87804306c958961c56af22bd2146d6[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Tue Mar 10 20:04:47 2026 +0500
+
+    Add backend health check & wake-up logic on Login and Airfoils Page
+    
+    Introduce backend health-check and wake-up handling to reduce first-request failures and surface status to the UI. Changes include:
+    
+    - Add checkingBackend state and isBackendHealthy / wakeUpBackend helpers in src/app/airfoils/page.tsx.
+    - Perform a health check on mount before fetching airfoils; if unhealthy, attempt to wake backend and retry after a short delay (3s). Uses a 5s fetch timeout and falls back to the existing fetchAirfoils behavior on errors.
+    - Update loading UI text to reflect backend checking state and show fallback/demo indicator when using fallback data.
+    - Import PYTHON_BACKEND_URL and call wakeUpBackend on LoginPage mount (src/components/LoginPage.tsx) to pre-warm the backend when the login screen loads.
+    - Minor JSX/formatting cleanups in page.tsx for consistent className/template formatting.
+    
+    This aims to improve user experience when the Python backend is cold or temporarily unavailable by proactively waking it and providing clearer status messaging.
+
+[33mcommit 067373428e38561b8902a6ddf75c34fab6f9d751[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Mon Mar 9 19:16:31 2026 +0500
+
+    Send jwt to BE for secure connection
+
+[33mcommit 38e77d76b6e207d0bab59529ea901e6b552cd564[m
+Merge: 843f027 43873d7
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Mon Mar 9 00:33:27 2026 +0500
+
+    Merge branch 'dev' of https://github.com/FYP-M4-Fluid-Simulator/Frontend-Code
+
+[33mcommit 43873d71031f4e30844583414094defa9bf2dab3[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Mon Mar 9 00:33:04 2026 +0500
+
+    Fix env names
+
+[33mcommit 843f0270cadf6c5883dc33aab937a20796623505[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Tue Mar 3 07:14:52 2026 +0500
+
+    fix workflow
+
+[33mcommit 667489d5411334531860e4c0b6414c90f6fe1809[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Tue Mar 3 06:52:56 2026 +0500
+
+    sonar sast workflow
+
+[33mcommit 42fdd334b2c5de58de7ab490293ec12006e900ea[m
+Merge: 6321fd9 3f97641
+Author: Musab Kasbati <43878981+musabkas@users.noreply.github.com>
+Date:   Sun Feb 22 23:14:51 2026 +0500
+
+    Merge pull request #23 from FYP-M4-Fluid-Simulator/fix/canvas-sim-progress
+    
+    Fix/canvas sim progress
+
+[33mcommit 3f97641f3a3530b1d58bacc38ac385fb85d29d38[m[33m ([m[1;31morigin/fix/canvas-sim-progress[m[33m)[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 23:13:05 2026 +0500
+
+    maintain cst when backtracing pages
+
+[33mcommit ba7e4fc44b38031b5bfc4caa5f5144d4bea336d7[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 23:06:28 2026 +0500
+
+    correct lower surface control points
+
+[33mcommit 68f837ed134b3d11e4cea3de78a35c6344a96424[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 22:44:32 2026 +0500
+
+    non-draggable control points + accurate simulation progress + stop jarring velocity arrow animation in optimize
+
+[33mcommit 6321fd92f7b1819c4d1dcab4ae516866da856bf6[m
+Merge: 9f26868 254d508
+Author: Muhammad Saad <110264527+msaadg@users.noreply.github.com>
+Date:   Sun Feb 22 22:09:14 2026 +0500
+
+    Merge pull request #22 from FYP-M4-Fluid-Simulator/feat/filter-airfoils
+    
+    Add filter for airfoils
+
+[33mcommit 254d508c95e0fb725c310f20b82504ce17dd8b16[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 22:07:18 2026 +0500
+
+    Add filter for airfoils
+
+[33mcommit 9f26868634230df8526d9032f5f0d8ca1e151e96[m
+Merge: 3b9e656 711fcbb
+Author: Muhammad Saad <110264527+msaadg@users.noreply.github.com>
+Date:   Sun Feb 22 20:07:01 2026 +0500
+
+    Merge pull request #21 from FYP-M4-Fluid-Simulator/updates/ui
+    
+    Updates UI - Sim and Opt
+
+[33mcommit 711fcbb3d6598c3b871447f0ff790b3e7ef2bf9f[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 20:05:07 2026 +0500
+
+    Use standard notation in airfoils page
+
+[33mcommit 16201e20f1abf8e249b94aa779ceec64a1cdeb1b[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 19:46:29 2026 +0500
+
+    Disable optimize params and point back to design page from optimize page
+
+[33mcommit d54d3106547a0f555fb7cff5f89871d37e9bafd1[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 19:45:32 2026 +0500
+
+    Update CFD Canvas to follow same color guidelines as before simulation and rm top/botttom solid in visualizing
+
+[33mcommit 3b9e656b8efa9b3d1ae10d2343330b72d8c76ae7[m
+Merge: 2ae29b1 97f6e35
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 19:34:31 2026 +0500
+
+    Merge pull request #20 from FYP-M4-Fluid-Simulator/anas_dev
+    
+    Fixed the airfoil lower edge cutting issue
+
+[33mcommit 97f6e354240bd233d395208022d078bd4e109d8b[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 19:32:29 2026 +0500
+
+    Fixed the airfoil lower edge cutting issue
+
+[33mcommit 2ae29b16884caee4cc2039831d397994431e31e0[m
+Merge: 6836b6a 54e9123
+Author: Muhammad Saad <110264527+msaadg@users.noreply.github.com>
+Date:   Sun Feb 22 18:59:22 2026 +0500
+
+    Merge pull request #19 from FYP-M4-Fluid-Simulator/update/save-airfoils-flow
+    
+    Update saving experiments
+
+[33mcommit 54e9123992e4993374f3d418a3c505316ff6d656[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 18:30:18 2026 +0500
+
+    Update saving experiments
+
+[33mcommit 6836b6aebbe5c33364e9482e9904f4698c3b17df[m
+Merge: 3293b30 0f02a99
+Author: Musab Kasbati <43878981+musabkas@users.noreply.github.com>
+Date:   Sun Feb 22 17:55:36 2026 +0500
+
+    Merge pull request #18 from FYP-M4-Fluid-Simulator/fix/parameter-ranges
+    
+    Fix/parameter ranges
+
+[33mcommit 0f02a990fde8d3ced11021aa5c32507e26d16607[m[33m ([m[1;31morigin/fix/parameter-ranges[m[33m)[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 17:53:47 2026 +0500
+
+    improve canvas to show grid and velocity arrows
+
+[33mcommit 3eae6596a0207129d67dc9ef5c0c4fd8f3badd3a[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 17:44:28 2026 +0500
+
+    parameter value clamping
+
+[33mcommit 884ef7bb747bbcfadb930bb09aae64f6230e32f4[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 17:31:36 2026 +0500
+
+    parameter ranges for optimize and simulate sidebar
+
+[33mcommit 3293b30b45ba98d58e94e31588fb3af772429599[m
+Merge: 7ebf4fe a6eb8a9
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 16:59:52 2026 +0500
+
+    Merge pull request #17 from FYP-M4-Fluid-Simulator/anas_dev
+    
+    Update Variables name for dat to cst api call
+
+[33mcommit a6eb8a93e9f3937cc8aafa9dd65bc668191975aa[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 16:59:03 2026 +0500
+
+    Update Variables name for dat to cst api call
+
+[33mcommit 7ebf4fe0d2830ffa8383a6a8c47a7c0403da1530[m
+Merge: edc1d22 ba60c73
+Author: Musab Kasbati <43878981+musabkas@users.noreply.github.com>
+Date:   Sun Feb 22 16:20:18 2026 +0500
+
+    Merge pull request #16 from FYP-M4-Fluid-Simulator/fix/grid-granularity
+    
+    update cfd grid granularity to be handled by BE
+
+[33mcommit ba60c73045cfe21acf3ed61a6d653dfc00b86463[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 16:18:19 2026 +0500
+
+    update cfd grid granularity to be handled by BE
+
+[33mcommit edc1d224d404bf879e734d6a758ee8186df090f8[m
+Merge: a201aa3 32feda8
+Author: Muhammad Saad <110264527+msaadg@users.noreply.github.com>
+Date:   Sun Feb 22 15:14:53 2026 +0500
+
+    Merge pull request #15 from FYP-M4-Fluid-Simulator/fixes/simulation-ui
+    
+    Simulation UI fixes
+
+[33mcommit 32feda84c7c3a4f11aa74a20c225b5e634d2ea8d[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 15:13:43 2026 +0500
+
+    Simulation UI fixes
+
+[33mcommit a201aa313da4cfe56eefc67689f34938ded6e09a[m
+Merge: b3b42ae 61fdcea
+Author: Musab Kasbati <43878981+musabkas@users.noreply.github.com>
+Date:   Sun Feb 22 15:03:04 2026 +0500
+
+    Merge pull request #14 from FYP-M4-Fluid-Simulator/feat/aoa-optimize
+    
+    Feat/aoa optimize
+
+[33mcommit 61fdcea6acfc25ca603c1b1b7d9b9d19f6b1a170[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 15:01:02 2026 +0500
+
+    handle aoa + improve cfd canvas rendering: proper outline + toggle for velocity field
+
+[33mcommit b3b42ae678838e12e962877b3ceb04deb3fce916[m
+Merge: 58146e9 13d806f
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 14:57:18 2026 +0500
+
+    Merge pull request #13 from FYP-M4-Fluid-Simulator/Update-API-fetching-for-saved-airfoils
+    
+    Add connection to getting airfoils API
+
+[33mcommit 13d806fa9015b961cb0575c57540ebcc708ab7fb[m
+Merge: e150bf5 58146e9
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 14:55:57 2026 +0500
+
+    Merge branch 'dev' of https://github.com/FYP-M4-Fluid-Simulator/Frontend-Code into Update-API-fetching-for-saved-airfoils
+
+[33mcommit e150bf5ea85dc5b87dcdce16c79c4df996554e5a[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 14:51:03 2026 +0500
+
+    Update variable name level bugs
+
+[33mcommit 44ecdc3bc8493d76d6fd29f7abb940e17e4cc948[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 14:43:44 2026 +0500
+
+    Add connection to getting airfoils API
+
+[33mcommit 58146e9729b42d5210dd13d92c304a2e04abf191[m
+Merge: f54de85 cf35418
+Author: Muhammad Saad <110264527+msaadg@users.noreply.github.com>
+Date:   Sun Feb 22 14:23:49 2026 +0500
+
+    Merge pull request #12 from FYP-M4-Fluid-Simulator/fix/simulation-ui
+    
+    Fix simulation UI
+
+[33mcommit cf354180230d9b9573070a273caaedfff17636a4[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 14:21:53 2026 +0500
+
+    Fix simulation UI
+
+[33mcommit f54de856092a84f0022ca853f3e69abe4fb4356d[m
+Merge: 161615b b68217d
+Author: Muhammad Saad <110264527+msaadg@users.noreply.github.com>
+Date:   Sun Feb 22 13:51:16 2026 +0500
+
+    Merge pull request #11 from FYP-M4-Fluid-Simulator/feat/auth
+    
+    Add auth
+
+[33mcommit b68217df41725d8c88e90cf3ebecc06e11464858[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 13:49:58 2026 +0500
+
+    fix build
+
+[33mcommit dd9178babfc91c59d990efcc10bdb99f2352b8c4[m
+Merge: 9bc92df 161615b
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 13:49:11 2026 +0500
+
+    Merge branch 'dev' of https://github.com/FYP-M4-Fluid-Simulator/Frontend-Code into feat/auth
+
+[33mcommit 9bc92df97f47af16ea7027bf2c77aec7a44c4e6c[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 13:42:56 2026 +0500
+
+    Add auth
+
+[33mcommit 161615b2a72115e0e2b9bebcff888686a023cc05[m
+Merge: 1b96e93 a3c37c3
+Author: Musab Kasbati <43878981+musabkas@users.noreply.github.com>
+Date:   Sun Feb 22 13:02:43 2026 +0500
+
+    Merge pull request #10 from FYP-M4-Fluid-Simulator/fix/remove-reset-buttons
+    
+    Fix/remove reset buttons
+
+[33mcommit a3c37c3da091137bbf29601ad35c5cca93b44c7a[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 13:00:28 2026 +0500
+
+    remove deprecated finalize page
+
+[33mcommit 4961a181bebd88522bc79663762b0cf2cd3935b0[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 13:00:16 2026 +0500
+
+    remove reset option from design, simulate, optimize
+
+[33mcommit 1b96e93968188716b114a6363cfd3f49d848cdeb[m
+Merge: b71fbf9 7761f36
+Author: Musab Kasbati <43878981+musabkas@users.noreply.github.com>
+Date:   Sun Feb 22 12:49:54 2026 +0500
+
+    Merge pull request #8 from FYP-M4-Fluid-Simulator/fix/remove-fullscreen-buttons
+    
+    remove fullscreen options from airfoil canvas and turbine
+
+[33mcommit 7761f36f42407ba29139eac29c22e4e9755aa024[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 12:48:57 2026 +0500
+
+    removed finalize and simulate fullscrren option
+
+[33mcommit 98f92243377a5cefce905f6b409da3220e6223c2[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 12:46:13 2026 +0500
+
+    remove fullscreen options from airfoil canvas and turbine
+
+[33mcommit b71fbf9db1428ff7d28658c935f6d0bb9af0d9b6[m
+Merge: 0bb66c5 0c65267
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 12:39:45 2026 +0500
+
+    Merge pull request #7 from FYP-M4-Fluid-Simulator/hotfix
+    
+    Hotfix
+
+[33mcommit 0c65267bb865b01f0dfadada43f746f249ced9ca[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 12:37:41 2026 +0500
+
+    update UI of simulate and design pages
+
+[33mcommit 0bb66c51946269252c1ce64516344aacc6bc1012[m
+Merge: 24df3f1 ac83d84
+Author: Musab Kasbati <43878981+musabkas@users.noreply.github.com>
+Date:   Sun Feb 22 12:31:31 2026 +0500
+
+    Merge pull request #6 from FYP-M4-Fluid-Simulator/fix/input-ranges2
+    
+    limit speed and cst
+
+[33mcommit ac83d8465c8a8fb6847af2da7f00edc4ed2dfcf2[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 12:30:04 2026 +0500
+
+    limit speed and cst
+
+[33mcommit 125edecf8795262c7d0d737c51de3b3374c2bd6e[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 12:29:33 2026 +0500
+
+    Update UI of design page
+
+[33mcommit 24df3f1c073b06123db8e1ae6136570b89fb9982[m
+Merge: b129f96 8a3ee3e
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 12:16:51 2026 +0500
+
+    Merge pull request #5 from FYP-M4-Fluid-Simulator/hotfix
+    
+    Update generateAirfoil to generateCSTAirfoil new function
+
+[33mcommit 8a3ee3e2e7ab1bc65752db68ce5d8c79e414c977[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 12:13:55 2026 +0500
+
+    Fixed error of updated funcction in optimize page
+
+[33mcommit 8ec114e0870a6cb3e3b57964090d1554bef5a2cb[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 22 12:08:23 2026 +0500
+
+    Update generateAirfoil to generateCSTAirfoil new function
+
+[33mcommit b129f96f20f1559f2c001e87428a2f6b0ceb98c1[m
+Merge: 52d1471 7512099
+Author: Musab Kasbati <43878981+musabkas@users.noreply.github.com>
+Date:   Sun Feb 22 12:00:17 2026 +0500
+
+    Merge pull request #4 from FYP-M4-Fluid-Simulator/fix/input-ranges
+    
+    remove unused components
+
+[33mcommit 7512099661b0bf4b320fe41bfe60d9b924926d5e[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Sun Feb 22 11:57:49 2026 +0500
+
+    remove unused components
+
+[33mcommit 52d147117d2f5e7397948f63efd979c79c84858c[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 02:07:15 2026 +0500
+
+    rm test commit
+
+[33mcommit 8a2223493ecfa1ce2bb5d38a5e13f227e4694219[m
+Merge: 43b42c5 9da7878
+Author: Muhammad Saad <110264527+msaadg@users.noreply.github.com>
+Date:   Sun Feb 22 02:06:13 2026 +0500
+
+    Merge pull request #3 from FYP-M4-Fluid-Simulator/test-dev
+    
+    testing dev
+
+[33mcommit 9da78787e064dc0bf9bee2fb84ba1eba4c6510fc[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 22 02:05:14 2026 +0500
+
+    testing dev
+
+[33mcommit 43b42c55b142a8dbf740273e1a6d4ee779aca86a[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sat Feb 21 20:04:21 2026 +0500
+
+    Add random uuid as user-id
+
+[33mcommit 9e88036b2119a3bf500bdf802246186af1018d30[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 21 11:05:10 2026 +0500
+
+    Update turbine position on page
+
+[33mcommit 4837aa57d14c34d3af57ce795e9ff6934dd5c631[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 20 20:42:48 2026 +0500
+
+    Redesign airfoil deck page
+
+[33mcommit 3dea2a5cb2a158d2a279df88ef932d052fc62331[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 20 20:40:14 2026 +0500
+
+    Add dummy airfoil
+
+[33mcommit 05fbdca0a3bbe8b27c24130fa33640a4d33637a8[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 20 19:50:50 2026 +0500
+
+    Add Airfoil Deck as landing page and Add pagination on Airfoil Deck
+
+[33mcommit a457b97550dd0622102e544cb6ef78a53392a03b[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 20 10:59:24 2026 +0500
+
+    Delete route.ts
+
+[33mcommit c02eede584e6e29f766164fc6b5f63046b06742d[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 20 10:53:33 2026 +0500
+
+    refactor(cst): migrate to client-side CST calculation and input with keyboard of weights
+    
+    refactor(cst): migrate to client-side CST calculation and Python-parity implementation
+    ✨ New Features:
+    - generateCSTAirfoil(): New main function returning coordinates, upperCoordinates, lowerCoordinates
+    - Client-side real-time airfoil generation (no network latency)
+    - Complete CST API route with validation and error handling
+    - EditableNumberInput component for better UX (select-on-focus, Enter/Escape shortcuts)
+    - Improved coefficient precision (3→4 decimal places)
+    
+    🔧 Refactoring:
+    CST Library (src/lib/cst.ts):
+    - Renamed binomial() → nCr() to match Python naming
+    - Replaced separate bernstein/classFunction/shapeFunction with unified classShape()
+    - Switched from linear to cosine spacing for x-coordinates (better leading/trailing edge resolution)
+    - Changed from function declarations to arrow functions for consistency
+    - Added @deprecated tags for legacy functions
+    
+    Design Page (src/app/design/page.tsx):
+    - Replaced fetch('/api/cst/update') with direct generateCSTAirfoil() call
+    - Updated default airfoil coefficients to match Python test case
+    - Improved coefficient input range validation (-2.0 to 2.0)
+    - Fixed canvas resize timing with sidebar animation (300ms delay)
+    
+    API Route (src/app/api/cst/update/route.ts):
+    - Implemented full CST algorithm with Bernstein polynomials
+    - Added comprehensive input validation (array checks, coefficient ranges -1 to 1)
+    - Proper error handling with detailed error messages
+    - Cosine spacing for proper point distribution
+
+[33mcommit eba7103f230465f51847e5a3ccb663e42e54552d[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Thu Feb 19 11:48:13 2026 +0500
+
+    hide leading and trailing points
+
+[33mcommit 906bf0d7f8246e507e6a412960b28f36dd981eb1[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Wed Feb 18 15:56:10 2026 +0500
+
+    Fix simulate results to show at end
+
+[33mcommit 375f2d8ce3c0304e6eeabc12600a672cf5d44417[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Wed Feb 18 15:30:53 2026 +0500
+
+    Add BE connection for Optimizae Page
+
+[33mcommit a8cbb551dcb155784f7861fdd8753fd0392f722a[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Wed Feb 18 09:42:19 2026 +0500
+
+    show cst outline and larger arrows
+
+[33mcommit efa2607b5c35cd34160172d16a61201531d990be[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Tue Feb 17 18:38:37 2026 +0500
+
+    Canvas size issue solved when sidebar is closed
+
+[33mcommit c07c387bb2a1353dfca5a3dde1a090d9ae64b5ef[m
+Author: Musab Kasbati <musab16000@gmail.com>
+Date:   Tue Feb 17 12:25:19 2026 +0500
+
+    flow reorganization + ui tweaks
+
+[33mcommit 8dfa88415ec098e61942e0a2fd82e745d27b7694[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 15 19:23:34 2026 +0500
+
+    Add export button on optimization page
+
+[33mcommit b239319c774a0f1e2be973b3b4605d79506e189b[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 15 19:19:48 2026 +0500
+
+    Add View results button on simulation and optimization page
+
+[33mcommit c35ae46cdc446edab27c2b9c3bca04646737dff1[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 15 19:14:45 2026 +0500
+
+    remove export button design page
+
+[33mcommit e83b80c6f6e31adaa97ad3513db67b775115e505[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 15 15:52:14 2026 +0500
+
+    dat to cst backend connection done
+
+[33mcommit 7a75f32a393a8dde297bf0d2e88c8dfa956fd3d5[m
+Author: Musab1Blaser <musab16000@gmail.com>
+Date:   Sun Feb 15 14:02:53 2026 +0500
+
+    update gitignore
+
+[33mcommit 0d10a15f00edae9e470002177c1eb942e09fbb6e[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 15 12:25:00 2026 +0500
+
+    Simulation page compile issue fix
+
+[33mcommit a34fc0e1c0cb2c09f6923cecb0583a7174b1516e[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 15 12:18:48 2026 +0500
+
+    Simulation page left sidebar fix
+    
+    Now the left sidebar pops back in during simulation has started and right sidebar gets bigger. User can also toggle visualize veocity and dropdown for pressure, curl etc.
+
+[33mcommit fd808323f42a2bde18b1f0f3c2fd6879c6dc7c21[m
+Merge: c75bca2 37a8ddf
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 15 12:17:27 2026 +0500
+
+    Merge branch 'main' of https://github.com/FYP-M4-Fluid-Simulator/Frontend-Code
+
+[33mcommit c75bca23c01ad187782c67142941c1794bff1eca[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sun Feb 15 12:15:33 2026 +0500
+
+    simulation page sidebar fix
+    
+    Now the left sidebar pops back in during simulation has started and right sidebar gets bigger. User can also toggle visualize veocity and dropdown for pressure, curl etc.
+
+[33mcommit 37a8ddfe31c963e7867dc20a19bbe356f09ee17f[m
+Author: Muhammad Saad <ms08063@st.habib.edu.pk>
+Date:   Sun Feb 15 03:34:14 2026 +0500
+
+    Add visualization integration, fix results modal still needed
+
+[33mcommit 23f4915847d5c59649202209998feda377b37e1c[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 21:54:16 2026 +0500
+
+    Websocket connect code + dummy page added
+
+[33mcommit 9af60e58c9be886947700ca961c70ae893920857[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 11:20:50 2026 +0500
+
+    Add scroll bar optimization page
+
+[33mcommit 5c18e70ff1e6d07c35f2563b4265094d52b0c8b1[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 11:19:21 2026 +0500
+
+    fix build issue optimization page
+
+[33mcommit 25d37a78dfbbd9407eaf4b6ab066e5db7caa2f5f[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 11:14:06 2026 +0500
+
+    Optimization page done
+
+[33mcommit b30e53007f10fb695be6309292d0455b8ab987f9[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 11:12:10 2026 +0500
+
+    Optimization Page graph added with results
+
+[33mcommit 81dd7d03d8aa31c9d8fa19e84b8972d929c955c4[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 10:42:06 2026 +0500
+
+    Added results graphs
+
+[33mcommit b6d5621d779754fecc50c0601abfaaba8d6f5d00[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 10:38:39 2026 +0500
+
+    Optimization page fix
+
+[33mcommit fe47916eeac8f8b8e209587d89b56da862f3b5eb[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 10:19:13 2026 +0500
+
+    Add Saved Airfoil Page
+
+[33mcommit cc51901c77cfe07f180bc511788bbebb2a4d2c6d[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Feb 14 09:58:37 2026 +0500
+
+    Export design added
+
+[33mcommit f6241952c41d5ae5c7d3e53241aeb2afaa5ad6b5[m
+Author: Musab1Blaser <musab16000@gmail.com>
+Date:   Sat Feb 14 02:25:05 2026 +0500
+
+    some fixes
+
+[33mcommit a1d978b3ea593f85602502d6ad0eef1ead98d84b[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 13 11:29:35 2026 +0500
+
+    Optimization Page Add Sidebar
+
+[33mcommit f455261f5df076083f12ce9cddb75ca373f1eb35[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 13 11:18:32 2026 +0500
+
+    Add output results on simulation page and update sidebar
+
+[33mcommit 9c5bfdf3865752c2e54792f2225e1ecaa8f648bc[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 13 10:39:32 2026 +0500
+
+    Fixed : Simulate Page sidebar remains open
+
+[33mcommit bd69d688b208ea514b25371bc0aaae5e9ca5c579[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 12 23:18:45 2026 +0500
+
+    Finalize Page Remove Mesh controls and add zoom options
+
+[33mcommit e6167221e83dcf2e409e50f459ecd17ab697a0d7[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 12 23:01:18 2026 +0500
+
+    Design Page Chord lenght in the top of sidebar
+
+[33mcommit 001b17b6d861ae37c9cf80c46af831db16944948[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 12 22:59:16 2026 +0500
+
+    Design Page Updated
+    
+    1. Chord Lenghth feature added in sidebar
+    2. Removed Simulation Controls from sidebar
+    3. Zoom Controls working
+    4. CST weights toggle only now
+
+[33mcommit 5ffff528f25f5742d7c700ba0310da3bda73bbf7[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Tue Feb 10 23:25:44 2026 +0500
+
+    Remove Red Blink Chord line and Max thickness line
+
+[33mcommit 0516d22409d18091b0fbf9ca4e477f3a54dcf402[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Tue Feb 10 23:22:22 2026 +0500
+
+    Zoom Controls
+
+[33mcommit 9f9d3745a5826b8f1db29440a15b9470b2628215[m
+Author: M.Anas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Tue Feb 10 23:17:17 2026 +0500
+
+    Finalize Page Canvas UI updated and resolve compile error
+
+[33mcommit 1645c8cec97780ff4af2621b584b6e955a789e5d[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Feb 9 23:21:51 2026 +0500
+
+    fixed build issue
+
+[33mcommit a10fdf3b2e980904e15fd1562910e5944b46d3f6[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Feb 9 23:16:57 2026 +0500
+
+    Updated Design Page and made sidebar
+
+[33mcommit baa76f29d01499b83eb38eb7d422b723c2cb518b[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 6 16:18:50 2026 +0500
+
+    Update README.md
+
+[33mcommit b5fe1fb54020f573d2aa3008519c9a0f9051343f[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 6 13:24:11 2026 +0500
+
+    connection with backend done
+
+[33mcommit 73641b038b5fbf46422da5dd43d903561191541f[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 6 11:14:24 2026 +0500
+
+    Delete route.ts
+
+[33mcommit afcaa2afad534837fdf6670ac5463cb585c477f5[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Fri Feb 6 10:35:45 2026 +0500
+
+    Added Rotating wind turbine
+
+[33mcommit 44b8330fc849a25873bd2ea243c369928630544c[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 14:53:38 2026 +0500
+
+    Fixed local build issues
+
+[33mcommit 8573a432996fbea5223baec3dc16c7a09c330a2b[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 14:00:47 2026 +0500
+
+    Update next.js version
+
+[33mcommit d2c218af554841e860b35a20eeccc22604420223[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 13:55:50 2026 +0500
+
+    Update package.json
+
+[33mcommit 4edda361ab814b8170b0053846a2698bd99def7c[m
+Merge: 488f376 9e17e6e
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 13:52:08 2026 +0500
+
+    Merge pull request #2 from FYP-M4-Fluid-Simulator/frontend_Update
+    
+    Corrected Name TurboDiff
+
+[33mcommit 9e17e6eb7d22920acc4cfed806a4db9bca12ac5c[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 13:50:18 2026 +0500
+
+    Corrected Name TurboDiff
+
+[33mcommit 488f37695083def1a5765114435a31dfa4c002d1[m
+Merge: 23bad9a 34e578c
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 13:22:55 2026 +0500
+
+    Merge pull request #1 from FYP-M4-Fluid-Simulator/frontend_Update
+    
+    Frontend Updated
+
+[33mcommit 34e578c4d798a9e2d526200570b9c392e417a9e3[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 13:14:36 2026 +0500
+
+    Fixed Design Page Canvas
+
+[33mcommit 7a2b3a781150fd55d6307c6277aaed6119d5068b[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 13:02:20 2026 +0500
+
+    Made Control Points Smaller
+
+[33mcommit d3cf95609f797a872a33bae718704cd0151f8fc3[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 12:44:15 2026 +0500
+
+    Added a  Finalize Design Page
+
+[33mcommit 6428900b677b0e9571a5ef3c55f79a43deb9c625[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 11:42:35 2026 +0500
+
+    Updated Canvas to be more usable
+
+[33mcommit 3c069aa1252109366ab055db90e7680feb763a7e[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Thu Feb 5 11:20:49 2026 +0500
+
+    Added base code Updated from Fig
+
+[33mcommit b9c22fc7bc5a5d07a5d521f2392f4a58468b1b98[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Wed Feb 4 10:47:55 2026 +0500
+
+    Corrected UI of landing page and some tweaks
+
+[33mcommit 23bad9a05c0394b006f3ed2402c934d3092e23c1[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Wed Feb 4 10:41:10 2026 +0500
+
+    Add landing/login/signup pages & UI tweaks
+    
+    Introduce client-side onboarding views and UI improvements: add LandingPage, LoginPage, and SignupPage components with motion animations and mock navigation; refactor src/app/page.tsx to manage pages via local state and render the new pages (with an app placeholder). Add motion dependency in package.json. Update OptimizationInput to include learning rate control, refine input layouts and sliders, and improve UX. Enhance SimulationControls with airfoil select/upload, control-point management (add/remove/update), and additional configuration options; temporarily comment out TopBar usage in RootLayout. These changes improve onboarding and provide richer interactive controls for simulation and optimization workflows.
+
+[33mcommit 9ec1917df83fd16d0eec0580e88184e4feb2ea70[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Jan 31 17:02:40 2026 +0500
+
+    React 18 installed
+
+[33mcommit f898b8ba32bc1ea48f8f98ec946d945b9b728b0e[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Jan 31 16:59:34 2026 +0500
+
+    small deps issues resolved
+
+[33mcommit 5d391f9054c8a55d98f175e0ea3b0e044d5171cb[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Jan 31 16:45:59 2026 +0500
+
+    Fixed deps
+
+[33mcommit 54a834ee3c56c5b009fa319e912918e9a0c9f46e[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Jan 31 16:34:49 2026 +0500
+
+    Fixed Build Issues locally
+
+[33mcommit 23d5e998ecc33bab6818cc4bc2120ccd240cb226[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Jan 31 13:14:52 2026 +0500
+
+    Added a dummy api
+
+[33mcommit cc197615a68a78b620decce7d3ea93556ba80868[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Sat Jan 31 13:07:35 2026 +0500
+
+    Next js Migration Done!
+
+[33mcommit 473c605f2049f05ec67af92077b20554c3a3d7da[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Jan 26 21:31:33 2026 +0500
+
+    Fixed Turbine Rendering Cuttinng issue
+
+[33mcommit 2e4803b87f713b037f6a77d7f2f8622d1bda66ae[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Jan 26 20:37:36 2026 +0500
+
+    Update README.md
+
+[33mcommit 6c427317f907e5dc9f22b9d2fcbaf826c7ccf8d8[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Jan 26 20:36:58 2026 +0500
+
+    Added the base code
+
+[33mcommit 16cf0d200efea7353a5a4dff566ee24d6845b9ff[m
+Author: AlphaAnas <96944434+AlphaAnas@users.noreply.github.com>
+Date:   Mon Jan 26 20:27:27 2026 +0500
+
+    Initial commit

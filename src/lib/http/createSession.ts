@@ -46,7 +46,7 @@ export async function createSession(config: SessionConfig) {
   const fidelity = fidelityMap[density];
 
   const token = await auth.currentUser?.getIdToken();
-
+  console.log("Sending a make session request with sim_time: ", config.simulationDuration);
   const res = await fetch(`${PYTHON_BACKEND_URL}/sessions`, {
     method: "POST",
     headers: {
