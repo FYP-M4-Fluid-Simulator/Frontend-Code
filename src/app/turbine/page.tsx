@@ -18,6 +18,7 @@ import { PYTHON_BACKEND_URL } from "@/config";
 type PowerOutputResult = {
   total_power_watts: number;
   total_power_kilowatts: number;
+  operating_rpm: number;
 };
 
 type CFDInputState = {
@@ -41,6 +42,12 @@ const TURBINE_CONSTANTS = {
   num_elements: 20,
 };
 
+const TSR_LIMITS = {
+  min: 1,
+  max: 15,
+  step: 0.1,
+};
+
 export default function TurbinePage() {
   const router = useRouter();
 
@@ -51,7 +58,7 @@ export default function TurbinePage() {
   const [showPowerPanel, setShowPowerPanel] = useState(false);
   const [isCalculatingPower, setIsCalculatingPower] = useState(false);
   const [powerError, setPowerError] = useState<string | null>(null);
-  const [rpm, setRpm] = useState(1200);
+  const [tsr, setTsr] = useState(7);
   const [powerResult, setPowerResult] = useState<PowerOutputResult | null>(
     null,
   );
@@ -125,7 +132,9 @@ export default function TurbinePage() {
     setIsCalculatingPower(true);
 
     try {
-      const token = auth?.currentUser ? await auth.currentUser.getIdToken() : "";
+      const token = auth?.currentUser
+        ? await auth.currentUser.getIdToken()
+        : "";
       if (!token) {
         throw new Error("You must be logged in to calculate power output.");
       }
@@ -137,7 +146,7 @@ export default function TurbinePage() {
         cl: liftCoefficient,
         cd: dragCoefficient,
         chord: cfdInputs.chordLength,
-        rpm,
+        tsr, // Note: tsr - tip speed ratio
         ...TURBINE_CONSTANTS,
       };
 
@@ -168,10 +177,12 @@ export default function TurbinePage() {
       const data = await response.json();
       const totalPowerWatts = Number(data?.total_power_watts);
       const totalPowerKilowatts = Number(data?.total_power_kilowatts);
+      const operatingRpm = Number(data?.operating_rpm);
 
       if (
         !Number.isFinite(totalPowerWatts) ||
-        !Number.isFinite(totalPowerKilowatts)
+        !Number.isFinite(totalPowerKilowatts) ||
+        !Number.isFinite(operatingRpm)
       ) {
         throw new Error("Backend returned an invalid power output response.");
       }
@@ -179,6 +190,7 @@ export default function TurbinePage() {
       setPowerResult({
         total_power_watts: totalPowerWatts,
         total_power_kilowatts: totalPowerKilowatts,
+        operating_rpm: operatingRpm,
       });
     } catch (error) {
       setPowerError(
@@ -196,8 +208,10 @@ export default function TurbinePage() {
       liftToDragRatio,
       liftCoefficient,
       dragCoefficient,
-      rpm: liftToDragRatio * 0.25,
-      powerKw: liftToDragRatio * 3.2,
+      tsr,
+      operatingRpm: powerResult?.operating_rpm ?? null,
+      powerW: powerResult?.total_power_watts ?? null,
+      powerKw: powerResult?.total_power_kilowatts ?? null,
       efficiency: Math.min(98.5, (liftToDragRatio / 80) * 95),
       timestamp: new Date().toISOString(),
     };
@@ -332,129 +346,141 @@ export default function TurbinePage() {
 
             {/* Power Panel */}
             <div className="mt-4 pt-3 border-t border-gray-200 space-y-3 text-xs">
-                <div>
-                  <div className="text-xs font-bold text-gray-700 mb-2">
-                    Input Metrics
-                  </div>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Chord Length</span>
-                      <span className="font-semibold text-gray-900">
-                        {cfdInputs.chordLength.toFixed(2)} m
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Angle of Attack</span>
-                      <span className="font-semibold text-gray-900">
-                        {cfdInputs.angleOfAttack.toFixed(2)} °
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Inflow Velocity</span>
-                      <span className="font-semibold text-gray-900">
-                        {cfdInputs.velocity.toFixed(2)} m/s
-                      </span>
-                    </div>
-                  </div>
+              <div>
+                <div className="text-xs font-bold text-gray-700 mb-2">
+                  Input Metrics
                 </div>
-
-                <div>
-                  <div className="text-xs font-bold text-gray-700 mb-2">
-                    Turbine Constants
-                  </div>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Rotor Radius</span>
-                      <span className="font-semibold text-gray-900">
-                        {TURBINE_CONSTANTS.rotor_radius.toFixed(1)} m
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Hub Radius</span>
-                      <span className="font-semibold text-gray-900">
-                        {TURBINE_CONSTANTS.hub_radius.toFixed(1)} m
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Number of Blades</span>
-                      <span className="font-semibold text-gray-900">
-                        {TURBINE_CONSTANTS.num_blades}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Number of Elements</span>
-                      <span className="font-semibold text-gray-900">
-                        {TURBINE_CONSTANTS.num_elements}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-bold text-gray-700">RPM</span>
-                    <span className="text-xs font-black text-green-700">
-                      {rpm}
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Chord Length</span>
+                    <span className="font-semibold text-gray-900">
+                      {cfdInputs.chordLength.toFixed(2)} m
                     </span>
                   </div>
-                  <input
-                    type="range"
-                    min={300}
-                    max={3000}
-                    step={50}
-                    value={rpm}
-                    onChange={(event) => setRpm(Number(event.target.value))}
-                    className="w-full h-2 accent-green-600"
-                    disabled={isCalculatingPower}
-                  />
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Angle of Attack</span>
+                    <span className="font-semibold text-gray-900">
+                      {cfdInputs.angleOfAttack.toFixed(2)} °
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Inflow Velocity</span>
+                    <span className="font-semibold text-gray-900">
+                      {cfdInputs.velocity.toFixed(2)} m/s
+                    </span>
+                  </div>
                 </div>
-
-                <button
-                  onClick={handleCalculatePower}
-                  disabled={isCalculatingPower}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all w-full flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:bg-emerald-400"
-                >
-                  {isCalculatingPower ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Calculating...
-                    </>
-                  ) : (
-                    "Calculate"
-                  )}
-                </button>
-
-                {isCalculatingPower && (
-                  <div className="space-y-1">
-                    <div className="text-[11px] text-gray-600">
-                      Calculating power output...
-                    </div>
-                    <div className="w-full h-1.5 bg-green-100 rounded-full overflow-hidden">
-                      <div className="w-1/2 h-full bg-green-500 rounded-full animate-pulse"></div>
-                    </div>
-                  </div>
-                )}
-
-                {powerError && (
-                  <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
-                    {powerError}
-                  </div>
-                )}
-
-                {powerResult && !isCalculatingPower && (
-                  <div className="bg-green-50 border border-green-200 rounded-md p-2 space-y-1.5">
-                    <div className="text-xs font-bold text-green-800 mb-1">
-                      Power Output
-                    </div>
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-gray-700 text-xs">kW</span>
-                      <span className="font-black text-green-800 text-lg">
-                        {powerResult.total_power_kilowatts.toExponential(3)}
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              <div>
+                <div className="text-xs font-bold text-gray-700 mb-2">
+                  Turbine Constants
+                </div>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Rotor Radius</span>
+                    <span className="font-semibold text-gray-900">
+                      {TURBINE_CONSTANTS.rotor_radius.toFixed(1)} m
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Hub Radius</span>
+                    <span className="font-semibold text-gray-900">
+                      {TURBINE_CONSTANTS.hub_radius.toFixed(1)} m
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Number of Blades</span>
+                    <span className="font-semibold text-gray-900">
+                      {TURBINE_CONSTANTS.num_blades}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Number of Elements</span>
+                    <span className="font-semibold text-gray-900">
+                      {TURBINE_CONSTANTS.num_elements}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-gray-700">TSR</span>
+                  <span className="text-xs font-black text-green-700">
+                    {tsr.toFixed(1)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={TSR_LIMITS.min}
+                  max={TSR_LIMITS.max}
+                  step={TSR_LIMITS.step}
+                  value={tsr}
+                  onChange={(event) => setTsr(Number(event.target.value))}
+                  className="w-full h-2 accent-green-600"
+                  disabled={isCalculatingPower}
+                />
+              </div>
+
+              <button
+                onClick={handleCalculatePower}
+                disabled={isCalculatingPower}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all w-full flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:bg-emerald-400"
+              >
+                {isCalculatingPower ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Calculating...
+                  </>
+                ) : (
+                  "Calculate"
+                )}
+              </button>
+
+              {isCalculatingPower && (
+                <div className="space-y-1">
+                  <div className="text-[11px] text-gray-600">
+                    Calculating power output...
+                  </div>
+                  <div className="w-full h-1.5 bg-green-100 rounded-full overflow-hidden">
+                    <div className="w-1/2 h-full bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+              )}
+
+              {powerError && (
+                <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
+                  {powerError}
+                </div>
+              )}
+
+              {powerResult && !isCalculatingPower && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-2 space-y-1.5">
+                  <div className="text-xs font-bold text-green-800 mb-1">
+                    Power Output
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-gray-700 text-xs">kW</span>
+                    <span className="font-black text-green-800 text-lg">
+                      {powerResult.total_power_kilowatts.toExponential(3)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-gray-700 text-xs">W</span>
+                    <span className="font-bold text-green-900 text-sm">
+                      {powerResult.total_power_watts.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-gray-700 text-xs">Operating RPM</span>
+                    <span className="font-bold text-green-900 text-sm">
+                      {powerResult.operating_rpm.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
