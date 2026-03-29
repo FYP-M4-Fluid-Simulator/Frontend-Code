@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
+import { ZoomControls } from "../../components/ZoomControls";
+import { useCanvasInteraction } from "../../hooks/useCanvasInteraction";
 import ResultsModal from "../../components/ResultsModal";
 import { useRouter } from "next/navigation";
 import {
@@ -85,6 +87,7 @@ export default function OptimizePage() {
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
   >("coarse");
+  const [chordLength, setChordLength] = useState(1.0);
   const [showControlPoints, setShowControlPoints] = useState(false);
 
   // L/D ratio tracking for live chart
@@ -98,6 +101,19 @@ export default function OptimizePage() {
   const [numIterations, setNumIterations] = useState(30);
   const [minThickness, setMinThickness] = useState(0.06);
   const [maxThickness, setMaxThickness] = useState(0.25);
+
+  // Zoom and Pan interaction
+  const {
+    zoomLevel,
+    offset,
+    handleZoomIn,
+    handleZoomOut,
+    handleReset,
+    handleWheel,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+  } = useCanvasInteraction();
   const [learningRate, setLearningRate] = useState(0.005);
 
   // Optimization results
@@ -144,6 +160,7 @@ export default function OptimizePage() {
       setAngleOfAttack(state.angleOfAttack || angleOfAttack);
       setVelocity(state.velocity || velocity);
       setMeshDensity(state.meshDensity || meshDensity);
+      setChordLength(state.chordLength || chordLength);
     }
   }, []);
 
@@ -1225,6 +1242,11 @@ export default function OptimizePage() {
                   background: "#000000",
                   border: "2px solid rgba(100, 100, 100, 0.4)",
                 }}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
               >
                 <InteractiveAirfoilCanvas
                   width={canvasSize.width}
@@ -1241,6 +1263,17 @@ export default function OptimizePage() {
                   onCoefficientChange={updateCSTCoefficient}
                   designMode={false}
                   readOnly={true}
+                  zoomLevel={zoomLevel}
+                  offset={offset}
+                  chordLength={chordLength}
+                />
+
+                {/* Floating Zoom Controls */}
+                <ZoomControls
+                  zoomLevel={zoomLevel}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onReset={handleReset}
                 />
               </div>
 

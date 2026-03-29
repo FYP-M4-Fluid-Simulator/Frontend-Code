@@ -15,6 +15,8 @@ interface ControlPoint {
   index: number;
 }
 
+const DEFAULT_OFFSET = { x: 0, y: 0 };
+
 interface InteractiveAirfoilCanvasProps {
   width: number;
   height: number;
@@ -38,6 +40,7 @@ interface InteractiveAirfoilCanvasProps {
   onControlPointDragEnd?: () => void;
   zoomLevel?: number; // NEW: zoom level (100 = 100%)
   chordLength?: number; // NEW: chord length multiplier
+  offset?: { x: number; y: number }; // NEW: pan offset
 }
 
 export function InteractiveAirfoilCanvas({
@@ -59,6 +62,7 @@ export function InteractiveAirfoilCanvas({
   onControlPointDragEnd,
   zoomLevel = 100,
   chordLength = 1.0,
+  offset = DEFAULT_OFFSET,
 }: InteractiveAirfoilCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -126,8 +130,8 @@ export function InteractiveAirfoilCanvas({
 
     const baseScale = Math.min(canvasSize.width, canvasSize.height) * 0.7;
     const scale = baseScale * (zoomLevel / 100) * chordLength;
-    const offsetX = canvasSize.width / 2;
-    const offsetY = canvasSize.height / 2;
+    const offsetX = canvasSize.width / 2 + offset.x; // Applied offset
+    const offsetY = canvasSize.height / 2 + offset.y; // Applied offset
 
     const transformPoint = (p: { x: number; y: number } | undefined) => {
       if (!p) return { x: 0, y: 0 };
@@ -190,6 +194,7 @@ export function InteractiveAirfoilCanvas({
     canvasSize.height,
     zoomLevel,
     chordLength,
+    offset,
   ]);
 
   // Render CFD background
@@ -238,8 +243,8 @@ export function InteractiveAirfoilCanvas({
 
     const baseScale = Math.min(canvasSize.width, canvasSize.height) * 0.7;
     const scale = baseScale * (zoomLevel / 100) * chordLength;
-    const offsetX = canvasSize.width / 2;
-    const offsetY = canvasSize.height / 2;
+    const offsetX = canvasSize.width / 2 + offset.x; // Applied offset
+    const offsetY = canvasSize.height / 2 + offset.y; // Applied offset
 
     const gridSpacing = {
       coarse: 40,
@@ -663,6 +668,7 @@ export function InteractiveAirfoilCanvas({
     designMode,
     zoomLevel,
     chordLength,
+    offset,
   ]);
 
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -698,7 +704,7 @@ export function InteractiveAirfoilCanvas({
     // Calculate new coefficient based on vertical position
     const baseScale = Math.min(canvasSize.width, canvasSize.height) * 0.5;
     const scale = baseScale * (zoomLevel / 100) * chordLength;
-    const offsetY = canvasSize.height / 2;
+    const offsetY = canvasSize.height / 2 + offset.y; // Applied offset
     const newCoefficient = (offsetY - y) / scale;
 
     // Clamp per-surface to match sidebar bounds:
@@ -871,7 +877,7 @@ export function InteractiveAirfoilCanvas({
                   x1={pt.x}
                   y1={pt.y}
                   x2={pt.x}
-                  y2={canvasSize.height / 2}
+                  y2={canvasSize.height / 2 + offset.y} // Applied offset to reference line
                   stroke={designMode ? "#fbbf24" : "#3b82f6"}
                   strokeWidth="2"
                   strokeDasharray="4 4"

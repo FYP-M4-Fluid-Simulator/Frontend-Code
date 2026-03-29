@@ -8,8 +8,6 @@ import {
   Trash2,
   ArrowRight,
   X,
-  ZoomIn,
-  ZoomOut,
   Maximize,
   FilePlus,
   FolderOpen,
@@ -19,6 +17,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
+import { ZoomControls } from "../../components/ZoomControls";
+import { useCanvasInteraction } from "../../hooks/useCanvasInteraction";
 import { generateCSTAirfoil } from "../../lib/cst";
 import { useRouter } from "next/navigation";
 import { PYTHON_BACKEND_URL } from "@/config";
@@ -150,8 +150,19 @@ export default function DesignPage() {
   const [showMeshOverlay, setShowMeshOverlay] = useState(true);
   const [showControlPoints, setShowControlPoints] = useState(true);
 
-  // Zoom level and chord length
-  const [zoomLevel, setZoomLevel] = useState(100);
+  // Zoom and Pan interaction
+  const {
+    zoomLevel,
+    offset,
+    handleZoomIn,
+    handleZoomOut,
+    handleReset,
+    handleWheel,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+  } = useCanvasInteraction();
+
   const [chordLength, setChordLength] = useState(1.0);
   const [leadingEdgeRadius, setLeadingEdgeRadius] = useState(0.015867);
   const [numBernsteinCoefficients, setNumBernsteinCoefficients] = useState(4);
@@ -775,30 +786,6 @@ export default function DesignPage() {
         )}
         `{/* Main Content Area */}
         <div className="flex-1 flex flex-col p-6 gap-4 transition-all duration-300">
-          {/* Top Row: Zoom Controls */}
-          <div className="flex justify-center">
-            {/* Zoom Controls - Center */}
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
-              <button
-                onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
-                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-3.5 h-3.5" />
-              </button>
-              <span className="text-xs font-medium text-gray-700 px-2 min-w-[45px] text-center">
-                {zoomLevel}%
-              </span>
-              <button
-                onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
-                className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-900 transition-colors"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-3.5 h-3.5" />
-              </button>
-              <div className="w-px h-4 bg-gray-300 mx-1" />
-            </div>
-          </div>
 
           {/* Canvas */}
           <div className="flex-1 relative" ref={canvasRef}>
@@ -809,6 +796,11 @@ export default function DesignPage() {
                   "linear-gradient(135deg, #0B1628 0%, #1a2942 50%, #0B1628 100%)",
                 border: "2px solid rgba(59, 130, 246, 0.3)",
               }}
+              onWheel={handleWheel}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
             >
               <InteractiveAirfoilCanvas
                 width={canvasSize.width}
@@ -827,7 +819,16 @@ export default function DesignPage() {
                 onControlPointDragStart={handleControlPointDragStart}
                 onControlPointDragEnd={handleControlPointDragEnd}
                 zoomLevel={zoomLevel}
+                offset={offset}
                 chordLength={chordLength}
+              />
+
+              {/* Floating Zoom Controls */}
+              <ZoomControls
+                zoomLevel={zoomLevel}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onReset={handleReset}
               />
             </div>
           </div>

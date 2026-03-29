@@ -96,6 +96,10 @@ function cellPixelsForGrid(W: number, H: number): number {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
+const DEFAULT_UPPER = [0.18, 0.22, 0.2, 0.18, 0.15, 0.12];
+const DEFAULT_LOWER = [-0.1, -0.08, -0.06, -0.05, -0.04, -0.03];
+const DEFAULT_OFFSET = { x: 0, y: 0 };
+
 interface CFDCanvasProps {
   frameRef: React.MutableRefObject<any>;
   showVectorField?: boolean;
@@ -103,15 +107,19 @@ interface CFDCanvasProps {
   upperCoefficients?: number[];
   lowerCoefficients?: number[];
   angleOfAttack?: number;
+  zoomLevel?: number;
+  offset?: { x: number; y: number };
 }
 
 export default function CFDCanvas({
   frameRef,
   showVectorField = true,
   visualizationType = "curl",
-  upperCoefficients = [0.18, 0.22, 0.2, 0.18, 0.15, 0.12],
-  lowerCoefficients = [-0.1, -0.08, -0.06, -0.05, -0.04, -0.03],
+  upperCoefficients = DEFAULT_UPPER,
+  lowerCoefficients = DEFAULT_LOWER,
   angleOfAttack = 0,
+  zoomLevel = 100,
+  offset = DEFAULT_OFFSET,
 }: CFDCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -167,6 +175,15 @@ export default function CFDCanvas({
         lastH = H;
         lastCellPx = CELL;
       }
+
+      // ── Apply Transformations (Zoom & Pan) ──────────────────────────
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      
+      const scale = zoomLevel / 100;
+      ctx.translate(canvas.width / 2 + offset.x, canvas.height / 2 + offset.y);
+      ctx.scale(scale, scale);
+      ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
       // Physical geometry — read directly from the frame meta so the canvas
       // is always in sync with whatever values the backend resolved.
@@ -334,6 +351,7 @@ export default function CFDCanvas({
       ctx.stroke();
 
       ctx.restore();
+      ctx.restore();
     }
 
     loop();
@@ -345,6 +363,8 @@ export default function CFDCanvas({
     upperCoefficients,
     lowerCoefficients,
     angleOfAttack,
+    zoomLevel,
+    offset,
   ]);
 
   return (

@@ -20,6 +20,8 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { InteractiveAirfoilCanvas } from "../../components/InteractiveAirfoilCanvas";
 import CFDCanvas from "../../components/CFD_CANVAS";
+import { ZoomControls } from "../../components/ZoomControls";
+import { useCanvasInteraction } from "../../hooks/useCanvasInteraction";
 import ResultsModal from "../../components/ResultsModal";
 import { SessionConfig } from "../../lib/http/createSession";
 import { useCFD } from "../../lib/socket/CFDWebSocket";
@@ -132,6 +134,19 @@ export default function SimulatePage() {
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  // Zoom and Pan interaction
+  const {
+    zoomLevel,
+    offset,
+    handleZoomIn,
+    handleZoomOut,
+    handleReset,
+    handleWheel,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+  } = useCanvasInteraction();
 
   // Ref for progress interval
   const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -1104,6 +1119,11 @@ export default function SimulatePage() {
                   background: "#000000",
                   border: "2px solid rgba(100, 100, 100, 0.4)",
                 }}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
               >
                 {isSimulating || showResults ? (
                   <CFDCanvas
@@ -1113,6 +1133,8 @@ export default function SimulatePage() {
                     upperCoefficients={upperCoefficients}
                     lowerCoefficients={lowerCoefficients}
                     angleOfAttack={angleOfAttack}
+                    zoomLevel={zoomLevel}
+                    offset={offset}
                   />
                 ) : (
                   <InteractiveAirfoilCanvas
@@ -1131,8 +1153,18 @@ export default function SimulatePage() {
                     designMode={false}
                     readOnly={true}
                     chordLength={chordLength}
+                    zoomLevel={zoomLevel}
+                    offset={offset}
                   />
                 )}
+
+                {/* Floating Zoom Controls */}
+                <ZoomControls
+                  zoomLevel={zoomLevel}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onReset={handleReset}
+                />
 
                 {/* Loading overlay when fetching results */}
                 {isLoadingResults && (
