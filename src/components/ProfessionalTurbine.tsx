@@ -5,14 +5,12 @@ import { Maximize2, Minimize2 } from "lucide-react";
 
 interface ProfessionalTurbineProps {
   liftToDragRatio: number;
-  rotationMultiplier?: number;
-  rpm?: number;
+  powerKilowatts?: number | null;
 }
 
 export function ProfessionalTurbine({
   liftToDragRatio,
-  rotationMultiplier = 1,
-  rpm = 1200,
+  powerKilowatts = null,
 }: ProfessionalTurbineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
@@ -39,10 +37,12 @@ export function ProfessionalTurbine({
 
     const width = canvas.width;
     const height = canvas.height;
-    // Make animation noticeably responsive to slider RPM changes.
-    const rpmFactor = Math.max(0.5, rpm / 300);
-    const baseSpeed = (liftToDragRatio / 50) * 0.008;
-    const rotationSpeed = (baseSpeed + rpmFactor * 0.01) * rotationMultiplier;
+    // Drive rotor speed from power output with a visible but realistic curve.
+    const safePowerKw = Math.max(0, powerKilowatts ?? 0);
+    const normalizedPower = Math.min(1, Math.log10(safePowerKw + 1) / 4);
+    const idleSpeed = 0.004;
+    const maxSpeed = 0.024;
+    const rotationSpeed = idleSpeed + normalizedPower * (maxSpeed - idleSpeed);
 
     const drawScene = () => {
       // Professional dark background like CFD software
@@ -74,7 +74,7 @@ export function ProfessionalTurbine({
       const centerX = width / 2;
       const centerY = height * 0.65; // Moved down from 0.5
       const hubRadius = Math.min(width, height) * 0.03; // Reduced from 0.04
-      const bladeLength = Math.min(width, height) * 0.30; // Reduced from 0.4 to prevent clipping
+      const bladeLength = Math.min(width, height) * 0.3; // Reduced from 0.4 to prevent clipping
 
       // Draw velocity field streamlines (professional CFD style)
       const time = Date.now() / 1000;
@@ -463,7 +463,7 @@ export function ProfessionalTurbine({
       }
       window.removeEventListener("resize", updateCanvasSize);
     };
-  }, [liftToDragRatio, rotationMultiplier, rpm]);
+  }, [liftToDragRatio, powerKilowatts]);
 
   return (
     <div

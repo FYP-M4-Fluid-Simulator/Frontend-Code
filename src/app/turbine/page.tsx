@@ -57,12 +57,7 @@ export default function TurbinePage() {
   );
   const [cfdInputs, setCfdInputs] = useState<CFDInputState>(DEFAULT_CFD_INPUTS);
 
-  const rotationMultiplier = powerResult
-    ? Math.min(
-        8,
-        Math.max(1, Math.log10(powerResult.total_power_kilowatts + 1) * 3),
-      )
-    : 1;
+  const currentPowerKilowatts = powerResult?.total_power_kilowatts ?? null;
 
   // Load latest CFD metrics from sessionStorage if available.
   useEffect(() => {
@@ -468,8 +463,7 @@ export default function TurbinePage() {
           <div className="absolute inset-4 rounded-xl shadow-2xl overflow-hidden border-2 border-gray-300">
             <ProfessionalTurbine
               liftToDragRatio={liftToDragRatio}
-              rotationMultiplier={rotationMultiplier}
-              rpm={rpm}
+              powerKilowatts={currentPowerKilowatts}
             />
           </div>
         </div>
