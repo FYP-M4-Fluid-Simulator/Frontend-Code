@@ -5,10 +5,14 @@ import { Maximize2, Minimize2 } from "lucide-react";
 
 interface ProfessionalTurbineProps {
   liftToDragRatio: number;
+  rotationMultiplier?: number;
+  rpm?: number;
 }
 
 export function ProfessionalTurbine({
   liftToDragRatio,
+  rotationMultiplier = 1,
+  rpm = 1200,
 }: ProfessionalTurbineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
@@ -35,7 +39,10 @@ export function ProfessionalTurbine({
 
     const width = canvas.width;
     const height = canvas.height;
-    const rotationSpeed = (liftToDragRatio / 50) * 0.02;
+    // Make animation noticeably responsive to slider RPM changes.
+    const rpmFactor = Math.max(0.5, rpm / 300);
+    const baseSpeed = (liftToDragRatio / 50) * 0.008;
+    const rotationSpeed = (baseSpeed + rpmFactor * 0.01) * rotationMultiplier;
 
     const drawScene = () => {
       // Professional dark background like CFD software
@@ -456,7 +463,7 @@ export function ProfessionalTurbine({
       }
       window.removeEventListener("resize", updateCanvasSize);
     };
-  }, [liftToDragRatio]);
+  }, [liftToDragRatio, rotationMultiplier, rpm]);
 
   return (
     <div
