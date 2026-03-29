@@ -20,24 +20,44 @@ export default function TurbinePage() {
 
   // Turbine state
   const [liftToDragRatio, setLiftToDragRatio] = useState(45.0);
+  const [liftCoefficient, setLiftCoefficient] = useState(0);
+  const [dragCoefficient, setDragCoefficient] = useState(0);
 
-  // Load L/D ratio from sessionStorage if available
+  // Load latest CFD metrics from sessionStorage if available.
   useEffect(() => {
     const savedResults = sessionStorage.getItem("simulationResults");
     const savedOptResults = sessionStorage.getItem("optimizationResults");
 
     if (savedOptResults) {
       const results = JSON.parse(savedOptResults);
-      setLiftToDragRatio(results.bestLiftToDragRatio || 66.6);
+      setLiftToDragRatio(
+        results.bestLiftToDragRatio || results.liftToDragRatio || 66.6,
+      );
+      setLiftCoefficient(
+        results.bestLiftCoefficient ||
+          results.liftCoefficient ||
+          results.cl ||
+          0,
+      );
+      setDragCoefficient(
+        results.bestDragCoefficient ||
+          results.dragCoefficient ||
+          results.cd ||
+          0,
+      );
     } else if (savedResults) {
       const results = JSON.parse(savedResults);
       setLiftToDragRatio(results.liftToDragRatio || 36.5);
+      setLiftCoefficient(results.liftCoefficient || results.cl || 0);
+      setDragCoefficient(results.dragCoefficient || results.cd || 0);
     }
   }, []);
 
   const handleExportResults = () => {
     const results = {
       liftToDragRatio,
+      liftCoefficient,
+      dragCoefficient,
       rpm: liftToDragRatio * 0.25,
       powerKw: liftToDragRatio * 3.2,
       efficiency: Math.min(98.5, (liftToDragRatio / 80) * 95),
@@ -127,34 +147,46 @@ export default function TurbinePage() {
               Performance Summary
             </h3>
 
-            <div className="space-y-2 text-xs font-medium">
+            <div className="space-y-2 text-sm font-medium">
+              <div className="flex justify-between">
+                <span className="text-gray-700">Lift Coeff (Cl):</span>
+                <span className="text-base font-black text-cyan-700">
+                  {liftCoefficient.toFixed(4)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700">Drag Coeff (Cd):</span>
+                <span className="text-base font-black text-rose-700">
+                  {dragCoefficient.toFixed(4)}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">L/D Ratio:</span>
-                <span className="font-black text-green-700">
+                <span className="text-base font-black text-green-700">
                   {liftToDragRatio.toFixed(1)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">RPM:</span>
-                <span className="font-black text-blue-700">
+                <span className="text-base font-black text-blue-700">
                   {(liftToDragRatio * 0.25).toFixed(1)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Power:</span>
-                <span className="font-black text-orange-700">
+                <span className="text-base font-black text-orange-700">
                   {(liftToDragRatio * 3.2).toFixed(0)} kW
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Efficiency:</span>
-                <span className="font-black text-purple-700">
+                <span className="text-base font-black text-purple-700">
                   {Math.min(98.5, (liftToDragRatio / 80) * 95).toFixed(1)}%
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Status:</span>
-                <span className="font-black text-green-600">OPTIMAL</span>
+                <span className="text-base font-black text-green-600">OPTIMAL</span>
               </div>
             </div>
 
@@ -187,9 +219,7 @@ export default function TurbinePage() {
         {/* Turbine Component */}
         <div className="flex-1 relative">
           <div className="absolute inset-4 rounded-xl shadow-2xl overflow-hidden border-2 border-gray-300">
-            <ProfessionalTurbine
-              liftToDragRatio={liftToDragRatio}
-            />
+            <ProfessionalTurbine liftToDragRatio={liftToDragRatio} />
           </div>
         </div>
 
