@@ -5,10 +5,12 @@ import { Maximize2, Minimize2 } from "lucide-react";
 
 interface ProfessionalTurbineProps {
   liftToDragRatio: number;
+  powerKilowatts?: number | null;
 }
 
 export function ProfessionalTurbine({
   liftToDragRatio,
+  powerKilowatts = null,
 }: ProfessionalTurbineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
@@ -35,7 +37,12 @@ export function ProfessionalTurbine({
 
     const width = canvas.width;
     const height = canvas.height;
-    const rotationSpeed = (liftToDragRatio / 50) * 0.02;
+    // Drive rotor speed from power output with a visible but realistic curve.
+    const safePowerKw = Math.max(0, powerKilowatts ?? 0);
+    const normalizedPower = Math.min(1, Math.log10(safePowerKw + 1) / 4);
+    const idleSpeed = 0.004;
+    const maxSpeed = 0.024;
+    const rotationSpeed = idleSpeed + normalizedPower * (maxSpeed - idleSpeed);
 
     const drawScene = () => {
       // Professional dark background like CFD software
@@ -67,7 +74,7 @@ export function ProfessionalTurbine({
       const centerX = width / 2;
       const centerY = height * 0.65; // Moved down from 0.5
       const hubRadius = Math.min(width, height) * 0.03; // Reduced from 0.04
-      const bladeLength = Math.min(width, height) * 0.30; // Reduced from 0.4 to prevent clipping
+      const bladeLength = Math.min(width, height) * 0.3; // Reduced from 0.4 to prevent clipping
 
       // Draw velocity field streamlines (professional CFD style)
       const time = Date.now() / 1000;
@@ -364,85 +371,85 @@ export function ProfessionalTurbine({
       ctx.fillText(`H = ${280}px`, centerX + 35, hubY + 280 / 2);
 
       // Performance data overlay with enhanced metrics
-      ctx.fillStyle = "rgba(20, 30, 50, 0.92)";
-      ctx.fillRect(20, 20, 280, 160);
-      ctx.strokeStyle = "rgba(100, 150, 255, 0.6)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(20, 20, 280, 160);
+      // ctx.fillStyle = "rgba(20, 30, 50, 0.92)";
+      // ctx.fillRect(20, 20, 280, 160);
+      // ctx.strokeStyle = "rgba(100, 150, 255, 0.6)";
+      // ctx.lineWidth = 2;
+      // // ctx.strokeRect(20, 20, 280, 160);
 
       // Header with glow effect
-      ctx.shadowColor = "rgba(100, 150, 255, 0.8)";
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = "rgba(100, 150, 255, 0.95)";
-      ctx.font = "bold 14px monospace";
-      ctx.fillText("TURBINE PERFORMANCE METRICS", 30, 45);
+      // ctx.shadowColor = "rgba(100, 150, 255, 0.8)";
+      // ctx.shadowBlur = 10;
+      // ctx.fillStyle = "rgba(100, 150, 255, 0.95)";
+      // ctx.font = "bold 14px monospace";
+      // ctx.fillText("TURBINE PERFORMANCE METRICS", 30, 45);
 
       // Reset shadow
-      ctx.shadowBlur = 0;
+      // ctx.shadowBlur = 0;
 
-      // Calculate enhanced metrics based on L/D ratio
-      const rpm = liftToDragRatio * 0.25; // More realistic RPM calculation
-      const powerKw = liftToDragRatio * 3.2; // Enhanced power calculation
-      const efficiency = Math.min(98.5, (liftToDragRatio / 80) * 95); // Realistic efficiency curve
-      const tipSpeed = (rpm * 2 * Math.PI * bladeLength) / (60 * 10); // Actual tip speed calculation
-      const windSpeed = 12 + (liftToDragRatio - 30) * 0.15; // Estimated wind speed
-      const capacity = Math.min(100, (powerKw / 25) * 100); // Capacity factor
+      // // Calculate enhanced metrics based on L/D ratio
+      // const rpm = liftToDragRatio * 0.25; // More realistic RPM calculation
+      // const powerKw = liftToDragRatio * 3.2; // Enhanced power calculation
+      // const efficiency = Math.min(98.5, (liftToDragRatio / 80) * 95); // Realistic efficiency curve
+      // const tipSpeed = (rpm * 2 * Math.PI * bladeLength) / (60 * 10); // Actual tip speed calculation
+      // const windSpeed = 12 + (liftToDragRatio - 30) * 0.15; // Estimated wind speed
+      // const capacity = Math.min(100, (powerKw / 25) * 100); // Capacity factor
 
-      // Metrics with professional styling
-      ctx.font = "12px monospace";
+      // // Metrics with professional styling
+      // ctx.font = "12px monospace";
 
-      // Primary metrics (green for good performance)
-      ctx.fillStyle = "rgba(100, 255, 150, 0.95)";
-      ctx.fillText(`RPM:          ${rpm.toFixed(1)}`, 35, 70);
-      ctx.fillText(`Power:        ${powerKw.toFixed(0)} kW`, 35, 85);
-      ctx.fillText(`L/D Ratio:    ${liftToDragRatio.toFixed(1)}`, 35, 100);
+      // // Primary metrics (green for good performance)
+      // ctx.fillStyle = "rgba(100, 255, 150, 0.95)";
+      // ctx.fillText(`RPM:          ${rpm.toFixed(1)}`, 35, 70);
+      // ctx.fillText(`Power:        ${powerKw.toFixed(0)} kW`, 35, 85);
+      // ctx.fillText(`L/D Ratio:    ${liftToDragRatio.toFixed(1)}`, 35, 100);
 
-      // Secondary metrics (cyan for operational data)
-      ctx.fillStyle = "rgba(100, 200, 255, 0.95)";
-      ctx.fillText(`Efficiency:   ${efficiency.toFixed(1)}%`, 35, 120);
-      ctx.fillText(`Tip Speed:    ${tipSpeed.toFixed(1)} m/s`, 35, 135);
-      ctx.fillText(`Wind Speed:   ${windSpeed.toFixed(1)} m/s`, 35, 150);
+      // // Secondary metrics (cyan for operational data)
+      // ctx.fillStyle = "rgba(100, 200, 255, 0.95)";
+      // ctx.fillText(`Efficiency:   ${efficiency.toFixed(1)}%`, 35, 120);
+      // ctx.fillText(`Tip Speed:    ${tipSpeed.toFixed(1)} m/s`, 35, 135);
+      // ctx.fillText(`Wind Speed:   ${windSpeed.toFixed(1)} m/s`, 35, 150);
 
-      // Capacity factor (orange/red based on performance)
-      const capacityColor =
-        capacity > 80
-          ? "rgba(100, 255, 100, 0.95)"
-          : capacity > 60
-            ? "rgba(255, 200, 100, 0.95)"
-            : "rgba(255, 150, 100, 0.95)";
-      ctx.fillStyle = capacityColor;
-      ctx.fillText(`Capacity:     ${capacity.toFixed(1)}%`, 35, 165);
+      // // Capacity factor (orange/red based on performance)
+      // const capacityColor =
+      //   capacity > 80
+      //     ? "rgba(100, 255, 100, 0.95)"
+      //     : capacity > 60
+      //       ? "rgba(255, 200, 100, 0.95)"
+      //       : "rgba(255, 150, 100, 0.95)";
+      // ctx.fillStyle = capacityColor;
+      // ctx.fillText(`Capacity:     ${capacity.toFixed(1)}%`, 35, 165);
 
-      // Performance indicator bars
-      const barStartX = 200;
-      const barWidth = 80;
-      const barHeight = 8;
+      // // Performance indicator bars
+      // const barStartX = 200;
+      // const barWidth = 80;
+      // const barHeight = 8;
 
-      // Efficiency bar
-      ctx.fillStyle = "rgba(50, 60, 80, 0.8)";
-      ctx.fillRect(barStartX, 112, barWidth, barHeight);
-      ctx.fillStyle = "rgba(100, 255, 150, 0.8)";
-      ctx.fillRect(barStartX, 112, (efficiency / 100) * barWidth, barHeight);
+      // // Efficiency bar
+      // ctx.fillStyle = "rgba(50, 60, 80, 0.8)";
+      // ctx.fillRect(barStartX, 112, barWidth, barHeight);
+      // ctx.fillStyle = "rgba(100, 255, 150, 0.8)";
+      // ctx.fillRect(barStartX, 112, (efficiency / 100) * barWidth, barHeight);
 
-      // Capacity bar
-      ctx.fillStyle = "rgba(50, 60, 80, 0.8)";
-      ctx.fillRect(barStartX, 157, barWidth, barHeight);
-      ctx.fillStyle = capacityColor;
-      ctx.fillRect(barStartX, 157, (capacity / 100) * barWidth, barHeight);
+      // // Capacity bar
+      // ctx.fillStyle = "rgba(50, 60, 80, 0.8)";
+      // ctx.fillRect(barStartX, 157, barWidth, barHeight);
+      // ctx.fillStyle = capacityColor;
+      // ctx.fillRect(barStartX, 157, (capacity / 100) * barWidth, barHeight);
 
       // Status indicators
       const statusY = 30;
       const statusSize = 8;
 
       // Operational status (green dot)
-      ctx.fillStyle = "rgba(100, 255, 100, 0.9)";
-      ctx.beginPath();
-      ctx.arc(260, statusY, statusSize, 0, Math.PI * 2);
-      ctx.fill();
+      // ctx.fillStyle = "rgba(100, 255, 100, 0.9)";
+      // ctx.beginPath();
+      // ctx.arc(260, statusY, statusSize, 0, Math.PI * 2);
+      // ctx.fill();
 
-      ctx.fillStyle = "rgba(200, 220, 255, 0.9)";
-      ctx.font = "10px monospace";
-      ctx.fillText("OPERATIONAL", 210, statusY + 3);
+      // ctx.fillStyle = "rgba(200, 220, 255, 0.9)";
+      // ctx.font = "10px monospace";
+      // ctx.fillText("OPERATIONAL", 210, statusY + 3);
 
       rotationRef.current += rotationSpeed;
       animationRef.current = requestAnimationFrame(drawScene);
@@ -456,7 +463,7 @@ export function ProfessionalTurbine({
       }
       window.removeEventListener("resize", updateCanvasSize);
     };
-  }, [liftToDragRatio]);
+  }, [liftToDragRatio, powerKilowatts]);
 
   return (
     <div

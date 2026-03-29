@@ -6,38 +6,196 @@ import {
   ArrowLeft,
   Download,
   Settings,
-  RotateCcw,
-  Maximize2,
-  LogOut,
+  Loader2,
   TrendingUp,
 } from "lucide-react";
 import { ProfessionalTurbine } from "../../components/ProfessionalTurbine";
 import { useRouter } from "next/navigation";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
+import { auth } from "@/lib/firebase/config";
+import { PYTHON_BACKEND_URL } from "@/config";
+
+type PowerOutputResult = {
+  total_power_watts: number;
+  total_power_kilowatts: number;
+};
+
+type CFDInputState = {
+  chordLength: number;
+  angleOfAttack: number;
+  velocity: number;
+  hasSource: boolean;
+};
+
+const DEFAULT_CFD_INPUTS: CFDInputState = {
+  chordLength: 1,
+  angleOfAttack: 5,
+  velocity: 30,
+  hasSource: false,
+};
+
+const TURBINE_CONSTANTS = {
+  rotor_radius: 35,
+  hub_radius: 1.0,
+  num_blades: 3,
+  num_elements: 20,
+};
 
 export default function TurbinePage() {
   const router = useRouter();
 
   // Turbine state
   const [liftToDragRatio, setLiftToDragRatio] = useState(45.0);
+  const [liftCoefficient, setLiftCoefficient] = useState(0);
+  const [dragCoefficient, setDragCoefficient] = useState(0);
+  const [showPowerPanel, setShowPowerPanel] = useState(false);
+  const [isCalculatingPower, setIsCalculatingPower] = useState(false);
+  const [powerError, setPowerError] = useState<string | null>(null);
+  const [rpm, setRpm] = useState(1200);
+  const [powerResult, setPowerResult] = useState<PowerOutputResult | null>(
+    null,
+  );
+  const [cfdInputs, setCfdInputs] = useState<CFDInputState>(DEFAULT_CFD_INPUTS);
 
-  // Load L/D ratio from sessionStorage if available
+  const currentPowerKilowatts = powerResult?.total_power_kilowatts ?? null;
+
+  // Load latest CFD metrics from sessionStorage if available.
   useEffect(() => {
     const savedResults = sessionStorage.getItem("simulationResults");
     const savedOptResults = sessionStorage.getItem("optimizationResults");
+    const savedCfdState = sessionStorage.getItem("cfdState");
+
+    const toNumberOrDefault = (value: unknown, fallback: number) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
 
     if (savedOptResults) {
       const results = JSON.parse(savedOptResults);
-      setLiftToDragRatio(results.bestLiftToDragRatio || 66.6);
+      setLiftToDragRatio(
+        results.bestLiftToDragRatio || results.liftToDragRatio || 66.6,
+      );
+      setLiftCoefficient(
+        results.bestLiftCoefficient ||
+          results.liftCoefficient ||
+          results.cl ||
+          0,
+      );
+      setDragCoefficient(
+        results.bestDragCoefficient ||
+          results.dragCoefficient ||
+          results.cd ||
+          0,
+      );
     } else if (savedResults) {
       const results = JSON.parse(savedResults);
       setLiftToDragRatio(results.liftToDragRatio || 36.5);
+      setLiftCoefficient(results.liftCoefficient || results.cl || 0);
+      setDragCoefficient(results.dragCoefficient || results.cd || 0);
+    }
+
+    if (savedCfdState) {
+      try {
+        const parsedCfdState = JSON.parse(savedCfdState);
+        setCfdInputs({
+          chordLength: toNumberOrDefault(
+            parsedCfdState.chordLength,
+            DEFAULT_CFD_INPUTS.chordLength,
+          ),
+          angleOfAttack: toNumberOrDefault(
+            parsedCfdState.angleOfAttack,
+            DEFAULT_CFD_INPUTS.angleOfAttack,
+          ),
+          velocity: toNumberOrDefault(
+            parsedCfdState.velocity,
+            DEFAULT_CFD_INPUTS.velocity,
+          ),
+          hasSource: true,
+        });
+      } catch {
+        setCfdInputs(DEFAULT_CFD_INPUTS);
+      }
     }
   }, []);
+
+  const handleCalculatePower = async () => {
+    setShowPowerPanel(true);
+    setPowerError(null);
+    setPowerResult(null);
+    setIsCalculatingPower(true);
+
+    try {
+      const token = auth?.currentUser ? await auth.currentUser.getIdToken() : "";
+      if (!token) {
+        throw new Error("You must be logged in to calculate power output.");
+      }
+
+      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}power-output`;
+      const payload = {
+        v_wind: cfdInputs.velocity,
+        alpha_deg: cfdInputs.angleOfAttack,
+        cl: liftCoefficient,
+        cd: dragCoefficient,
+        chord: cfdInputs.chordLength,
+        rpm,
+        ...TURBINE_CONSTANTS,
+      };
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        let message = `Power calculation failed (${response.status}).`;
+        try {
+          const errorData = await response.json();
+          const backendMessage =
+            errorData?.detail || errorData?.message || errorData?.error;
+          if (backendMessage) {
+            message = String(backendMessage);
+          }
+        } catch {
+          // Keep fallback error message if response body is not JSON.
+        }
+        throw new Error(message);
+      }
+
+      const data = await response.json();
+      const totalPowerWatts = Number(data?.total_power_watts);
+      const totalPowerKilowatts = Number(data?.total_power_kilowatts);
+
+      if (
+        !Number.isFinite(totalPowerWatts) ||
+        !Number.isFinite(totalPowerKilowatts)
+      ) {
+        throw new Error("Backend returned an invalid power output response.");
+      }
+
+      setPowerResult({
+        total_power_watts: totalPowerWatts,
+        total_power_kilowatts: totalPowerKilowatts,
+      });
+    } catch (error) {
+      setPowerError(
+        error instanceof Error
+          ? error.message
+          : "Unable to calculate power output right now.",
+      );
+    } finally {
+      setIsCalculatingPower(false);
+    }
+  };
 
   const handleExportResults = () => {
     const results = {
       liftToDragRatio,
+      liftCoefficient,
+      dragCoefficient,
       rpm: liftToDragRatio * 0.25,
       powerKw: liftToDragRatio * 3.2,
       efficiency: Math.min(98.5, (liftToDragRatio / 80) * 95),
@@ -127,60 +285,176 @@ export default function TurbinePage() {
               Performance Summary
             </h3>
 
-            <div className="space-y-2 text-xs font-medium">
+            <div className="space-y-2 text-sm font-medium">
               <div className="flex justify-between">
-                <span className="text-gray-700">L/D Ratio:</span>
-                <span className="font-black text-green-700">
-                  {liftToDragRatio.toFixed(1)}
+                <span className="text-gray-700">Lift Coeff (Cl):</span>
+                <span className="text-base font-black text-cyan-700">
+                  {liftCoefficient.toFixed(4)}
                 </span>
               </div>
               <div className="flex justify-between">
+                <span className="text-gray-700">Drag Coeff (Cd):</span>
+                <span className="text-base font-black text-rose-700">
+                  {dragCoefficient.toFixed(4)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700">L/D Ratio:</span>
+                <span className="text-base font-black text-green-700">
+                  {liftToDragRatio.toFixed(1)}
+                </span>
+              </div>
+              {/* <div className="flex justify-between">
                 <span className="text-gray-700">RPM:</span>
-                <span className="font-black text-blue-700">
+                <span className="text-base font-black text-blue-700">
                   {(liftToDragRatio * 0.25).toFixed(1)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Power:</span>
-                <span className="font-black text-orange-700">
+                <span className="text-base font-black text-orange-700">
                   {(liftToDragRatio * 3.2).toFixed(0)} kW
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Efficiency:</span>
-                <span className="font-black text-purple-700">
+                <span className="text-base font-black text-purple-700">
                   {Math.min(98.5, (liftToDragRatio / 80) * 95).toFixed(1)}%
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Status:</span>
-                <span className="font-black text-green-600">OPTIMAL</span>
-              </div>
+                <span className="text-base font-black text-green-600">
+                  OPTIMAL
+                </span>
+              </div> */}
             </div>
 
-            {/* Performance Rating */}
-            <div className="mt-4 pt-3 border-t border-gray-200">
-              <div className="text-xs font-bold text-gray-700 mb-1">
-                Performance Rating
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(100, (liftToDragRatio / 80) * 100)}%`,
-                    }}
-                  ></div>
+            {/* Power Panel */}
+            <div className="mt-4 pt-3 border-t border-gray-200 space-y-3 text-xs">
+                <div>
+                  <div className="text-xs font-bold text-gray-700 mb-2">
+                    Input Metrics
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Chord Length</span>
+                      <span className="font-semibold text-gray-900">
+                        {cfdInputs.chordLength.toFixed(2)} m
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Angle of Attack</span>
+                      <span className="font-semibold text-gray-900">
+                        {cfdInputs.angleOfAttack.toFixed(2)} °
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Inflow Velocity</span>
+                      <span className="font-semibold text-gray-900">
+                        {cfdInputs.velocity.toFixed(2)} m/s
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-xs font-black text-green-700">
-                  {liftToDragRatio > 60
-                    ? "EXCELLENT"
-                    : liftToDragRatio > 40
-                      ? "GOOD"
-                      : "FAIR"}
-                </span>
+
+                <div>
+                  <div className="text-xs font-bold text-gray-700 mb-2">
+                    Turbine Constants
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Rotor Radius</span>
+                      <span className="font-semibold text-gray-900">
+                        {TURBINE_CONSTANTS.rotor_radius.toFixed(1)} m
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Hub Radius</span>
+                      <span className="font-semibold text-gray-900">
+                        {TURBINE_CONSTANTS.hub_radius.toFixed(1)} m
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Number of Blades</span>
+                      <span className="font-semibold text-gray-900">
+                        {TURBINE_CONSTANTS.num_blades}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Number of Elements</span>
+                      <span className="font-semibold text-gray-900">
+                        {TURBINE_CONSTANTS.num_elements}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-gray-700">RPM</span>
+                    <span className="text-xs font-black text-green-700">
+                      {rpm}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={300}
+                    max={3000}
+                    step={50}
+                    value={rpm}
+                    onChange={(event) => setRpm(Number(event.target.value))}
+                    className="w-full h-2 accent-green-600"
+                    disabled={isCalculatingPower}
+                  />
+                </div>
+
+                <button
+                  onClick={handleCalculatePower}
+                  disabled={isCalculatingPower}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all w-full flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:bg-emerald-400"
+                >
+                  {isCalculatingPower ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Calculating...
+                    </>
+                  ) : (
+                    "Calculate"
+                  )}
+                </button>
+
+                {isCalculatingPower && (
+                  <div className="space-y-1">
+                    <div className="text-[11px] text-gray-600">
+                      Calculating power output...
+                    </div>
+                    <div className="w-full h-1.5 bg-green-100 rounded-full overflow-hidden">
+                      <div className="w-1/2 h-full bg-green-500 rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
+                )}
+
+                {powerError && (
+                  <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
+                    {powerError}
+                  </div>
+                )}
+
+                {powerResult && !isCalculatingPower && (
+                  <div className="bg-green-50 border border-green-200 rounded-md p-2 space-y-1.5">
+                    <div className="text-xs font-bold text-green-800 mb-1">
+                      Power Output
+                    </div>
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-gray-700 text-xs">kW</span>
+                      <span className="font-black text-green-800 text-lg">
+                        {powerResult.total_power_kilowatts.toExponential(3)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
           </div>
         </div>
 
@@ -189,6 +463,7 @@ export default function TurbinePage() {
           <div className="absolute inset-4 rounded-xl shadow-2xl overflow-hidden border-2 border-gray-300">
             <ProfessionalTurbine
               liftToDragRatio={liftToDragRatio}
+              powerKilowatts={currentPowerKilowatts}
             />
           </div>
         </div>
