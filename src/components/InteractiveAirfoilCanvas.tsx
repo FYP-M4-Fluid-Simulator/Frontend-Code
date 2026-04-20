@@ -120,7 +120,7 @@ export function InteractiveAirfoilCanvas({
       return;
     }
 
-    const rotated = rotateAirfoil(upper, lower, angleOfAttack, 0.25);
+    const rotated = rotateAirfoil(upper, lower, 0, 0.25);
 
     // Guard: Check if rotation succeeded
     if (!rotated?.upper?.length || !rotated?.lower?.length) {
@@ -229,7 +229,7 @@ export function InteractiveAirfoilCanvas({
       return;
     }
 
-    const rotated = rotateAirfoil(upper, lower, angleOfAttack, 0.25);
+    const rotated = rotateAirfoil(upper, lower, 0, 0.25);
 
     // Guard: Check if rotation succeeded
     if (!rotated?.upper?.length || !rotated?.lower?.length) {
@@ -450,9 +450,9 @@ export function InteractiveAirfoilCanvas({
               0.88 + Math.sin(time * 2 + x * 0.02 + y * 0.02) * 0.12;
             const arrowLength = baseArrowLength * arrowScale * pulse;
 
-            // Arrows always point right (uniform inflow)
-            const endX = x + arrowLength;
-            const endY = y;
+            const angleRad = (angleOfAttack * Math.PI) / 180;
+            const vx = Math.cos(angleRad);
+            const vy = Math.sin(angleRad);
 
             const arrowColor = "rgba(0, 200, 255, 0.85)";
             const arrowGlow = "rgba(0, 200, 255, 0.35)";
@@ -461,6 +461,9 @@ export function InteractiveAirfoilCanvas({
             ctx.lineWidth = 1.5;
             ctx.shadowBlur = 6;
             ctx.shadowColor = arrowGlow;
+
+            const endX = x + vx * arrowLength;
+            const endY = y - vy * arrowLength;
 
             // Shaft
             ctx.beginPath();
@@ -471,17 +474,18 @@ export function InteractiveAirfoilCanvas({
             // Arrowhead
             const headLength = 5 * arrowScale;
             const headAngle = Math.PI / 7;
+            const angle = Math.atan2(-vy, vx);
 
             ctx.beginPath();
             ctx.moveTo(endX, endY);
             ctx.lineTo(
-              endX - headLength * Math.cos(-headAngle),
-              endY - headLength * Math.sin(-headAngle),
+              endX - headLength * Math.cos(angle - headAngle),
+              endY - headLength * Math.sin(angle - headAngle),
             );
             ctx.moveTo(endX, endY);
             ctx.lineTo(
-              endX - headLength * Math.cos(headAngle),
-              endY - headLength * Math.sin(headAngle),
+              endX - headLength * Math.cos(angle + headAngle),
+              endY - headLength * Math.sin(angle + headAngle),
             );
             ctx.stroke();
 

@@ -318,7 +318,7 @@ export default function CFDCanvas({
       const midIdx = Math.floor(afSX.length / 2);
       const pivotX = afSX[midIdx];
       const pivotY = (afSYU[midIdx] + afSYL[midIdx]) / 2;
-      const aoaRad = -(angleOfAttack * Math.PI) / 180;
+      const aoaRad = 0; // Airfoil is not rotated; flow direction is modified instead
 
       ctx.save();
       ctx.translate(pivotX, pivotY);

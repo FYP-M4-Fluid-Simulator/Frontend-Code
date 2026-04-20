@@ -60,7 +60,15 @@ export default function SimulatePage() {
   const [sessionConfig, setSessionConfig] = useState<SessionConfig | undefined>(
     undefined,
   );
-  const [simulationMetrics, setSimulationMetrics] = useState({
+  const [simulationMetrics, setSimulationMetrics] = useState<{
+    cl: number;
+    cd: number;
+    liftToDragRatio: number;
+    xfoilCl?: number | null;
+    xfoilCd?: number | null;
+    xfoilLd?: number | null;
+    xfoilStatus?: string;
+  }>({
     cl: 0,
     cd: 0,
     liftToDragRatio: 0,
@@ -99,6 +107,7 @@ export default function SimulatePage() {
     isCompleted,
     setIsCompleted,
     coefficients,
+    xfoilData,
     closeConnection,
     sessionId,
     frameStep,
@@ -118,6 +127,7 @@ export default function SimulatePage() {
   const [angleOfAttack, setAngleOfAttack] = useState(0);
   const [velocity, setVelocity] = useState(15);
   const [chordLength, setChordLength] = useState(1.0);
+  const [reynoldsNumber, setReynoldsNumber] = useState<number>(1e6);
   const [meshDensity, setMeshDensity] = useState<
     "coarse" | "medium" | "fine" | "ultra"
   >("medium"); // Default mesh density
@@ -474,6 +484,7 @@ export default function SimulatePage() {
       chordLength,
       timeStepSize,
       simulationDuration,
+      reynoldsNumber,
       runId: Date.now().toString(),
     };
 
@@ -503,6 +514,10 @@ export default function SimulatePage() {
           cl: coefficients.cl,
           cd: coefficients.cd,
           liftToDragRatio: coefficients.l_d,
+          xfoilCl: xfoilData?.cl ?? null,
+          xfoilCd: xfoilData?.cd ?? null,
+          xfoilLd: xfoilData?.l_d ?? null,
+          xfoilStatus: xfoilData?.status ?? 'not_run',
         });
       }
 
@@ -663,7 +678,7 @@ export default function SimulatePage() {
                       <div className="flex items-center gap-3 mb-2">
                         <input
                           type="range"
-                          min={5}
+                          min={1}
                           max={30}
                           value={velocity}
                           onChange={(e) => setVelocity(Number(e.target.value))}
@@ -676,7 +691,7 @@ export default function SimulatePage() {
                           onChange={(e) => setVelocity(Number(e.target.value))}
                           onBlur={(e) =>
                             setVelocity(
-                              Math.min(30, Math.max(5, Number(e.target.value))),
+                              Math.min(30, Math.max(1, Number(e.target.value))),
                             )
                           }
                           min={5}
@@ -834,6 +849,41 @@ export default function SimulatePage() {
                         Current: {simulationDuration} s
                       </p>
                     </div>
+
+                    {/* Reynolds Number */}
+                    <div>
+                      <label className="text-sm font-black text-gray-900 mb-3 block">
+                        Reynolds Number (Re)
+                      </label>
+                      <div className="flex items-center gap-3 mb-2">
+                        <select
+                          value={reynoldsNumber}
+                          onChange={(e) => setReynoldsNumber(Number(e.target.value))}
+                          disabled={isSimulating}
+                          className={`flex-1 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
+                        >
+                          <option value={1e5}>1×10⁵ (Low Re)</option>
+                          <option value={5e5}>5×10⁵</option>
+                          <option value={1e6}>1×10⁶ (Medium Re)</option>
+                          <option value={2e6}>2×10⁶</option>
+                          <option value={6e6}>6×10⁶ (High Re)</option>
+                        </select>
+                        <input
+                          type="number"
+                          min={1e4}
+                          max={1e8}
+                          step={1e5}
+                          value={reynoldsNumber}
+                          onChange={(e) => setReynoldsNumber(Number(e.target.value))}
+                          disabled={isSimulating}
+                          className={`w-28 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isSimulating ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        ν = {(velocity * chordLength / reynoldsNumber).toExponential(2)} m²/s
+                      </p>
+                    </div>
+
                   </div>
 
                   {/* Start Simulation Button at bottom of Parameters tab */}
