@@ -146,7 +146,7 @@ export default function SimulatePage() {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-  } = useCanvasInteraction();
+  } = useCanvasInteraction(canvasSize);
 
   // Ref for progress interval
   const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);

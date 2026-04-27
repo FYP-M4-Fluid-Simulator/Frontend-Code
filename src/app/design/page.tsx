@@ -150,6 +150,10 @@ export default function DesignPage() {
   const [showMeshOverlay, setShowMeshOverlay] = useState(true);
   const [showControlPoints, setShowControlPoints] = useState(true);
 
+  // Canvas dimensions
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
   // Zoom and Pan interaction
   const {
     zoomLevel,
@@ -161,7 +165,7 @@ export default function DesignPage() {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-  } = useCanvasInteraction();
+  } = useCanvasInteraction(canvasSize);
 
   const [chordLength, setChordLength] = useState(1.0);
   const [leadingEdgeRadius, setLeadingEdgeRadius] = useState(0.015867);
@@ -174,10 +178,6 @@ export default function DesignPage() {
   const [isConverting, setIsConverting] = useState(false);
   const [conversionProgress, setConversionProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Canvas dimensions
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   // Load airfoil data from sessionStorage if available
   useEffect(() => {

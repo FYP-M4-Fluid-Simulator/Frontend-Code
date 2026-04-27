@@ -102,6 +102,10 @@ export default function OptimizePage() {
   const [minThickness, setMinThickness] = useState(0.06);
   const [maxThickness, setMaxThickness] = useState(0.25);
 
+  // Canvas dimensions
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
   // Zoom and Pan interaction
   const {
     zoomLevel,
@@ -113,7 +117,7 @@ export default function OptimizePage() {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-  } = useCanvasInteraction();
+  } = useCanvasInteraction(canvasSize);
   const [learningRate, setLearningRate] = useState(0.005);
 
   // Optimization results
@@ -124,10 +128,6 @@ export default function OptimizePage() {
 
   // Export menu state
   const [showExportMenu, setShowExportMenu] = useState(false);
-
-  // Canvas dimensions
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   // Optimization interval ref for cleanup
   const optimizationIntervalRef = useRef<NodeJS.Timeout | null>(null);
