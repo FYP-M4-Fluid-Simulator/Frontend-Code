@@ -179,9 +179,15 @@ export default function CFDCanvas({
       // ── Apply Transformations (Zoom & Pan) ──────────────────────────
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
-      
+
       const scale = zoomLevel / 100;
-      ctx.translate(canvas.width / 2 + offset.x, canvas.height / 2 + offset.y);
+      // offset arrives in CSS pixels (from mouse events); convert to canvas
+      // buffer pixels so the transform pivot stays consistent.
+      const cssW = canvas.offsetWidth || canvas.width;
+      const cssH = canvas.offsetHeight || canvas.height;
+      const ox = offset.x * (canvas.width / cssW);
+      const oy = offset.y * (canvas.height / cssH);
+      ctx.translate(canvas.width / 2 + ox, canvas.height / 2 + oy);
       ctx.scale(scale, scale);
       ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
