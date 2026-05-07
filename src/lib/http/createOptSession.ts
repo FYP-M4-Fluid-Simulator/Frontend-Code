@@ -14,6 +14,7 @@ export interface OptSessionConfig {
   maxThickness?: number;
   inflow_velocity?: number;
   angle_of_attack?: number;
+  reynoldsNumber?: number;  
   runId?: string;
 }
 
@@ -56,6 +57,7 @@ export async function createOptSession(config: OptSessionConfig) {
       max_thickness: config.maxThickness ?? 0.25,
       inflow_velocity: config.inflow_velocity ?? 1.0,
       angle_of_attack: config.angle_of_attack ?? 0.0,
+      reynolds_number: config.reynoldsNumber || 1000000,
     }),
   });
 

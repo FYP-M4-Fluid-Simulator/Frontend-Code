@@ -101,6 +101,7 @@ export default function OptimizePage() {
   const [numIterations, setNumIterations] = useState(30);
   const [minThickness, setMinThickness] = useState(0.06);
   const [maxThickness, setMaxThickness] = useState(0.25);
+  const [reynoldsNumber, setReynoldsNumber] = useState<number>(1e6);
 
   // Canvas dimensions
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -562,6 +563,7 @@ export default function OptimizePage() {
       maxThickness,
       inflow_velocity: velocity,
       angle_of_attack: angleOfAttack,
+      reynoldsNumber,
       meshDensity,
       runId: Date.now().toString(),
     });
@@ -866,6 +868,40 @@ export default function OptimizePage() {
                       </div>
                       <p className="text-xs text-gray-500">
                         Current: {simulationDuration} s
+                      </p>
+                    </div>
+
+                    {/* Reynolds Number */}
+                    <div>
+                      <label className="text-sm font-black text-gray-900 mb-3 block">
+                        Reynolds Number (Re)
+                      </label>
+                      <div className="flex items-center gap-3 mb-2">
+                        <select
+                          value={reynoldsNumber}
+                          onChange={(e) => setReynoldsNumber(Number(e.target.value))}
+                          disabled={isOptimizing}
+                          className={`flex-1 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
+                        >
+                          <option value={1e5}>1×10⁵ (Low Re)</option>
+                          <option value={5e5}>5×10⁵</option>
+                          <option value={1e6}>1×10⁶ (Medium Re)</option>
+                          <option value={2e6}>2×10⁶</option>
+                          <option value={6e6}>6×10⁶ (High Re)</option>
+                        </select>
+                        <input
+                          type="number"
+                          min={1e4}
+                          max={1e8}
+                          step={1e5}
+                          value={reynoldsNumber}
+                          onChange={(e) => setReynoldsNumber(Number(e.target.value))}
+                          disabled={isOptimizing}
+                          className={`w-28 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        ν = {(velocity * chordLength / reynoldsNumber).toExponential(2)} m²/s
                       </p>
                     </div>
 

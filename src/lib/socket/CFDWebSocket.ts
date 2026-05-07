@@ -10,12 +10,20 @@ export interface CoefficientData {
   l_d: number;
 }
 
+export interface XFoilData {
+  cl: number | null;
+  cd: number | null;
+  l_d: number | null;
+  status: string; // "converged" | "failed" | "error" | "not_run"
+}
+
 export function useCFD(config?: SessionConfig) {
   const frameRef = useRef<any | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coefficients, setCoefficients] = useState<CoefficientData | null>(null);
+  const [xfoilData, setXfoilData] = useState<XFoilData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [frameStep, setFrameStep] = useState(0);
   const [totalSteps, setTotalSteps] = useState(0);
@@ -108,6 +116,16 @@ export function useCFD(config?: SessionConfig) {
                 l_d: data.meta.l_d,
               });
             }
+
+            // Capture XFoil validation data from the final_results message
+            if (data.type === 'final_results' && data.meta) {
+              setXfoilData({
+                cl: data.meta.xfoil_cl ?? null,
+                cd: data.meta.xfoil_cd ?? null,
+                l_d: data.meta.xfoil_l_d ?? null,
+                status: data.meta.xfoil_status ?? 'not_run',
+              });
+            }
           } catch (err) {
             console.error("❌ Failed to parse WebSocket message:", err);
             console.error("Raw message:", e.data);
@@ -174,5 +192,5 @@ export function useCFD(config?: SessionConfig) {
     }
   };
 
-  return { frameRef, isConnected, isCompleted, setIsCompleted, error, coefficients, closeConnection, sessionId, frameStep, totalSteps, setTotalSteps };
+  return { frameRef, isConnected, isCompleted, setIsCompleted, error, coefficients, xfoilData, closeConnection, sessionId, frameStep, totalSteps, setTotalSteps };
 }

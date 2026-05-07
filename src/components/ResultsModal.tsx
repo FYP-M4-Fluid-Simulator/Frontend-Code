@@ -33,6 +33,11 @@ interface ResultsModalProps {
     cd: number;
     liftToDragRatio?: number;
     loss?: number;
+    // XFoil validated results (simulation only)
+    xfoilCl?: number | null;
+    xfoilCd?: number | null;
+    xfoilLd?: number | null;
+    xfoilStatus?: string;
   };
   convergenceData?: Array<{
     iteration: number;
@@ -96,6 +101,38 @@ export default function ResultsModal({
       );
     }
     return val.toFixed(4);
+  };
+
+  const xfoilStatusBadge = (status: string | undefined) => {
+    switch (status) {
+      case "converged":
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+            Converged
+          </span>
+        );
+      case "failed":
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500/20 text-orange-300 border border-orange-500/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
+            Did not converge
+          </span>
+        );
+      case "error":
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+            Error
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-slate-500/20 text-slate-300 border border-slate-500/40">
+            Not run
+          </span>
+        );
+    }
   };
 
   const formatScientificTick = (value: number) => {
@@ -179,6 +216,76 @@ export default function ResultsModal({
               </div>
             )}
           </div>
+
+          {/* XFoil Validation Panel — simulation only */}
+          {type === "simulation" && (
+            <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/40 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-indigo-200">
+                    XFoil Validation
+                  </h3>
+                  <p className="text-indigo-300/60 text-xs mt-0.5">
+                    Panel-method reference values (viscous, 2D, steady)
+                  </p>
+                </div>
+                {xfoilStatusBadge(metrics.xfoilStatus)}
+              </div>
+
+              {metrics.xfoilStatus === "converged" ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Cl comparison */}
+                  <div className="bg-black/20 rounded-lg p-3 text-center">
+                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
+                      C<sub>L</sub>
+                    </div>
+                    <div className="text-white text-xl font-bold">
+                      {metrics.xfoilCl?.toFixed(4) ?? "—"}
+                    </div>
+                    <div className="text-indigo-300/50 text-xs mt-1">
+                      RANS: {metrics.cl.toFixed(4)}
+                    </div>
+                  </div>
+                  {/* Cd comparison */}
+                  <div className="bg-black/20 rounded-lg p-3 text-center">
+                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
+                      C<sub>D</sub>
+                    </div>
+                    <div className="text-white text-xl font-bold">
+                      {metrics.xfoilCd?.toFixed(5) ?? "—"}
+                    </div>
+                    <div className="text-indigo-300/50 text-xs mt-1">
+                      RANS: {metrics.cd.toFixed(5)}
+                    </div>
+                  </div>
+                  {/* L/D comparison */}
+                  <div className="bg-black/20 rounded-lg p-3 text-center">
+                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
+                      L/D
+                    </div>
+                    <div className="text-white text-xl font-bold">
+                      {metrics.xfoilLd?.toFixed(2) ?? "—"}
+                    </div>
+                    <div className="text-indigo-300/50 text-xs mt-1">
+                      RANS: {
+                        metrics.liftToDragRatio != null
+                          ? metrics.liftToDragRatio.toFixed(2)
+                          : (metrics.cd !== 0
+                              ? (metrics.cl / metrics.cd).toFixed(2)
+                              : "—")
+                      }
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-3 text-indigo-300/50 text-sm">
+                  {metrics.xfoilStatus === "not_run" || !metrics.xfoilStatus
+                    ? "XFoil will run at end of simulation."
+                    : "XFoil did not produce a result for this condition. RANS values above remain the primary reference."}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Aerodynamic Coefficients Chart */}
           <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">

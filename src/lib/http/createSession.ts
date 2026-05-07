@@ -7,6 +7,7 @@ export interface SessionConfig {
   lowerCoefficients: number[];
   velocity?: number;
   angleOfAttack?: number;
+  reynoldsNumber?: number; 
   meshDensity?: "coarse" | "medium" | "fine" | "ultra";
   chordLength?: number;
   timeStepSize?: number;
@@ -60,6 +61,7 @@ export async function createSession(config: SessionConfig) {
       dt: config.timeStepSize || 0.01,
       inflow_velocity: config.velocity || 2.0,
       angle_of_attack: config.angleOfAttack || 0,
+      reynolds_number: config.reynoldsNumber || 1000000,
       cst_upper: config.upperCoefficients,
       cst_lower: config.lowerCoefficients,
       stream_every: 1,
