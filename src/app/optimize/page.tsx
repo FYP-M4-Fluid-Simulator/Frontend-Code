@@ -48,6 +48,7 @@ import type { OptSessionConfig } from "../../lib/http/createOptSession";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
+import { extractOptXfoilFromCompleteMeta } from "@/lib/xfoilMetrics";
 import { PYTHON_BACKEND_URL } from "@/config";
 
 export default function OptimizePage() {
@@ -378,6 +379,8 @@ export default function OptimizePage() {
       window.history.replaceState({}, "", url.toString());
     }
 
+    const xfoil = extractOptXfoilFromCompleteMeta(meta);
+
     // Store for turbine page
     sessionStorage.setItem(
       "optimizationResults",
@@ -390,6 +393,10 @@ export default function OptimizePage() {
         maxThickness: meta.final_max_thickness,
         convergenceRate: 100,
         improvementPercent: 0,
+        xfoilCl: xfoil.cl,
+        xfoilCd: xfoil.cd,
+        xfoilLd: xfoil.l_d,
+        xfoilStatus: xfoil.status,
       }),
     );
 
@@ -406,6 +413,10 @@ export default function OptimizePage() {
           totalIterations: meta.total_iterations,
           cst_upper: shape.cst_upper,
           cst_lower: shape.cst_lower,
+          xfoilCl: xfoil.cl,
+          xfoilCd: xfoil.cd,
+          xfoilLd: xfoil.l_d,
+          xfoilStatus: xfoil.status,
         }),
       );
     }

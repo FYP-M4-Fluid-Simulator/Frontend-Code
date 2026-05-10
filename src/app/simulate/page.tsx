@@ -41,6 +41,7 @@ import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
 import { PYTHON_BACKEND_URL } from "@/config";
+import { extractXfoilFromSessionMeta } from "@/lib/xfoilMetrics";
 
 export default function SimulatePage() {
   const router = useRouter();
@@ -457,12 +458,21 @@ export default function SimulatePage() {
         setComputationDuration(finalDuration);
       }
 
-      // Use XFoil results exclusively — xfoilData arrives in the final_results message
+      const finalMeta = frameRef.current?.meta || {};
+      const fallbackXfoil = extractXfoilFromSessionMeta({
+        ...finalMeta,
+        final_xfoil_cl: xfoilData?.cl,
+        final_xfoil_cd: xfoilData?.cd,
+        final_xfoil_l_d: xfoilData?.l_d,
+        final_xfoil_status: xfoilData?.status,
+      });
+
+      // Use XFoil results with Deep Learning fallbacks
       setSimulationMetrics({
-        xfoilCl: xfoilData?.cl ?? null,
-        xfoilCd: xfoilData?.cd ?? null,
-        xfoilLd: xfoilData?.l_d ?? null,
-        xfoilStatus: xfoilData?.status ?? "not_run",
+        xfoilCl: fallbackXfoil.cl,
+        xfoilCd: fallbackXfoil.cd,
+        xfoilLd: fallbackXfoil.l_d,
+        xfoilStatus: fallbackXfoil.status,
       });
 
       setShowResults(true);
@@ -480,18 +490,19 @@ export default function SimulatePage() {
         setShowResultsModal(true);
       }, 500);
 
+      const simResultsObj = {
+        xfoilCl: fallbackXfoil.cl,
+        xfoilCd: fallbackXfoil.cd,
+        xfoilLd: fallbackXfoil.l_d,
+        xfoilStatus: fallbackXfoil.status,
+        computationTime: finalDuration,
+      };
+
       if (sessionId) {
-        localStorage.setItem(
-          `sim_result_${sessionId}`,
-          JSON.stringify({
-            xfoilCl: xfoilData?.cl ?? null,
-            xfoilCd: xfoilData?.cd ?? null,
-            xfoilLd: xfoilData?.l_d ?? null,
-            xfoilStatus: xfoilData?.status ?? "not_run",
-            computationTime: finalDuration,
-          }),
-        );
+        localStorage.setItem(`sim_result_${sessionId}`, JSON.stringify(simResultsObj));
       }
+      
+      sessionStorage.setItem("simulationResults", JSON.stringify(simResultsObj));
 
       if (simulationIntervalRef.current) {
         clearInterval(simulationIntervalRef.current);
