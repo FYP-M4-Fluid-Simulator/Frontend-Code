@@ -41,6 +41,10 @@ import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
 import { PYTHON_BACKEND_URL } from "@/config";
+import {
+  extractXfoilFromSessionMeta,
+  isUsableXfoilPair,
+} from "../../lib/xfoilMetrics";
 
 export default function SimulatePage() {
   const router = useRouter();
@@ -72,6 +76,10 @@ export default function SimulatePage() {
     cl: 0,
     cd: 0,
     liftToDragRatio: 0,
+    xfoilCl: null,
+    xfoilCd: null,
+    xfoilLd: null,
+    xfoilStatus: "not_run",
   });
   const [computationDuration, setComputationDuration] = useState(0);
 
@@ -106,7 +114,6 @@ export default function SimulatePage() {
     frameRef,
     isCompleted,
     setIsCompleted,
-    coefficients,
     xfoilData,
     closeConnection,
     sessionId,
@@ -201,15 +208,46 @@ export default function SimulatePage() {
     const cachedRaw = localStorage.getItem(`sim_result_${urlSessionId}`);
     if (cachedRaw) {
       try {
-        const cached = JSON.parse(cachedRaw);
-        setSimulationMetrics({
-          cl: cached.liftCoefficient ?? 0,
-          cd: cached.dragCoefficient ?? 0,
-          liftToDragRatio: cached.liftToDragRatio ?? 0,
-        });
-        if (cached.computationTime) {
-          setComputationDuration(cached.computationTime);
+        const cached = JSON.parse(cachedRaw) as Record<string, unknown>;
+        const xf = extractXfoilFromSessionMeta(cached);
+        if (!isUsableXfoilPair(xf.cl, xf.cd)) {
+          toast.error("Cached session has no XFoil coefficients. Re-run the simulation.");
+          setIsLoadingResults(false);
+          return;
         }
+        const cl = xf.cl as number;
+        const cd = xf.cd as number;
+        const ld =
+          xf.l_d != null && Number.isFinite(xf.l_d)
+            ? xf.l_d
+            : cd !== 0
+              ? cl / cd
+              : 0;
+        const resultData = {
+          xfoilCl: cl,
+          xfoilCd: cd,
+          xfoilLd: ld,
+          xfoilStatus: xf.status,
+          computationTime:
+            typeof cached.computationTime === "number" &&
+            Number.isFinite(cached.computationTime)
+              ? cached.computationTime
+              : 0,
+          timestamp: new Date().toISOString(),
+        };
+        setSimulationMetrics({
+          cl,
+          cd,
+          liftToDragRatio: ld,
+          xfoilCl: cl,
+          xfoilCd: cd,
+          xfoilLd: ld,
+          xfoilStatus: xf.status,
+        });
+        if (resultData.computationTime) {
+          setComputationDuration(resultData.computationTime);
+        }
+        sessionStorage.setItem("simulationResults", JSON.stringify(resultData));
         setShowResults(true);
         setSimulationProgress(100);
         setActiveSidebarTab("results");
@@ -253,11 +291,40 @@ export default function SimulatePage() {
 
         // Populate metrics from the response
         if (data.meta) {
-          setSimulationMetrics({
-            cl: data.meta.cl ?? 0,
-            cd: data.meta.cd ?? 0,
-            liftToDragRatio: data.meta.l_d ?? 0,
-          });
+          const xf = extractXfoilFromSessionMeta(
+            data.meta as Record<string, unknown>,
+          );
+          if (isUsableXfoilPair(xf.cl, xf.cd)) {
+            const cl = xf.cl as number;
+            const cd = xf.cd as number;
+            const ld =
+              xf.l_d != null && Number.isFinite(xf.l_d)
+                ? xf.l_d
+                : cd !== 0
+                  ? cl / cd
+                  : 0;
+            const resultData = {
+              xfoilCl: cl,
+              xfoilCd: cd,
+              xfoilLd: ld,
+              xfoilStatus: xf.status,
+              computationTime: 0,
+              timestamp: new Date().toISOString(),
+            };
+            setSimulationMetrics({
+              cl,
+              cd,
+              liftToDragRatio: ld,
+              xfoilCl: cl,
+              xfoilCd: cd,
+              xfoilLd: ld,
+              xfoilStatus: xf.status,
+            });
+            sessionStorage.setItem(
+              "simulationResults",
+              JSON.stringify(resultData),
+            );
+          }
         }
 
         // If we got field data, put it in the frame ref
@@ -371,21 +438,6 @@ export default function SimulatePage() {
     }
   };
 
-  // Track coefficient history in real-time during simulation
-  useEffect(() => {
-    if (coefficients && isSimulating) {
-      setCoefficientHistory((prev) => [
-        ...prev,
-        {
-          iteration: prev.length + 1,
-          cl: coefficients.cl,
-          cd: coefficients.cd,
-          ldRatio: coefficients.l_d,
-        },
-      ]);
-    }
-  }, [coefficients, isSimulating]);
-
   const handleSaveExperiment = async (name: string) => {
     const activeSessionId = sessionId || sessionConfig?.runId;
     if (!activeSessionId) {
@@ -465,6 +517,10 @@ export default function SimulatePage() {
       cl: 0,
       cd: 0,
       liftToDragRatio: 0,
+      xfoilCl: null,
+      xfoilCd: null,
+      xfoilLd: null,
+      xfoilStatus: "not_run",
     });
     sessionStorage.removeItem("simulationResults");
 
@@ -495,31 +551,11 @@ export default function SimulatePage() {
     setTotalSteps(expectedSteps);
   };
 
-  // Handle simulation completion from WebSocket
+  // Handle simulation completion from WebSocket (UI transitions only — coefs may arrive next tick)
   useEffect(() => {
     if (isCompleted && isSimulating) {
       setSimulationProgress(100);
       setIsSimulating(false);
-      // Calculate actual computation time
-      const startTimeStr = sessionStorage.getItem("simulationStartTime");
-      if (startTimeStr) {
-        const startTime = parseFloat(startTimeStr);
-        const durationSeconds = (performance.now() - startTime) / 1000;
-        setComputationDuration(durationSeconds);
-      }
-
-      // Update metrics with final coefficient values
-      if (coefficients) {
-        setSimulationMetrics({
-          cl: coefficients.cl,
-          cd: coefficients.cd,
-          liftToDragRatio: coefficients.l_d,
-          xfoilCl: xfoilData?.cl ?? null,
-          xfoilCd: xfoilData?.cd ?? null,
-          xfoilLd: xfoilData?.l_d ?? null,
-          xfoilStatus: xfoilData?.status ?? 'not_run',
-        });
-      }
 
       setShowResults(true);
       setActiveSidebarTab("results");
@@ -537,35 +573,75 @@ export default function SimulatePage() {
         setShowResultsModal(true);
       }, 500);
 
-      // Store final results in sessionStorage (for in-tab use)
-      if (coefficients) {
-        const resultData = {
-          liftToDragRatio: coefficients.l_d,
-          liftCoefficient: coefficients.cl,
-          dragCoefficient: coefficients.cd,
-          computationTime: computationDuration,
-        };
-        sessionStorage.setItem(
-          "simulationResults",
-          JSON.stringify(resultData),
-        );
-
-        // Also store in localStorage keyed by sessionId (persists across tabs)
-        if (sessionId) {
-          localStorage.setItem(
-            `sim_result_${sessionId}`,
-            JSON.stringify(resultData),
-          );
-        }
-      }
-
       // Clear interval (kept for cleanup safety)
       if (simulationIntervalRef.current) {
         clearInterval(simulationIntervalRef.current);
         simulationIntervalRef.current = null;
       }
     }
-  }, [isCompleted, isSimulating, coefficients, simulationDuration]);
+  }, [isCompleted, isSimulating, sessionId]);
+
+  // Persist XFoil metrics when the run completes and final XFoil data is available.
+  useEffect(() => {
+    if (!isCompleted || !xfoilData) return;
+    const cl = xfoilData.cl;
+    const cd = xfoilData.cd;
+    if (!isUsableXfoilPair(cl, cd)) return;
+
+    let durationSeconds = 0;
+    const startTimeStr = sessionStorage.getItem("simulationStartTime");
+    if (startTimeStr) {
+      const startTime = parseFloat(startTimeStr);
+      durationSeconds = (performance.now() - startTime) / 1000;
+      setComputationDuration(durationSeconds);
+    }
+
+    const lift = cl as number;
+    const drag = cd as number;
+    const ld =
+      xfoilData.l_d != null && Number.isFinite(xfoilData.l_d)
+        ? xfoilData.l_d
+        : drag !== 0
+          ? lift / drag
+          : 0;
+
+    setSimulationMetrics({
+      cl: lift,
+      cd: drag,
+      liftToDragRatio: ld,
+      xfoilCl: lift,
+      xfoilCd: drag,
+      xfoilLd: ld,
+      xfoilStatus: xfoilData.status ?? "not_run",
+    });
+
+    const resultData = {
+      xfoilCl: lift,
+      xfoilCd: drag,
+      xfoilLd: ld,
+      xfoilStatus: xfoilData.status ?? "not_run",
+      computationTime: durationSeconds,
+      timestamp: new Date().toISOString(),
+    };
+    sessionStorage.setItem(
+      "simulationResults",
+      JSON.stringify(resultData),
+    );
+
+    if (sessionId) {
+      localStorage.setItem(
+        `sim_result_${sessionId}`,
+        JSON.stringify(resultData),
+      );
+    }
+  }, [
+    isCompleted,
+    sessionId,
+    xfoilData?.cl,
+    xfoilData?.cd,
+    xfoilData?.l_d,
+    xfoilData?.status,
+  ]);
 
   const handleStopSimulation = () => {
     setIsSimulating(false);
@@ -957,24 +1033,24 @@ export default function SimulatePage() {
                     <div className="space-y-2 text-xs font-medium text-cyan-800">
                       <div className="flex justify-between">
                         <span>
-                          Lift Coefficient (C<sub>L</sub>):
+                          XFoil Lift (C<sub>L</sub>):
                         </span>
                         <span className="font-black">
-                          {formatValue(simulationMetrics.cl)}
+                          {formatValue(simulationMetrics.xfoilCl ?? simulationMetrics.cl)}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>
-                          Drag Coefficient (C<sub>D</sub>):
+                          XFoil Drag (C<sub>D</sub>):
                         </span>
                         <span className="font-black">
-                          {formatValue(simulationMetrics.cd)}
+                          {formatValue(simulationMetrics.xfoilCd ?? simulationMetrics.cd)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>L/D Ratio:</span>
+                        <span>XFoil L/D:</span>
                         <span className="font-black">
-                          {formatValue(simulationMetrics.liftToDragRatio)}
+                          {formatValue(simulationMetrics.xfoilLd ?? simulationMetrics.liftToDragRatio)}
                         </span>
                       </div>
                     </div>
@@ -992,14 +1068,14 @@ export default function SimulatePage() {
                             C<sub>L</sub>
                           </span>
                           <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.cl)}
+                            {formatValue(simulationMetrics.xfoilCl ?? simulationMetrics.cl)}
                           </span>
                         </div>
                         <div className="w-full bg-cyan-100 rounded-full h-4 overflow-hidden">
                           <div
                             className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full flex items-center justify-end pr-2"
                             style={{
-                              width: `${Math.min((Math.abs(simulationMetrics.cl) / 1.2) * 100, 100)}%`,
+                              width: `${Math.min((Math.abs(simulationMetrics.xfoilCl ?? simulationMetrics.cl) / 1.2) * 100, 100)}%`,
                             }}
                           >
                             <span className="text-[10px] font-bold text-white">
@@ -1016,14 +1092,14 @@ export default function SimulatePage() {
                             C<sub>D</sub>
                           </span>
                           <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.cd)}
+                            {formatValue(simulationMetrics.xfoilCd ?? simulationMetrics.cd)}
                           </span>
                         </div>
                         <div className="w-full bg-red-100 rounded-full h-4 overflow-hidden">
                           <div
                             className="bg-gradient-to-r from-red-500 to-red-600 h-full rounded-full flex items-center justify-end pr-2"
                             style={{
-                              width: `${Math.min((simulationMetrics.cd / 0.1) * 100, 100)}%`,
+                              width: `${Math.min(((simulationMetrics.xfoilCd ?? simulationMetrics.cd) / 0.1) * 100, 100)}%`,
                             }}
                           >
                             <span className="text-[10px] font-bold text-white">
@@ -1040,14 +1116,14 @@ export default function SimulatePage() {
                             L/D Ratio
                           </span>
                           <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.liftToDragRatio)}
+                            {formatValue(simulationMetrics.xfoilLd ?? simulationMetrics.liftToDragRatio)}
                           </span>
                         </div>
                         <div className="w-full bg-green-100 rounded-full h-4 overflow-hidden">
                           <div
                             className="bg-gradient-to-r from-green-500 to-green-600 h-full rounded-full flex items-center justify-end pr-2"
                             style={{
-                              width: `${Math.min((simulationMetrics.liftToDragRatio / 50) * 100, 100)}%`,
+                              width: `${Math.min(((simulationMetrics.xfoilLd ?? simulationMetrics.liftToDragRatio) / 50) * 100, 100)}%`,
                             }}
                           >
                             <span className="text-[10px] font-bold text-white">
