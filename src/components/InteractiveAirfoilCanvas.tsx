@@ -565,7 +565,6 @@ export function InteractiveAirfoilCanvas({
         ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
         ctx.font = "12px sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText("Chord: 1.0 m", 20, canvasSize.height - 40);
         // ctx.fillText(
         //   `Angle of Attack: ${angleOfAttack.toFixed(1)}°`,
         //   20,
@@ -609,15 +608,7 @@ export function InteractiveAirfoilCanvas({
         // const leadingEdge = transformPoint({ x: 0, y: 0 });
         // const trailingEdge = transformPoint({ x: 1, y: 0 });
 
-        // Display chord length
-        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-        ctx.font = "14px sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(
-          `Chord: ${chordLength.toFixed(2)} m`,
-          20,
-          canvasSize.height - 20,
-        );
+
 
         // Leading edge (orange/yellow control point)
         // ctx.fillStyle = "#f59e0b"; // Amber/Orange
