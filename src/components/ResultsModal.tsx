@@ -33,6 +33,7 @@ interface ResultsModalProps {
     cd: number;
     liftToDragRatio?: number;
     loss?: number;
+    maxThickness?: number;
     // XFoil validated results (simulation only)
     xfoilCl?: number | null;
     xfoilCd?: number | null;
@@ -166,7 +167,7 @@ export default function ResultsModal({
         {/* Content */}
         <div className="p-8 space-y-6">
           {/* Metrics Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-2 ${type === "optimization" ? "md:grid-cols-5" : "md:grid-cols-4"} gap-4`}>
             <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-xl p-4">
               <div className="text-green-300 text-xs font-semibold mb-2">
                 Lift Coefficient (C<sub>L</sub>)
@@ -200,131 +201,61 @@ export default function ResultsModal({
               </div>
             </div>
 
-            {type === "optimization" ? (
-              <div className="bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/30 rounded-xl p-4">
-                <div className="text-yellow-300 text-xs font-semibold mb-2">
-                  Loss
-                </div>
-                <div className="text-yellow-100 text-2xl font-bold">
-                  {formatValue(metrics.loss)}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-400/30 rounded-xl p-4">
-                <div className="text-gray-300 text-xs font-semibold mb-2">
-                  Computation Time
-                </div>
-                <div className="text-gray-300 text-2xl font-bold">
-                  {computationTime ? `${computationTime.toFixed(1)}s` : "-"}
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* XFoil Validation Panel — simulation only */}
-          {type === "simulation" && (
-            <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/40 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-base font-bold text-indigo-200">
-                    XFoil Validation
-                  </h3>
-                  <p className="text-indigo-300/60 text-xs mt-0.5">
-                    Panel-method reference values (viscous, 2D, steady)
-                  </p>
-                </div>
-                {xfoilStatusBadge(metrics.xfoilStatus)}
-              </div>
 
-              {metrics.xfoilStatus === "converged" ? (
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
-                      C<sub>L</sub>
-                    </div>
-                    <div className="text-white text-xl font-bold">
-                      {metrics.xfoilCl?.toFixed(4) ?? "—"}
-                    </div>
-                  </div>
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
-                      C<sub>D</sub>
-                    </div>
-                    <div className="text-white text-xl font-bold">
-                      {metrics.xfoilCd?.toFixed(5) ?? "—"}
-                    </div>
-                  </div>
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
-                      L/D
-                    </div>
-                    <div className="text-white text-xl font-bold">
-                      {metrics.xfoilLd?.toFixed(2) ?? "—"}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-3 text-indigo-300/50 text-sm">
-                  {metrics.xfoilStatus === "not_run" || !metrics.xfoilStatus
-                    ? "XFoil will run at end of simulation."
-                    : "XFoil did not produce a result for this condition. No reliable aerodynamic coefficients available."}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* L/D Ratio Evolution — primary chart, full width */}
-          <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-blue-200 mb-4">
-              L/D Ratio Evolution (XFoil Verified)
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis
-                  dataKey="iteration"
-                  stroke="#94a3b8"
-                  label={{
-                    value: "Iteration",
-                    position: "insideBottom",
-                    offset: -5,
-                    fill: "#94a3b8",
-                  }}
-                />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1e293b",
-                    border: "1px solid #3b82f6",
-                    borderRadius: "8px",
-                  }}
-                  labelStyle={{ color: "#93c5fd" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="ldRatio"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  name="L/D Ratio (XFoil)"
-                  dot={{ r: 3, fill: "#10b981" }}
-                  connectNulls={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Secondary Charts */}
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Loss Convergence (Optimization Only) */}
             {type === "optimization" && (
+              <>
+                <div className="bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-400/30 rounded-xl p-4">
+                  <div className="text-pink-300 text-xs font-semibold mb-2">
+                    Max Thickness
+                  </div>
+                  <div className="text-pink-100 text-2xl font-bold">
+                    {metrics.maxThickness ? `${(metrics.maxThickness * 100).toFixed(2)}%` : "—"}
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/30 rounded-xl p-4">
+                  <div className="text-yellow-300 text-xs font-semibold mb-2">
+                    Loss
+                  </div>
+                  <div className="text-yellow-100 text-2xl font-bold">
+                    {formatValue(metrics.loss)}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-400/30 rounded-xl p-4">
+              <div className="text-gray-300 text-xs font-semibold mb-2">
+                Computation Time
+              </div>
+              <div className="text-gray-300 text-2xl font-bold">
+                {computationTime ? `${computationTime.toFixed(1)}s` : "-"}
+              </div>
+            </div> */}
+          </div>
+
+          {/* Evolution Charts (Optimization Only) */}
+          {type === "optimization" && (
+            <div className="space-y-6">
+              {/* L/D Ratio Evolution — primary chart, full width */}
               <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
                 <h3 className="text-xl font-bold text-blue-200 mb-4">
-                  Loss Convergence
+                  L/D Ratio Evolution (XFoil Verified)
                 </h3>
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="iteration" stroke="#94a3b8" />
+                    <XAxis
+                      dataKey="iteration"
+                      stroke="#94a3b8"
+                      label={{
+                        value: "Iteration",
+                        position: "insideBottom",
+                        offset: -5,
+                        fill: "#94a3b8",
+                      }}
+                    />
                     <YAxis stroke="#94a3b8" />
                     <Tooltip
                       contentStyle={{
@@ -332,76 +263,106 @@ export default function ResultsModal({
                         border: "1px solid #3b82f6",
                         borderRadius: "8px",
                       }}
+                      labelStyle={{ color: "#93c5fd" }}
                     />
                     <Line
                       type="monotone"
-                      dataKey="loss"
-                      stroke="#f59e0b"
+                      dataKey="ldRatio"
+                      stroke="#10b981"
                       strokeWidth={2}
-                      name="Loss"
-                      dot={false}
+                      name="L/D Ratio (XFoil)"
+                      dot={{ r: 3, fill: "#10b981" }}
+                      connectNulls={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            )}
 
-            {/* Aerodynamic Coefficients (XFoil verified points only) */}
-            <div
-              className={`bg-slate-800/50 border border-blue-500/30 rounded-xl p-6 ${
-                type !== "optimization" ? "md:col-span-2" : ""
-              }`}
-            >
-              <h3 className="text-xl font-bold text-blue-200 mb-4">
-                Cₐ &amp; Cᴅ Evolution (XFoil Verified)
-              </h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="iteration" stroke="#94a3b8" />
-                  <YAxis
-                    stroke="#94a3b8"
-                    label={{
-                      value: "Coefficient Value",
-                      angle: -90,
-                      position: "insideLeft",
-                      offset: 0,
-                      fill: "#94a3b8",
-                    }}
-                    tickFormatter={(value) => formatScientificTick(Number(value))}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1e293b",
-                      border: "1px solid #3b82f6",
-                      borderRadius: "8px",
-                    }}
-                    labelStyle={{ color: "#93c5fd" }}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="cl"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    name="C_L"
-                    dot={{ r: 2, fill: "#10b981" }}
-                    connectNulls={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cd"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    name="C_D"
-                    dot={{ r: 2, fill: "#f97316" }}
-                    connectNulls={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {/* Secondary Charts Grid */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Loss Convergence */}
+                <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
+                  <h3 className="text-xl font-bold text-blue-200 mb-4">
+                    Loss Convergence
+                  </h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="iteration" stroke="#94a3b8" />
+                      <YAxis stroke="#94a3b8" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1e293b",
+                          border: "1px solid #3b82f6",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="loss"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        name="Loss"
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Aerodynamic Coefficients Evolution */}
+                <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
+                  <h3 className="text-xl font-bold text-blue-200 mb-4">
+                    Cₗ &amp; Cᴅ Evolution (XFoil Verified)
+                  </h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="iteration" stroke="#94a3b8" />
+                      <YAxis
+                        stroke="#94a3b8"
+                        label={{
+                          value: "Coefficient Value",
+                          angle: -90,
+                          position: "insideLeft",
+                          offset: 0,
+                          fill: "#94a3b8",
+                        }}
+                        tickFormatter={(value) => formatScientificTick(Number(value))}
+                        tick={{ fontSize: 11 }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1e293b",
+                          border: "1px solid #3b82f6",
+                          borderRadius: "8px",
+                        }}
+                        labelStyle={{ color: "#93c5fd" }}
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="cl"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        name="C_L"
+                        dot={{ r: 2, fill: "#10b981" }}
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="cd"
+                        stroke="#f97316"
+                        strokeWidth={2}
+                        name="C_D"
+                        dot={{ r: 2, fill: "#f97316" }}
+                        connectNulls={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Action Buttons */}
           <div className="space-y-4 pt-4">

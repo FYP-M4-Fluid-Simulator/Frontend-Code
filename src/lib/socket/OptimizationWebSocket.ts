@@ -15,6 +15,7 @@ export interface OptIterationMeta {
   cl_cd: number | null; // null when XFoil did not converge for this iteration
   lift_force: number;
   drag_force: number;
+  max_thickness: number;
 }
 
 export interface OptShape {
@@ -40,6 +41,7 @@ export interface OptCompleteFrame {
     final_cl_cd: number;
     final_drag: number;
     final_loss: number;
+    final_max_thickness: number;
   };
   shape: OptShape;
   initial_shape: { cst_upper: number[]; cst_lower: number[] };

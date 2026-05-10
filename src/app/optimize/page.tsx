@@ -73,6 +73,7 @@ export default function OptimizePage() {
     cd: 0.0156,
     liftToDragRatio: 79.2,
     loss: 0.000456,
+    maxThickness: 0.12,
   });
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
@@ -191,6 +192,7 @@ export default function OptimizePage() {
           cd: cached.cd ?? 0,
           liftToDragRatio: cached.liftToDragRatio ?? 0,
           loss: cached.loss ?? 0,
+          maxThickness: cached.maxThickness ?? 0,
         };
         setOptimizationMetrics(finalMetrics);
         setBestLiftCoeff(cached.cl ?? 0);
@@ -251,6 +253,7 @@ export default function OptimizePage() {
             cd: data.meta.final_cd ?? 0,
             liftToDragRatio: data.meta.final_cl_cd ?? 0,
             loss: data.meta.final_loss ?? 0,
+            maxThickness: data.meta.final_max_thickness ?? 0,
           };
           setOptimizationMetrics(finalMetrics);
           setBestLiftCoeff(data.meta.final_cl ?? 0);
@@ -330,6 +333,14 @@ export default function OptimizePage() {
       setBestLDRatio(currentMeta.cl_cd);
     }
     setOptimizationLoss(currentMeta.loss);
+    setOptimizationMetrics((prev) => ({
+      ...prev,
+      cl: (currentMeta.cl as number) || prev.cl,
+      cd: (currentMeta.cd as number) || prev.cd,
+      liftToDragRatio: currentMeta.cl_cd || prev.liftToDragRatio,
+      loss: currentMeta.loss,
+      maxThickness: currentMeta.max_thickness,
+    }));
   }, [currentMeta, currentShape]);
 
   // Handle optimization completion
@@ -348,6 +359,7 @@ export default function OptimizePage() {
       cd: meta.final_cd,
       liftToDragRatio: meta.final_cl_cd,
       loss: meta.final_loss,
+      maxThickness: meta.final_max_thickness,
     };
     setOptimizationMetrics(finalMetrics);
     setBestLiftCoeff(meta.final_cl);
@@ -375,6 +387,7 @@ export default function OptimizePage() {
         bestDragCoefficient: meta.final_cd,
         generations: meta.total_iterations,
         numIterations: meta.total_iterations,
+        maxThickness: meta.final_max_thickness,
         convergenceRate: 100,
         improvementPercent: 0,
       }),
@@ -389,6 +402,7 @@ export default function OptimizePage() {
           cd: meta.final_cd,
           liftToDragRatio: meta.final_cl_cd,
           loss: meta.final_loss,
+          maxThickness: meta.final_max_thickness,
           totalIterations: meta.total_iterations,
           cst_upper: shape.cst_upper,
           cst_lower: shape.cst_lower,
@@ -555,6 +569,7 @@ export default function OptimizePage() {
       cd: 0,
       liftToDragRatio: 0,
       loss: 0,
+      maxThickness: 0,
     });
     setBestLiftCoeff(0);
     setBestDragCoeff(0);
