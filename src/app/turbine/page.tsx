@@ -519,14 +519,6 @@ export default function TurbinePage() {
                 );
               })()}
 
-              <button
-                id="calculate-power-btn"
-                onClick={handleCalculatePower}
-                className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all w-full flex items-center justify-center gap-2"
-              >
-                <Zap className="h-3.5 w-3.5" />
-                Calculate Power Output
-              </button>
 
               {powerError && (
                 <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md p-2 leading-relaxed">

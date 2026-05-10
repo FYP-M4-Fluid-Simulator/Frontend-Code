@@ -103,9 +103,9 @@ export default function SimulatePage() {
   const [coefficientHistory, setCoefficientHistory] = useState<
     Array<{
       iteration: number;
-      cl: number;
-      cd: number;
-      ldRatio: number;
+      cl: number | null;
+      cd: number | null;
+      ldRatio: number | null;
     }>
   >([]);
 
@@ -210,44 +210,29 @@ export default function SimulatePage() {
       try {
         const cached = JSON.parse(cachedRaw) as Record<string, unknown>;
         const xf = extractXfoilFromSessionMeta(cached);
-        if (!isUsableXfoilPair(xf.cl, xf.cd)) {
-          toast.error("Cached session has no XFoil coefficients. Re-run the simulation.");
-          setIsLoadingResults(false);
-          return;
-        }
-        const cl = xf.cl as number;
-        const cd = xf.cd as number;
-        const ld =
-          xf.l_d != null && Number.isFinite(xf.l_d)
-            ? xf.l_d
-            : cd !== 0
-              ? cl / cd
-              : 0;
-        const resultData = {
-          xfoilCl: cl,
-          xfoilCd: cd,
-          xfoilLd: ld,
-          xfoilStatus: xf.status,
-          computationTime:
-            typeof cached.computationTime === "number" &&
-            Number.isFinite(cached.computationTime)
-              ? cached.computationTime
-              : 0,
-          timestamp: new Date().toISOString(),
-        };
+        const cl = xf.cl ?? 0;
+        const cd = xf.cd ?? 0;
+        const ld = xf.l_d ?? 0;
+        
         setSimulationMetrics({
           cl,
           cd,
           liftToDragRatio: ld,
-          xfoilCl: cl,
-          xfoilCd: cd,
+          xfoilCl: xf.cl,
+          xfoilCd: xf.cd,
           xfoilLd: ld,
           xfoilStatus: xf.status,
         });
-        if (resultData.computationTime) {
-          setComputationDuration(resultData.computationTime);
-        }
+        const resultData = {
+          xfoilCl: xf.cl,
+          xfoilCd: xf.cd,
+          xfoilLd: ld,
+          xfoilStatus: xf.status,
+          computationTime: typeof cached.computationTime === "number" ? cached.computationTime : 0,
+          timestamp: new Date().toISOString(),
+        };
         sessionStorage.setItem("simulationResults", JSON.stringify(resultData));
+
         setShowResults(true);
         setSimulationProgress(100);
         setActiveSidebarTab("results");
@@ -291,40 +276,32 @@ export default function SimulatePage() {
 
         // Populate metrics from the response
         if (data.meta) {
-          const xf = extractXfoilFromSessionMeta(
-            data.meta as Record<string, unknown>,
-          );
-          if (isUsableXfoilPair(xf.cl, xf.cd)) {
-            const cl = xf.cl as number;
-            const cd = xf.cd as number;
-            const ld =
-              xf.l_d != null && Number.isFinite(xf.l_d)
-                ? xf.l_d
-                : cd !== 0
-                  ? cl / cd
-                  : 0;
-            const resultData = {
-              xfoilCl: cl,
-              xfoilCd: cd,
+          const xf = extractXfoilFromSessionMeta(data.meta);
+          const cl = xf.cl ?? 0;
+          const cd = xf.cd ?? 0;
+          const ld = xf.l_d ?? 0;
+
+          setSimulationMetrics({
+            cl,
+            cd,
+            liftToDragRatio: ld,
+            xfoilCl: xf.cl,
+            xfoilCd: xf.cd,
+            xfoilLd: ld,
+            xfoilStatus: xf.status,
+          });
+
+          sessionStorage.setItem(
+            "simulationResults",
+            JSON.stringify({
+              xfoilCl: xf.cl,
+              xfoilCd: xf.cd,
               xfoilLd: ld,
               xfoilStatus: xf.status,
               computationTime: 0,
               timestamp: new Date().toISOString(),
-            };
-            setSimulationMetrics({
-              cl,
-              cd,
-              liftToDragRatio: ld,
-              xfoilCl: cl,
-              xfoilCd: cd,
-              xfoilLd: ld,
-              xfoilStatus: xf.status,
-            });
-            sessionStorage.setItem(
-              "simulationResults",
-              JSON.stringify(resultData),
-            );
-          }
+            }),
+          );
         }
 
         // If we got field data, put it in the frame ref
@@ -556,92 +533,70 @@ export default function SimulatePage() {
     if (isCompleted && isSimulating) {
       setSimulationProgress(100);
       setIsSimulating(false);
+      
+      let finalDuration = 0;
+      const startTimeStr = sessionStorage.getItem("simulationStartTime");
+      if (startTimeStr) {
+        const startTime = parseFloat(startTimeStr);
+        finalDuration = (performance.now() - startTime) / 1000;
+        setComputationDuration(finalDuration);
+      }
+
+      setSimulationMetrics({
+        cl: xfoilData?.cl ?? 0,
+        cd: xfoilData?.cd ?? 0,
+        liftToDragRatio: xfoilData?.l_d ?? 0,
+        xfoilCl: xfoilData?.cl ?? null,
+        xfoilCd: xfoilData?.cd ?? null,
+        xfoilLd: xfoilData?.l_d ?? null,
+        xfoilStatus: xfoilData?.status ?? "not_run",
+      });
 
       setShowResults(true);
       setActiveSidebarTab("results");
       setIsSidebarOpen(true);
 
-      // Update URL with sessionId so the link can be shared / revisited
       if (sessionId) {
         const url = new URL(window.location.href);
         url.searchParams.set("sessionId", sessionId);
         window.history.replaceState({}, "", url.toString());
+
+        localStorage.setItem(
+          `sim_result_${sessionId}`,
+          JSON.stringify({
+            xfoilCl: xfoilData?.cl ?? null,
+            xfoilCd: xfoilData?.cd ?? null,
+            xfoilLd: xfoilData?.l_d ?? null,
+            xfoilStatus: xfoilData?.status ?? "not_run",
+            computationTime: finalDuration,
+          }),
+        );
+
+        sessionStorage.setItem(
+          "simulationResults",
+          JSON.stringify({
+            xfoilCl: xfoilData?.cl ?? null,
+            xfoilCd: xfoilData?.cd ?? null,
+            xfoilLd: xfoilData?.l_d ?? null,
+            xfoilStatus: xfoilData?.status ?? "not_run",
+            computationTime: finalDuration,
+            timestamp: new Date().toISOString(),
+          }),
+        );
       }
 
-      // Show modal after a short delay
-      setTimeout(() => {
-        setShowResultsModal(true);
-      }, 500);
+      if (xfoilData?.status === "converged") {
+        setTimeout(() => {
+          setShowResultsModal(true);
+        }, 500);
+      }
 
-      // Clear interval (kept for cleanup safety)
       if (simulationIntervalRef.current) {
         clearInterval(simulationIntervalRef.current);
         simulationIntervalRef.current = null;
       }
     }
-  }, [isCompleted, isSimulating, sessionId]);
-
-  // Persist XFoil metrics when the run completes and final XFoil data is available.
-  useEffect(() => {
-    if (!isCompleted || !xfoilData) return;
-    const cl = xfoilData.cl;
-    const cd = xfoilData.cd;
-    if (!isUsableXfoilPair(cl, cd)) return;
-
-    let durationSeconds = 0;
-    const startTimeStr = sessionStorage.getItem("simulationStartTime");
-    if (startTimeStr) {
-      const startTime = parseFloat(startTimeStr);
-      durationSeconds = (performance.now() - startTime) / 1000;
-      setComputationDuration(durationSeconds);
-    }
-
-    const lift = cl as number;
-    const drag = cd as number;
-    const ld =
-      xfoilData.l_d != null && Number.isFinite(xfoilData.l_d)
-        ? xfoilData.l_d
-        : drag !== 0
-          ? lift / drag
-          : 0;
-
-    setSimulationMetrics({
-      cl: lift,
-      cd: drag,
-      liftToDragRatio: ld,
-      xfoilCl: lift,
-      xfoilCd: drag,
-      xfoilLd: ld,
-      xfoilStatus: xfoilData.status ?? "not_run",
-    });
-
-    const resultData = {
-      xfoilCl: lift,
-      xfoilCd: drag,
-      xfoilLd: ld,
-      xfoilStatus: xfoilData.status ?? "not_run",
-      computationTime: durationSeconds,
-      timestamp: new Date().toISOString(),
-    };
-    sessionStorage.setItem(
-      "simulationResults",
-      JSON.stringify(resultData),
-    );
-
-    if (sessionId) {
-      localStorage.setItem(
-        `sim_result_${sessionId}`,
-        JSON.stringify(resultData),
-      );
-    }
-  }, [
-    isCompleted,
-    sessionId,
-    xfoilData?.cl,
-    xfoilData?.cd,
-    xfoilData?.l_d,
-    xfoilData?.status,
-  ]);
+  }, [isCompleted, isSimulating, sessionId, xfoilData]);
 
   const handleStopSimulation = () => {
     setIsSimulating(false);
@@ -1029,110 +984,40 @@ export default function SimulatePage() {
                       📊 Simulation Results
                     </h4>
 
-                    {/* Key Metrics */}
-                    <div className="space-y-2 text-xs font-medium text-cyan-800">
-                      <div className="flex justify-between">
-                        <span>
-                          XFoil Lift (C<sub>L</sub>):
-                        </span>
-                        <span className="font-black">
-                          {formatValue(simulationMetrics.xfoilCl ?? simulationMetrics.cl)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>
-                          XFoil Drag (C<sub>D</sub>):
-                        </span>
-                        <span className="font-black">
-                          {formatValue(simulationMetrics.xfoilCd ?? simulationMetrics.cd)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>XFoil L/D:</span>
-                        <span className="font-black">
-                          {formatValue(simulationMetrics.xfoilLd ?? simulationMetrics.liftToDragRatio)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Coefficient Graphs */}
-                    <div className="space-y-3 pt-2 border-t border-cyan-200">
-                      <h5 className="text-xs font-black text-cyan-900">
-                        Coefficient Analysis
-                      </h5>
-
-                      {/* Lift Coefficient Bar */}
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-bold text-cyan-700">
-                            C<sub>L</sub>
+                    {simulationMetrics.xfoilStatus === "converged" ? (
+                      <div className="space-y-2 text-xs font-medium text-cyan-800">
+                        <div className="flex justify-between">
+                          <span>
+                            XFoil Lift (C<sub>L</sub>):
                           </span>
-                          <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.xfoilCl ?? simulationMetrics.cl)}
+                          <span className="font-black">
+                            {formatValue(simulationMetrics.xfoilCl)}
                           </span>
                         </div>
-                        <div className="w-full bg-cyan-100 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full flex items-center justify-end pr-2"
-                            style={{
-                              width: `${Math.min((Math.abs(simulationMetrics.xfoilCl ?? simulationMetrics.cl) / 1.2) * 100, 100)}%`,
-                            }}
-                          >
-                            <span className="text-[10px] font-bold text-white">
-                              Lift
-                            </span>
-                          </div>
+                        <div className="flex justify-between">
+                          <span>
+                            XFoil Drag (C<sub>D</sub>):
+                          </span>
+                          <span className="font-black">
+                            {formatValue(simulationMetrics.xfoilCd)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>XFoil L/D:</span>
+                          <span className="font-black">
+                            {formatValue(simulationMetrics.xfoilLd)}
+                          </span>
                         </div>
                       </div>
-
-                      {/* Drag Coefficient Bar */}
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-bold text-cyan-700">
-                            C<sub>D</sub>
-                          </span>
-                          <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.xfoilCd ?? simulationMetrics.cd)}
-                          </span>
-                        </div>
-                        <div className="w-full bg-red-100 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-red-500 to-red-600 h-full rounded-full flex items-center justify-end pr-2"
-                            style={{
-                              width: `${Math.min(((simulationMetrics.xfoilCd ?? simulationMetrics.cd) / 0.1) * 100, 100)}%`,
-                            }}
-                          >
-                            <span className="text-[10px] font-bold text-white">
-                              Drag
-                            </span>
-                          </div>
-                        </div>
+                    ) : (
+                      <div className="py-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3">
+                        <p className="font-black mb-1">⚠ XFoil Did Not Converge</p>
+                        <p>
+                          No reliable aerodynamic values available for these
+                          conditions. Adjust Re, AoA or geometry and rerun.
+                        </p>
                       </div>
-
-                      {/* L/D Ratio Bar */}
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-bold text-cyan-700">
-                            L/D Ratio
-                          </span>
-                          <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.xfoilLd ?? simulationMetrics.liftToDragRatio)}
-                          </span>
-                        </div>
-                        <div className="w-full bg-green-100 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-green-500 to-green-600 h-full rounded-full flex items-center justify-end pr-2"
-                            style={{
-                              width: `${Math.min(((simulationMetrics.xfoilLd ?? simulationMetrics.liftToDragRatio) / 50) * 100, 100)}%`,
-                            }}
-                          >
-                            <span className="text-[10px] font-bold text-white">
-                              Efficiency
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Additional Metrics */}
                     <div className="space-y-2 pt-2 border-t border-cyan-200 text-xs font-medium text-cyan-800">
@@ -1156,13 +1041,15 @@ export default function SimulatePage() {
 
                   {/* Action Buttons */}
                   <div className="space-y-3">
-                    <button
-                      onClick={() => router.push("/turbine")}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
-                    >
-                      <Wind className="w-5 h-5" />
-                      View Turbine
-                    </button>
+                    {simulationMetrics.xfoilStatus === "converged" && (
+                      <button
+                        onClick={() => router.push("/turbine")}
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
+                      >
+                        <Wind className="w-5 h-5" />
+                        View Turbine
+                      </button>
+                    )}
 
                     <button
                       onClick={handleNavigateToOptimize}

@@ -16,11 +16,22 @@ function readFiniteNumber(v: unknown): number | null {
 export function isUsableXfoilPair(
   cl: number | null | undefined,
   cd: number | null | undefined,
+  ld: number | null | undefined = null,
 ): boolean {
   const a = cl != null && Number.isFinite(cl) ? cl : null;
   const b = cd != null && Number.isFinite(cd) ? cd : null;
+  const c = ld != null && Number.isFinite(ld) ? ld : null;
+
   if (a === null || b === null) return false;
-  return !(a === 0 && b === 0);
+
+  // Reject zero placeholders
+  if (a === 0 && b === 0) return false;
+
+  // Reject common backend error placeholders (like -1.0 or very negative L/D)
+  if (c !== null && c <= -0.99 && c >= -1.01) return false;
+  if (c !== null && c < -10) return false; // unreasonable drag-to-lift or failure
+
+  return true;
 }
 
 /** Session / HTTP payloads from the Python backend (`meta` on result). */
@@ -61,28 +72,15 @@ export function extractXfoilFromSessionMeta(
 export function extractOptXfoilFromCompleteMeta(
   meta: OptCompleteFrame["meta"],
 ): XfoilMetrics {
-  const cl =
-    readFiniteNumber(meta.final_xfoil_cl) ??
-    readFiniteNumber(meta.xfoil_cl) ??
-    null;
-  const cd =
-    readFiniteNumber(meta.final_xfoil_cd) ??
-    readFiniteNumber(meta.xfoil_cd) ??
-    null;
-  let l_d =
-    readFiniteNumber(meta.final_xfoil_l_d) ??
-    readFiniteNumber(meta.xfoil_l_d) ??
-    null;
+  const cl = readFiniteNumber(meta.final_cl) ?? null;
+  const cd = readFiniteNumber(meta.final_cd) ?? null;
+  let l_d = readFiniteNumber(meta.final_cl_cd) ?? null;
 
   if (l_d == null && cl != null && cd != null && cd !== 0) {
     l_d = cl / cd;
   }
 
-  const statusRaw = meta.final_xfoil_status ?? meta.xfoil_status;
-  const status =
-    typeof statusRaw === "string" && statusRaw.length > 0
-      ? statusRaw
-      : "not_run";
+  const status = isUsableXfoilPair(cl, cd, l_d) ? "converged" : "failed";
 
   return { cl, cd, l_d, status };
 }

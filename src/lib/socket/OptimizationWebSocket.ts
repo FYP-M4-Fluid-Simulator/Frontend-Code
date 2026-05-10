@@ -10,16 +10,12 @@ export interface OptIterationMeta {
   iteration: number;
   total_iterations: number;
   loss: number;
-  cl: number;
-  cd: number;
-  cl_cd: number;
+  cl: number | null; // null when XFoil did not converge for this iteration
+  cd: number | null; // null when XFoil did not converge for this iteration
+  cl_cd: number | null; // null when XFoil did not converge for this iteration
   lift_force: number;
   drag_force: number;
-  /** XFoil reference (when backend provides it) — preferred for display / turbine */
-  xfoil_cl?: number | null;
-  xfoil_cd?: number | null;
-  xfoil_l_d?: number | null;
-  xfoil_status?: string | null;
+  max_thickness: number;
 }
 
 export interface OptShape {
@@ -40,20 +36,12 @@ export interface OptCompleteFrame {
   type: "complete";
   meta: {
     total_iterations: number;
-    final_cl: number;
-    final_cd: number;
-    final_cl_cd: number;
+    final_cl: number | null;
+    final_cd: number | null;
+    final_cl_cd: number | null;
     final_drag: number;
     final_loss: number;
-    /** XFoil finals (optional; names may vary by backend — see extractOptXfoilMeta) */
-    final_xfoil_cl?: number | null;
-    final_xfoil_cd?: number | null;
-    final_xfoil_l_d?: number | null;
-    final_xfoil_status?: string | null;
-    xfoil_cl?: number | null;
-    xfoil_cd?: number | null;
-    xfoil_l_d?: number | null;
-    xfoil_status?: string | null;
+    final_max_thickness: number;
   };
   shape: OptShape;
   initial_shape: { cst_upper: number[]; cst_lower: number[] };
