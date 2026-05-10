@@ -114,6 +114,7 @@ export default function SimulatePage() {
     frameRef,
     isCompleted,
     setIsCompleted,
+    coefficients,
     xfoilData,
     closeConnection,
     sessionId,
@@ -583,10 +584,17 @@ export default function SimulatePage() {
 
   // Persist XFoil metrics when the run completes and final XFoil data is available.
   useEffect(() => {
-    if (!isCompleted || !xfoilData) return;
-    const cl = xfoilData.cl;
-    const cd = xfoilData.cd;
-    if (!isUsableXfoilPair(cl, cd)) return;
+    if (!isCompleted) return;
+    const cl = xfoilData?.cl;
+    const cd = xfoilData?.cd;
+    const useXfoil = isUsableXfoilPair(cl, cd);
+    const useFallback =
+      !useXfoil &&
+      typeof coefficients?.cl === "number" &&
+      Number.isFinite(coefficients.cl) &&
+      typeof coefficients?.cd === "number" &&
+      Number.isFinite(coefficients.cd);
+    if (!useXfoil && !useFallback) return;
 
     let durationSeconds = 0;
     const startTimeStr = sessionStorage.getItem("simulationStartTime");
@@ -596,14 +604,19 @@ export default function SimulatePage() {
       setComputationDuration(durationSeconds);
     }
 
-    const lift = cl as number;
-    const drag = cd as number;
+    const lift = useXfoil ? (cl as number) : (coefficients?.cl as number);
+    const drag = useXfoil ? (cd as number) : (coefficients?.cd as number);
     const ld =
-      xfoilData.l_d != null && Number.isFinite(xfoilData.l_d)
+      useXfoil && xfoilData?.l_d != null && Number.isFinite(xfoilData.l_d)
         ? xfoilData.l_d
-        : drag !== 0
-          ? lift / drag
-          : 0;
+        : !useXfoil &&
+            coefficients?.l_d != null &&
+            Number.isFinite(coefficients.l_d)
+          ? coefficients.l_d
+          : drag !== 0
+            ? lift / drag
+            : 0;
+    const status = xfoilData?.status ?? "not_run";
 
     setSimulationMetrics({
       cl: lift,
@@ -612,14 +625,14 @@ export default function SimulatePage() {
       xfoilCl: lift,
       xfoilCd: drag,
       xfoilLd: ld,
-      xfoilStatus: xfoilData.status ?? "not_run",
+      xfoilStatus: status,
     });
 
     const resultData = {
       xfoilCl: lift,
       xfoilCd: drag,
       xfoilLd: ld,
-      xfoilStatus: xfoilData.status ?? "not_run",
+      xfoilStatus: status,
       computationTime: durationSeconds,
       timestamp: new Date().toISOString(),
     };
@@ -637,6 +650,9 @@ export default function SimulatePage() {
   }, [
     isCompleted,
     sessionId,
+    coefficients?.cl,
+    coefficients?.cd,
+    coefficients?.l_d,
     xfoilData?.cl,
     xfoilData?.cd,
     xfoilData?.l_d,

@@ -464,7 +464,12 @@ export default function OptimizePage() {
     } else {
       const dlCl = typeof currentMeta.cl === "number" ? currentMeta.cl : 0;
       const dlCd = typeof currentMeta.cd === "number" ? currentMeta.cd : 0;
-      const dlLd = typeof currentMeta.l_d === "number" ? currentMeta.l_d : (dlCd !== 0 ? dlCl / dlCd : 0);
+      const dlLd =
+        typeof currentMeta.cl_cd === "number"
+          ? currentMeta.cl_cd
+          : dlCd !== 0
+            ? dlCl / dlCd
+            : 0;
       setBestLiftCoeff(dlCl);
       setBestDragCoeff(dlCd);
       setBestLDRatio(dlLd);
