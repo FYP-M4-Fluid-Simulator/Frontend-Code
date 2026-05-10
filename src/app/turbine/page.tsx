@@ -286,7 +286,7 @@ export default function TurbinePage() {
     if (!Number.isFinite(value)) return "—";
     if (value === 0) return "0.0000";
     if (Math.abs(value) < 0.001) {
-      return value.toExponential(2).replace("e", "e");
+      return value.toExponential(2);
     }
     return value.toFixed(4);
   };
