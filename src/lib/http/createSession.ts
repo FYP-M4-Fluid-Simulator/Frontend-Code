@@ -65,7 +65,7 @@ export async function createSession(config: SessionConfig) {
       cst_upper: config.upperCoefficients,
       cst_lower: config.lowerCoefficients,
       stream_every: 1,
-      stream_fps: 30.0,
+      stream_fps: 0,
     }),
   });
 
