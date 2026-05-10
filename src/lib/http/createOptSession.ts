@@ -10,6 +10,8 @@ export interface OptSessionConfig {
   meshDensity?: "coarse" | "medium" | "fine" | "ultra";
   chordLength?: number;
   numSimSteps?: number;
+  timeStepSize?: number;
+  simulationDuration?: number;
   minThickness?: number;
   maxThickness?: number;
   inflow_velocity?: number;
@@ -39,6 +41,11 @@ export async function createOptSession(config: OptSessionConfig) {
 
   const token = await auth.currentUser?.getIdToken();
 
+  // Logic: dt and num_sim_steps (derived from simulationDuration if provided)
+  const dt = config.timeStepSize || 0.0002;
+  const duration = config.simulationDuration || 0.2; // Default 0.2s matching backend 1000 steps at 0.0002dt
+  const num_sim_steps = config.numSimSteps || Math.floor(duration / dt);
+
   const res = await fetch(`${PYTHON_BACKEND_URL}/optimize/sessions`, {
     method: "POST",
     headers: {
@@ -52,7 +59,8 @@ export async function createOptSession(config: OptSessionConfig) {
       cst_lower: config.lowerCoefficients,
       num_iterations: config.numIterations ?? 30,
       learning_rate: config.learningRate ?? 0.005,
-      num_sim_steps: config.numSimSteps ?? 80,
+      dt: dt,
+      num_sim_steps: num_sim_steps,
       min_thickness: config.minThickness ?? 0.06,
       max_thickness: config.maxThickness ?? 0.25,
       inflow_velocity: config.inflow_velocity ?? 1.0,
