@@ -66,6 +66,8 @@ export default function OptimizePage() {
   const [isExperimentSaved, setIsExperimentSaved] = useState(false);
   const [isSavingExperiment, setIsSavingExperiment] = useState(false);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  // True once at least one iteration has an XFoil-verified L/D
+  const [xfoilEverConverged, setXfoilEverConverged] = useState(false);
   const [optimizationMetrics, setOptimizationMetrics] = useState({
     cl: 1.2345,
     cd: 0.0156,
@@ -90,9 +92,9 @@ export default function OptimizePage() {
   const [chordLength, setChordLength] = useState(1.0);
   const [showControlPoints, setShowControlPoints] = useState(false);
 
-  // L/D ratio tracking for live chart
+  // L/D ratio tracking for live chart (XFoil-verified points only)
   const [ldRatioHistory, setLdRatioHistory] = useState<
-    Array<{ iteration: number; ldRatio: number }>
+    Array<{ iteration: number; ldRatio: number | null }>
   >([]);
 
   // Optimization parameters
@@ -312,16 +314,21 @@ export default function OptimizePage() {
     setOptimizationIteration(currentMeta.iteration);
     setMaxIterations(currentMeta.total_iterations);
 
-    // Append to L/D chart
-    setLdRatioHistory((prev) => [
-      ...prev,
-      { iteration: currentMeta.iteration, ldRatio: currentMeta.cl_cd },
-    ]);
+    // Append to L/D chart — only record XFoil-verified points (cl_cd is null when XFoil failed)
+    if (currentMeta.cl_cd !== null) {
+      setXfoilEverConverged(true);
+      setLdRatioHistory((prev) => [
+        ...prev,
+        { iteration: currentMeta.iteration, ldRatio: currentMeta.cl_cd as number },
+      ]);
+    }
 
-    // Keep running best values updated
-    setBestLiftCoeff(currentMeta.cl);
-    setBestDragCoeff(currentMeta.cd);
-    setBestLDRatio(currentMeta.cl_cd);
+    // Keep running best values updated (only update display when XFoil converged)
+    if (currentMeta.cl_cd !== null) {
+      setBestLiftCoeff(currentMeta.cl as number);
+      setBestDragCoeff(currentMeta.cd as number);
+      setBestLDRatio(currentMeta.cl_cd);
+    }
     setOptimizationLoss(currentMeta.loss);
   }, [currentMeta, currentShape]);
 
@@ -389,7 +396,8 @@ export default function OptimizePage() {
       );
     }
 
-    setTimeout(() => setShowResultsModal(true), 500);
+    // Only show modal if XFoil converged for at least one iteration
+    setTimeout(() => setShowResultsModal(xfoilEverConverged), 500);
   }, [optComplete, completedFrame]);
 
   // Surface errors
@@ -538,6 +546,7 @@ export default function OptimizePage() {
     setShowResultsModal(false);
     setIsExperimentSaved(false);
     setLdRatioHistory([]);
+    setXfoilEverConverged(false);
     setIsSidebarOpen(false);
 
     // Reset metrics
@@ -925,9 +934,9 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
-                          min={10}
-                          max={200}
-                          step={10}
+                          min={5}
+                          max={100}
+                          step={5}
                           value={numIterations}
                           onChange={(e) =>
                             setNumIterations(Number(e.target.value))
@@ -1117,45 +1126,67 @@ export default function OptimizePage() {
               {/* Results Tab Content */}
               {activeSidebarTab === "results" && showResults && (
                 <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                  <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
-                    <p className="text-sm font-black text-green-800">
-                      ✓ Optimization Complete!
-                    </p>
-                    <p className="text-xs text-green-700 mt-1">
-                      Found optimal airfoil configuration
-                    </p>
-                  </div>
+                  {xfoilEverConverged ? (
+                    <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                      <p className="text-sm font-black text-green-800">
+                        ✓ Optimization Complete!
+                      </p>
+                      <p className="text-xs text-green-700 mt-1">
+                        Found optimal airfoil configuration
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-50 border-2 border-amber-400 rounded-xl p-4">
+                      <p className="text-sm font-black text-amber-800">
+                        ⚠ XFoil Did Not Converge
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        XFoil could not evaluate this airfoil at the given
+                        Reynolds number and angle of attack. No reliable
+                        aerodynamic results are available. Try adjusting the
+                        geometry, Re, or AoA and rerun.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-xl border-2 border-orange-200 p-5 space-y-3">
                     <h4 className="text-sm font-black text-orange-900">
                       🏆 Optimization Results
                     </h4>
                     <div className="space-y-2 text-xs font-medium text-orange-800">
-                      <div className="flex justify-between">
-                        <span>
-                          Best C<sub>L</sub>:
-                        </span>
-                        <span className="font-black">
-                          {formatValue(optimizationMetrics.cl)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>
-                          Best C<sub>D</sub>:
-                        </span>
-                        <span className="font-black">
-                          {formatValue(optimizationMetrics.cd)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Best L/D Ratio:</span>
-                        <span className="font-black text-green-700">
-                          {optimizationMetrics.liftToDragRatio?.toFixed(2) ||
-                            (
-                              optimizationMetrics.cl / optimizationMetrics.cd
-                            ).toFixed(2)}
-                        </span>
-                      </div>
+                      {xfoilEverConverged ? (
+                        <>
+                          <div className="flex justify-between">
+                            <span>
+                              Best C<sub>L</sub>:
+                            </span>
+                            <span className="font-black">
+                              {formatValue(optimizationMetrics.cl)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>
+                              Best C<sub>D</sub>:
+                            </span>
+                            <span className="font-black">
+                              {formatValue(optimizationMetrics.cd)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Best L/D Ratio:</span>
+                            <span className="font-black text-green-700">
+                              {optimizationMetrics.liftToDragRatio?.toFixed(2) ||
+                                (
+                                  optimizationMetrics.cl / optimizationMetrics.cd
+                                ).toFixed(2)}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-xs text-orange-700 italic">
+                          No XFoil-verified aerodynamic values available.
+                        </p>
+                      )}
                       <div className="flex justify-between">
                         <span>Final Loss:</span>
                         <span className="font-black">
@@ -1195,20 +1226,23 @@ export default function OptimizePage() {
                               stroke="#f97316"
                               strokeWidth={2}
                               dot={{ fill: "#f97316", r: 2 }}
+                              connectNulls={false}
                             />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
                     )}
 
-                    {/* View Full Results Button */}
-                    <button
-                      onClick={() => setShowResultsModal(true)}
-                      className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all shadow-md text-sm"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      View Full Results
-                    </button>
+                    {/* View Full Results Button — only when XFoil converged */}
+                    {xfoilEverConverged && (
+                      <button
+                        onClick={() => setShowResultsModal(true)}
+                        className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all shadow-md text-sm"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        View Full Results
+                      </button>
+                    )}
                   </div>
 
                   {/* Action Buttons */}
@@ -1360,30 +1394,43 @@ export default function OptimizePage() {
                         {formatValue(optimizationLoss)}
                       </p>
                     </div>
-                    <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                      <p className="text-[10px] font-black text-blue-800 uppercase tracking-tighter">
-                        L/D Ratio
-                      </p>
-                      <p className="text-sm font-bold text-gray-900 text-green-600">
-                        {bestLDRatio.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
-                        C<sub>L</sub>
-                      </p>
-                      <p className="text-sm font-bold text-gray-900">
-                        {formatValue(bestLiftCoeff)}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
-                        C<sub>D</sub>
-                      </p>
-                      <p className="text-sm font-bold text-gray-900">
-                        {formatValue(bestDragCoeff)}
-                      </p>
-                    </div>
+                    {xfoilEverConverged ? (
+                      <>
+                        <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                          <p className="text-[10px] font-black text-blue-800 uppercase tracking-tighter">
+                            L/D Ratio
+                          </p>
+                          <p className="text-sm font-bold text-green-600">
+                            {bestLDRatio.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
+                            C<sub>L</sub>
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {formatValue(bestLiftCoeff)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
+                            C<sub>D</sub>
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {formatValue(bestDragCoeff)}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-amber-50 p-2 rounded-lg border border-amber-200 col-span-1">
+                        <p className="text-[10px] font-black text-amber-700 uppercase tracking-tighter">
+                          XFoil
+                        </p>
+                        <p className="text-xs text-amber-600">
+                          Awaiting convergence…
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

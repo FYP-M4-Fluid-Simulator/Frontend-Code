@@ -41,10 +41,10 @@ interface ResultsModalProps {
   };
   convergenceData?: Array<{
     iteration: number;
-    cl: number;
-    cd: number;
+    cl: number | null; // null when XFoil did not converge
+    cd: number | null; // null when XFoil did not converge
     loss?: number;
-    ldRatio?: number;
+    ldRatio?: number | null; // null when XFoil did not converge
   }>;
   onSaveExperiment?: (name: string) => void;
   onDownloadMetrics?: (format: "csv" | "json") => void;
@@ -172,7 +172,9 @@ export default function ResultsModal({
                 Lift Coefficient (C<sub>L</sub>)
               </div>
               <div className="text-green-100 text-2xl font-bold">
-                {formatValue(metrics.cl)}
+                {type === "simulation"
+                  ? (metrics.xfoilCl != null ? metrics.xfoilCl.toFixed(4) : "—")
+                  : formatValue(metrics.cl)}
               </div>
             </div>
 
@@ -181,18 +183,20 @@ export default function ResultsModal({
                 Drag Coefficient (C<sub>D</sub>)
               </div>
               <div className="text-orange-100 text-2xl font-bold">
-                {formatValue(metrics.cd)}
+                {type === "simulation"
+                  ? (metrics.xfoilCd != null ? metrics.xfoilCd.toFixed(5) : "—")
+                  : formatValue(metrics.cd)}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 rounded-xl p-4">
               <div className="text-blue-300 text-xs font-semibold mb-2">
-                {type === "optimization" ? "L/D Ratio" : "Lift-to-Drag"}
+                {type === "optimization" ? "L/D Ratio" : "Lift-to-Drag (XFoil)"}
               </div>
               <div className="text-blue-100 text-2xl font-bold">
-                {formatValue(
-                  metrics.liftToDragRatio || metrics.cl / metrics.cd,
-                )}
+                {type === "simulation"
+                  ? (metrics.xfoilLd != null ? metrics.xfoilLd.toFixed(2) : "—")
+                  : formatValue(metrics.liftToDragRatio || metrics.cl / metrics.cd)}
               </div>
             </div>
 
@@ -234,7 +238,6 @@ export default function ResultsModal({
 
               {metrics.xfoilStatus === "converged" ? (
                 <div className="grid grid-cols-3 gap-3">
-                  {/* Cl comparison */}
                   <div className="bg-black/20 rounded-lg p-3 text-center">
                     <div className="text-indigo-300/70 text-xs font-semibold mb-1">
                       C<sub>L</sub>
@@ -242,11 +245,7 @@ export default function ResultsModal({
                     <div className="text-white text-xl font-bold">
                       {metrics.xfoilCl?.toFixed(4) ?? "—"}
                     </div>
-                    <div className="text-indigo-300/50 text-xs mt-1">
-                      RANS: {metrics.cl.toFixed(4)}
-                    </div>
                   </div>
-                  {/* Cd comparison */}
                   <div className="bg-black/20 rounded-lg p-3 text-center">
                     <div className="text-indigo-300/70 text-xs font-semibold mb-1">
                       C<sub>D</sub>
@@ -254,11 +253,7 @@ export default function ResultsModal({
                     <div className="text-white text-xl font-bold">
                       {metrics.xfoilCd?.toFixed(5) ?? "—"}
                     </div>
-                    <div className="text-indigo-300/50 text-xs mt-1">
-                      RANS: {metrics.cd.toFixed(5)}
-                    </div>
                   </div>
-                  {/* L/D comparison */}
                   <div className="bg-black/20 rounded-lg p-3 text-center">
                     <div className="text-indigo-300/70 text-xs font-semibold mb-1">
                       L/D
@@ -266,31 +261,22 @@ export default function ResultsModal({
                     <div className="text-white text-xl font-bold">
                       {metrics.xfoilLd?.toFixed(2) ?? "—"}
                     </div>
-                    <div className="text-indigo-300/50 text-xs mt-1">
-                      RANS: {
-                        metrics.liftToDragRatio != null
-                          ? metrics.liftToDragRatio.toFixed(2)
-                          : (metrics.cd !== 0
-                              ? (metrics.cl / metrics.cd).toFixed(2)
-                              : "—")
-                      }
-                    </div>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-3 text-indigo-300/50 text-sm">
                   {metrics.xfoilStatus === "not_run" || !metrics.xfoilStatus
                     ? "XFoil will run at end of simulation."
-                    : "XFoil did not produce a result for this condition. RANS values above remain the primary reference."}
+                    : "XFoil did not produce a result for this condition. No reliable aerodynamic coefficients available."}
                 </div>
               )}
             </div>
           )}
 
-          {/* Aerodynamic Coefficients Chart */}
+          {/* L/D Ratio Evolution — primary chart, full width */}
           <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">
             <h3 className="text-xl font-bold text-blue-200 mb-4">
-              Aerodynamic Coefficients Convergence
+              L/D Ratio Evolution (XFoil Verified)
             </h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
@@ -305,18 +291,7 @@ export default function ResultsModal({
                     fill: "#94a3b8",
                   }}
                 />
-                <YAxis
-                  stroke="#94a3b8"
-                  label={{
-                    value: "Coefficient Value",
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: 0,
-                    fill: "#94a3b8",
-                  }}
-                  tickFormatter={(value) => formatScientificTick(Number(value))}
-                  tick={{ fontSize: 11 }}
-                />
+                <YAxis stroke="#94a3b8" />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1e293b",
@@ -325,28 +300,20 @@ export default function ResultsModal({
                   }}
                   labelStyle={{ color: "#93c5fd" }}
                 />
-                <Legend />
                 <Line
                   type="monotone"
-                  dataKey="cl"
+                  dataKey="ldRatio"
                   stroke="#10b981"
                   strokeWidth={2}
-                  name="C_L"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="cd"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  name="C_D"
-                  dot={false}
+                  name="L/D Ratio (XFoil)"
+                  dot={{ r: 3, fill: "#10b981" }}
+                  connectNulls={false}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Convergence Charts */}
+          {/* Secondary Charts */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Loss Convergence (Optimization Only) */}
             {type === "optimization" && (
@@ -379,32 +346,57 @@ export default function ResultsModal({
               </div>
             )}
 
-            {/* L/D Ratio Evolution (Both) */}
+            {/* Aerodynamic Coefficients (XFoil verified points only) */}
             <div
-              className={`bg-slate-800/50 border border-blue-500/30 rounded-xl p-6 ${type !== "optimization" ? "md:col-span-2" : ""}`}
+              className={`bg-slate-800/50 border border-blue-500/30 rounded-xl p-6 ${
+                type !== "optimization" ? "md:col-span-2" : ""
+              }`}
             >
               <h3 className="text-xl font-bold text-blue-200 mb-4">
-                L/D Ratio Evolution
+                Cₐ &amp; Cᴅ Evolution (XFoil Verified)
               </h3>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                   <XAxis dataKey="iteration" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
+                  <YAxis
+                    stroke="#94a3b8"
+                    label={{
+                      value: "Coefficient Value",
+                      angle: -90,
+                      position: "insideLeft",
+                      offset: 0,
+                      fill: "#94a3b8",
+                    }}
+                    tickFormatter={(value) => formatScientificTick(Number(value))}
+                    tick={{ fontSize: 11 }}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#1e293b",
                       border: "1px solid #3b82f6",
                       borderRadius: "8px",
                     }}
+                    labelStyle={{ color: "#93c5fd" }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="cl"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    name="C_L"
+                    dot={{ r: 2, fill: "#10b981" }}
+                    connectNulls={false}
                   />
                   <Line
                     type="monotone"
-                    dataKey="ldRatio"
-                    stroke="#10b981"
+                    dataKey="cd"
+                    stroke="#f97316"
                     strokeWidth={2}
-                    name="L/D Ratio"
-                    dot={false}
+                    name="C_D"
+                    dot={{ r: 2, fill: "#f97316" }}
+                    connectNulls={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -480,42 +472,50 @@ export default function ResultsModal({
               )}
 
               {onDownloadMetrics && (
-                <div className="relative group flex flex-col gap-2 p-4 bg-slate-800/80 border border-blue-500/30 rounded-xl">
+                <div className="flex flex-col gap-2 p-4 bg-slate-800/80 border border-blue-500/30 rounded-xl">
                   <label className="text-xs font-semibold text-orange-200 uppercase tracking-wider">
                     Export Results
+                    {type === "simulation" && metrics.xfoilStatus !== "converged" && (
+                      <span className="ml-2 text-gray-500 normal-case font-normal">(XFoil required)</span>
+                    )}
                   </label>
-                  <button
-                    onClick={() => onDownloadMetrics("csv")}
-                    className="w-full flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-lg font-semibold shadow-lg hover:shadow-orange-500/30 transition-all text-sm"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download Metrics
-                  </button>
+                  <div className="relative group">
+                    <button
+                      onClick={() => onDownloadMetrics("csv")}
+                      disabled={type === "simulation" && metrics.xfoilStatus !== "converged"}
+                      className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-lg hover:shadow-orange-500/30 transition-all text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Metrics
+                    </button>
 
-                  {/* Dropdown options */}
-                  <div className="absolute bottom-full left-0 right-0 mb-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20">
-                    <div className="bg-slate-900 rounded-lg shadow-xl border border-blue-500/50 overflow-hidden mx-4">
-                      <button
-                        onClick={() => {
-                          onDownloadMetrics("csv");
-                          onClose();
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
-                      >
-                        <FileText className="w-3 h-3" />
-                        CSV Format
-                      </button>
-                      <button
-                        onClick={() => {
-                          onDownloadMetrics("json");
-                          onClose();
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
-                      >
-                        <BarChart3 className="w-3 h-3" />
-                        JSON Format
-                      </button>
-                    </div>
+                    {/* Dropdown options — only when enabled */}
+                    {!(type === "simulation" && metrics.xfoilStatus !== "converged") && (
+                      <div className="absolute top-full left-0 right-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20">
+                        <div className="bg-slate-900 rounded-lg shadow-xl border border-blue-500/50 overflow-hidden">
+                          <button
+                            onClick={() => {
+                              onDownloadMetrics("csv");
+                              onClose();
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
+                          >
+                            <FileText className="w-3 h-3" />
+                            CSV Format
+                          </button>
+                          <button
+                            onClick={() => {
+                              onDownloadMetrics("json");
+                              onClose();
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-600/20 text-white text-sm transition-colors"
+                          >
+                            <BarChart3 className="w-3 h-3" />
+                            JSON Format
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

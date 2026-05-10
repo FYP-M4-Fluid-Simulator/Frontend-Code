@@ -10,9 +10,9 @@ export interface OptIterationMeta {
   iteration: number;
   total_iterations: number;
   loss: number;
-  cl: number;
-  cd: number;
-  cl_cd: number;
+  cl: number | null; // null when XFoil did not converge for this iteration
+  cd: number | null; // null when XFoil did not converge for this iteration
+  cl_cd: number | null; // null when XFoil did not converge for this iteration
   lift_force: number;
   drag_force: number;
 }

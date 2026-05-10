@@ -4,12 +4,6 @@ import { createSession, SessionConfig } from "../http/createSession";
 import { WS_BACKEND_URL } from "@/config";
 import { auth } from "../firebase/config";
 
-export interface CoefficientData {
-  cl: number;
-  cd: number;
-  l_d: number;
-}
-
 export interface XFoilData {
   cl: number | null;
   cd: number | null;
@@ -22,7 +16,6 @@ export function useCFD(config?: SessionConfig) {
   const [isConnected, setIsConnected] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [coefficients, setCoefficients] = useState<CoefficientData | null>(null);
   const [xfoilData, setXfoilData] = useState<XFoilData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [frameStep, setFrameStep] = useState(0);
@@ -108,15 +101,6 @@ export function useCFD(config?: SessionConfig) {
               // so we track it from config if available.
             }
 
-            // Extract coefficients from meta if available
-            if (data.meta && typeof data.meta.cl !== 'undefined') {
-              setCoefficients({
-                cl: data.meta.cl,
-                cd: data.meta.cd,
-                l_d: data.meta.l_d,
-              });
-            }
-
             // Capture XFoil validation data from the final_results message
             if (data.type === 'final_results' && data.meta) {
               setXfoilData({
@@ -192,5 +176,5 @@ export function useCFD(config?: SessionConfig) {
     }
   };
 
-  return { frameRef, isConnected, isCompleted, setIsCompleted, error, coefficients, xfoilData, closeConnection, sessionId, frameStep, totalSteps, setTotalSteps };
+  return { frameRef, isConnected, isCompleted, setIsCompleted, error, xfoilData, closeConnection, sessionId, frameStep, totalSteps, setTotalSteps };
 }
