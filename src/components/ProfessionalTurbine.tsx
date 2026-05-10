@@ -6,11 +6,16 @@ import { Maximize2, Minimize2 } from "lucide-react";
 interface ProfessionalTurbineProps {
   liftToDragRatio: number;
   powerKilowatts?: number | null;
+  rpm?: number | null;
+  /** 0.5 = small, 1.0 = medium (default), 1.6 = large */
+  scaleFactor?: number;
 }
 
 export function ProfessionalTurbine({
   liftToDragRatio,
   powerKilowatts = null,
+  rpm = null,
+  scaleFactor = 1.0,
 }: ProfessionalTurbineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
@@ -35,46 +40,73 @@ export function ProfessionalTurbine({
     updateCanvasSize();
     window.addEventListener("resize", updateCanvasSize);
 
-    const width = canvas.width;
-    const height = canvas.height;
-    // Drive rotor speed from power output with a visible but realistic curve.
-    const safePowerKw = Math.max(0, powerKilowatts ?? 0);
-    const normalizedPower = Math.min(1, Math.log10(safePowerKw + 1) / 4);
-    const idleSpeed = 0.004;
-    const maxSpeed = 0.024;
-    const rotationSpeed = idleSpeed + normalizedPower * (maxSpeed - idleSpeed);
+    // Drive rotor speed from rpm if available, else fallback to power output.
+    let rotationSpeed = 0.004; // default idle speed
+    if (rpm !== null && rpm > 0) {
+      // Real RPM to radians per frame (assuming ~60fps)
+      // rpm * (2 * PI) / (60s * 60fps) = rpm * PI / 1800
+      let targetSpeed = (rpm * Math.PI) / 1800;
+      
+      // Scale down significantly for visual comfort (so it doesn't spin wildly fast)
+      targetSpeed = targetSpeed * 0.1;
+      
+      // Cap for visual clarity
+      targetSpeed = Math.min(targetSpeed, 0.06);
+      
+      // Ensure it spins at least at idle speed if it's supposed to be running
+      rotationSpeed = Math.max(targetSpeed, 0.004);
+    } else {
+      const safePowerKw = Math.max(0, powerKilowatts ?? 0);
+      const normalizedPower = Math.min(1, Math.log10(safePowerKw + 1) / 4);
+      const idleSpeed = 0.004;
+      const maxSpeed = 0.024;
+      rotationSpeed = idleSpeed + normalizedPower * (maxSpeed - idleSpeed);
+    }
 
     const drawScene = () => {
+      if (!canvas || !ctx) return;
+
+      const w = canvas.width;
+      const h = canvas.height;
+
       // Professional dark background like CFD software
-      const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, h);
       bgGradient.addColorStop(0, "#0a0e1a");
       bgGradient.addColorStop(1, "#151b2e");
       ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, w, h);
 
       // Draw subtle grid
       ctx.strokeStyle = "rgba(100, 150, 200, 0.1)";
       ctx.lineWidth = 1;
 
-      for (let x = 0; x < width; x += 50) {
+      for (let x = 0; x < w; x += 50) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+        ctx.lineTo(x, h);
         ctx.stroke();
       }
 
-      for (let y = 0; y < height; y += 50) {
+      for (let y = 0; y < h; y += 50) {
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
+        ctx.lineTo(w, y);
         ctx.stroke();
       }
 
-      // Turbine specifications
-      const centerX = width / 2;
-      const centerY = height * 0.65; // Moved down from 0.5
-      const hubRadius = Math.min(width, height) * 0.03; // Reduced from 0.04
-      const bladeLength = Math.min(width, height) * 0.3; // Reduced from 0.4 to prevent clipping
+      // ── Turbine specifications — all driven by scaleFactor ──────────────────
+      const baseBladeLength = Math.min(w, h) * 0.3;
+      const bladeLength = baseBladeLength * scaleFactor;
+      const hubRadius = Math.min(w, h) * 0.03 * scaleFactor;
+      // Tower height = 1.05× blade length, clamped so it always fits
+      const towerHeight = Math.max(160, Math.min(bladeLength * 1.05, h * 0.55));
+
+      // Center X is always mid-canvas.
+      const centerX = w / 2;
+      // Center Y is chosen so the rotor disk (hub ± bladeLength) stays on screen
+      const minCenterY = towerHeight + bladeLength + 20;
+      const maxCenterY = h - 60;
+      const centerY = Math.min(maxCenterY, Math.max(minCenterY, h * 0.72));
 
       // Draw velocity field streamlines (professional CFD style)
       const time = Date.now() / 1000;
@@ -85,7 +117,7 @@ export function ProfessionalTurbine({
         const yOffset = -200 + i * 40;
         ctx.beginPath();
 
-        for (let x = 0; x < width; x += 5) {
+        for (let x = 0; x < w; x += 5) {
           const distFromTurbine = Math.abs(x - centerX);
           const distFactor = Math.max(0, 1 - distFromTurbine / 300);
           const wave = Math.sin(x * 0.02 + time + i * 0.5) * 5 * distFactor;
@@ -134,6 +166,10 @@ export function ProfessionalTurbine({
 
       ctx.restore();
 
+      // Hub center position
+      const hubX = centerX;
+      const hubY = centerY - towerHeight;
+
       // Draw tower with technical appearance
       ctx.strokeStyle = "#4a5568";
       ctx.lineWidth = 2;
@@ -142,8 +178,8 @@ export function ProfessionalTurbine({
       // Tower structure
       ctx.beginPath();
       ctx.moveTo(centerX - 12, centerY + 50);
-      ctx.lineTo(centerX - 8, centerY - 280);
-      ctx.lineTo(centerX + 8, centerY - 280);
+      ctx.lineTo(centerX - 8, centerY - towerHeight);
+      ctx.lineTo(centerX + 8, centerY - towerHeight);
       ctx.lineTo(centerX + 12, centerY + 50);
       ctx.closePath();
       ctx.fill();
@@ -151,7 +187,7 @@ export function ProfessionalTurbine({
 
       // Tower panels
       for (let i = 0; i < 5; i++) {
-        const y = centerY + 50 - (i * 280) / 5;
+        const y = centerY + 50 - (i * towerHeight) / 5;
         ctx.strokeStyle = "#4a5568";
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -159,10 +195,6 @@ export function ProfessionalTurbine({
         ctx.lineTo(centerX + 12 - i * 0.8, y);
         ctx.stroke();
       }
-
-      // Hub center position
-      const hubX = centerX;
-      const hubY = centerY - 280;
 
       // Draw nacelle (technical design)
       ctx.fillStyle = "#374151";
@@ -292,8 +324,8 @@ export function ProfessionalTurbine({
 
       // Velocity vectors
       const vectorSpacing = 80;
-      for (let y = 100; y < height - 100; y += vectorSpacing) {
-        for (let x = 50; x < width - 50; x += vectorSpacing) {
+      for (let y = 100; y < h - 100; y += vectorSpacing) {
+        for (let x = 50; x < w - 50; x += vectorSpacing) {
           const distFromTurbine = Math.sqrt(
             Math.pow(x - centerX, 2) + Math.pow(y - hubY, 2),
           );
@@ -368,7 +400,7 @@ export function ProfessionalTurbine({
       ctx.moveTo(centerX + 30, hubY);
       ctx.lineTo(centerX + 30, centerY + 50);
       ctx.stroke();
-      ctx.fillText(`H = ${280}px`, centerX + 35, hubY + 280 / 2);
+      ctx.fillText(`H = ${towerHeight.toFixed(0)}px`, centerX + 35, hubY + towerHeight / 2);
 
       // Performance data overlay with enhanced metrics
       // ctx.fillStyle = "rgba(20, 30, 50, 0.92)";
@@ -463,7 +495,7 @@ export function ProfessionalTurbine({
       }
       window.removeEventListener("resize", updateCanvasSize);
     };
-  }, [liftToDragRatio, powerKilowatts]);
+  }, [liftToDragRatio, powerKilowatts, rpm, scaleFactor]);
 
   return (
     <div

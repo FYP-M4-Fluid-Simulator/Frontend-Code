@@ -49,6 +49,13 @@ import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
 import { PYTHON_BACKEND_URL } from "@/config";
+import {
+  displayMetricsFromXfoil,
+  extractOptXfoilFromCompleteMeta,
+  extractOptXfoilFromIterationMeta,
+  extractXfoilFromSessionMeta,
+  isUsableXfoilPair,
+} from "../../lib/xfoilMetrics";
 
 export default function OptimizePage() {
   const router = useRouter();
@@ -67,10 +74,14 @@ export default function OptimizePage() {
   const [isSavingExperiment, setIsSavingExperiment] = useState(false);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [optimizationMetrics, setOptimizationMetrics] = useState({
-    cl: 1.2345,
-    cd: 0.0156,
-    liftToDragRatio: 79.2,
-    loss: 0.000456,
+    cl: 0,
+    cd: 0,
+    liftToDragRatio: 0,
+    loss: 0,
+    xfoilCl: null as number | null,
+    xfoilCd: null as number | null,
+    xfoilLd: null as number | null,
+    xfoilStatus: "not_run" as string,
   });
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
@@ -183,24 +194,87 @@ export default function OptimizePage() {
     const cachedRaw = localStorage.getItem(`opt_result_${urlSessionId}`);
     if (cachedRaw) {
       try {
-        const cached = JSON.parse(cachedRaw);
-        const finalMetrics = {
-          cl: cached.cl ?? 0,
-          cd: cached.cd ?? 0,
-          liftToDragRatio: cached.liftToDragRatio ?? 0,
-          loss: cached.loss ?? 0,
-        };
-        setOptimizationMetrics(finalMetrics);
-        setBestLiftCoeff(cached.cl ?? 0);
-        setBestDragCoeff(cached.cd ?? 0);
-        setBestLDRatio(cached.liftToDragRatio ?? 0);
-        setOptimizationLoss(cached.loss ?? 0);
-        if (cached.totalIterations) {
-          setMaxIterations(cached.totalIterations);
-          setOptimizationIteration(cached.totalIterations);
+        const cached = JSON.parse(cachedRaw) as Record<string, unknown>;
+        const xf = extractXfoilFromSessionMeta(cached);
+        if (!isUsableXfoilPair(xf.cl, xf.cd)) {
+          toast.error("Cached optimization has no XFoil coefficients. Falling back to Deep Learning values.");
+          const dlCl = typeof cached.final_cl === "number" ? cached.final_cl : (typeof cached.cl === "number" ? cached.cl : 0);
+          const dlCd = typeof cached.final_cd === "number" ? cached.final_cd : (typeof cached.cd === "number" ? cached.cd : 0);
+          const ldFromMeta = cached.final_cl_cd ?? cached.l_d;
+          const dlLd = typeof ldFromMeta === "number" ? ldFromMeta : (dlCd !== 0 ? dlCl / dlCd : 0);
+          
+          setOptimizationMetrics({
+            cl: dlCl,
+            cd: dlCd,
+            liftToDragRatio: dlLd,
+            loss: typeof cached.loss === "number" ? cached.loss : 0,
+            xfoilCl: null,
+            xfoilCd: null,
+            xfoilLd: null,
+            xfoilStatus: xf.status,
+          });
+          setBestLiftCoeff(dlCl);
+          setBestDragCoeff(dlCd);
+          setBestLDRatio(dlLd);
+          setOptimizationLoss(typeof cached.loss === "number" ? cached.loss : 0);
+          if (cached.totalIterations) {
+            setMaxIterations(cached.totalIterations as number);
+            setOptimizationIteration(cached.totalIterations as number);
+          }
+          if (cached.cst_upper) setUpperCoefficients(cached.cst_upper as number[]);
+          if (cached.cst_lower) setLowerCoefficients(cached.cst_lower as number[]);
+
+          sessionStorage.setItem(
+            "optimizationResults",
+            JSON.stringify({
+              xfoilCl: dlCl,
+              xfoilCd: dlCd,
+              xfoilLd: dlLd,
+              xfoilStatus: xf.status,
+              generations: cached.totalIterations ?? 0,
+              numIterations: cached.totalIterations ?? 0,
+              convergenceRate: 100,
+              improvementPercent: 0,
+              timestamp: new Date().toISOString(),
+            }),
+          );
+
+          setShowResults(true);
+          setActiveSidebarTab("results");
+          setIsSidebarOpen(true);
+          setIsLoadingResults(false);
+          return; // skip API call
         }
-        if (cached.cst_upper) setUpperCoefficients(cached.cst_upper);
-        if (cached.cst_lower) setLowerCoefficients(cached.cst_lower);
+        const loss =
+          typeof cached.loss === "number" && Number.isFinite(cached.loss)
+            ? cached.loss
+            : 0;
+        const finalMetrics = displayMetricsFromXfoil(xf, loss);
+        setOptimizationMetrics(finalMetrics);
+        setBestLiftCoeff(finalMetrics.cl);
+        setBestDragCoeff(finalMetrics.cd);
+        setBestLDRatio(finalMetrics.liftToDragRatio);
+        setOptimizationLoss(loss);
+        if (cached.totalIterations) {
+          setMaxIterations(cached.totalIterations as number);
+          setOptimizationIteration(cached.totalIterations as number);
+        }
+        if (cached.cst_upper) setUpperCoefficients(cached.cst_upper as number[]);
+        if (cached.cst_lower) setLowerCoefficients(cached.cst_lower as number[]);
+        sessionStorage.setItem(
+          "optimizationResults",
+          JSON.stringify({
+            xfoilCl: xf.cl,
+            xfoilCd: xf.cd,
+            xfoilLd: finalMetrics.liftToDragRatio,
+            xfoilStatus: xf.status,
+            generations: cached.totalIterations ?? 0,
+            numIterations: cached.totalIterations ?? 0,
+            convergenceRate: 100,
+            improvementPercent: 0,
+            timestamp: new Date().toISOString(),
+          }),
+        );
 
         setShowResults(true);
         setActiveSidebarTab("results");
@@ -242,21 +316,76 @@ export default function OptimizePage() {
         const data = await response.json();
         if (cancelled) return;
 
-        // Populate metrics from the response
+        // Populate metrics from the response (XFoil only for aero coefficients)
         if (data.meta) {
-          const finalMetrics = {
-            cl: data.meta.final_cl ?? 0,
-            cd: data.meta.final_cd ?? 0,
-            liftToDragRatio: data.meta.final_cl_cd ?? 0,
-            loss: data.meta.final_loss ?? 0,
-          };
-          setOptimizationMetrics(finalMetrics);
-          setBestLiftCoeff(data.meta.final_cl ?? 0);
-          setBestDragCoeff(data.meta.final_cd ?? 0);
-          setBestLDRatio(data.meta.final_cl_cd ?? 0);
-          setOptimizationLoss(data.meta.final_loss ?? 0);
-          setMaxIterations(data.meta.total_iterations ?? 0);
-          setOptimizationIteration(data.meta.total_iterations ?? 0);
+          const xf = extractXfoilFromSessionMeta(
+            data.meta as Record<string, unknown>,
+          );
+          const loss = data.meta.final_loss ?? 0;
+          if (!isUsableXfoilPair(xf.cl, xf.cd)) {
+            toast.error(
+              "Server result has no XFoil coefficients. Falling back to Deep Learning values.",
+            );
+            const dlCl = typeof data.meta.final_cl === "number" ? data.meta.final_cl : (typeof data.meta.cl === "number" ? data.meta.cl : 0);
+            const dlCd = typeof data.meta.final_cd === "number" ? data.meta.final_cd : (typeof data.meta.cd === "number" ? data.meta.cd : 0);
+            const ldFromMeta = data.meta.final_cl_cd ?? data.meta.l_d;
+            const dlLd = typeof ldFromMeta === "number" ? ldFromMeta : (dlCd !== 0 ? dlCl / dlCd : 0);
+            
+            setOptimizationMetrics({
+              cl: dlCl as number,
+              cd: dlCd as number,
+              liftToDragRatio: dlLd as number,
+              loss: loss,
+              xfoilCl: null,
+              xfoilCd: null,
+              xfoilLd: null,
+              xfoilStatus: xf.status,
+            });
+            setBestLiftCoeff(dlCl as number);
+            setBestDragCoeff(dlCd as number);
+            setBestLDRatio(dlLd as number);
+            setOptimizationLoss(loss);
+            setMaxIterations((data.meta.total_iterations as number) ?? 0);
+            setOptimizationIteration((data.meta.total_iterations as number) ?? 0);
+
+            sessionStorage.setItem(
+              "optimizationResults",
+              JSON.stringify({
+                xfoilCl: dlCl,
+                xfoilCd: dlCd,
+                xfoilLd: dlLd,
+                xfoilStatus: xf.status,
+                generations: data.meta.total_iterations ?? 0,
+                numIterations: data.meta.total_iterations ?? 0,
+                convergenceRate: 100,
+                improvementPercent: 0,
+                timestamp: new Date().toISOString(),
+              }),
+            );
+          } else {
+            const finalMetrics = displayMetricsFromXfoil(xf, loss);
+            setOptimizationMetrics(finalMetrics);
+            setBestLiftCoeff(finalMetrics.cl);
+            setBestDragCoeff(finalMetrics.cd);
+            setBestLDRatio(finalMetrics.liftToDragRatio);
+            setOptimizationLoss(loss);
+            setMaxIterations(data.meta.total_iterations ?? 0);
+            setOptimizationIteration(data.meta.total_iterations ?? 0);
+            sessionStorage.setItem(
+              "optimizationResults",
+              JSON.stringify({
+                xfoilCl: xf.cl,
+                xfoilCd: xf.cd,
+                xfoilLd: finalMetrics.liftToDragRatio,
+                xfoilStatus: xf.status,
+                generations: data.meta.total_iterations ?? 0,
+                numIterations: data.meta.total_iterations ?? 0,
+                convergenceRate: 100,
+                improvementPercent: 0,
+                timestamp: new Date().toISOString(),
+              }),
+            );
+          }
         }
 
         // Update CST coefficients with the optimized shape
@@ -312,16 +441,34 @@ export default function OptimizePage() {
     setOptimizationIteration(currentMeta.iteration);
     setMaxIterations(currentMeta.total_iterations);
 
-    // Append to L/D chart
-    setLdRatioHistory((prev) => [
-      ...prev,
-      { iteration: currentMeta.iteration, ldRatio: currentMeta.cl_cd },
-    ]);
+    const xfx = extractOptXfoilFromIterationMeta(currentMeta);
+    if (xfx.l_d != null && Number.isFinite(xfx.l_d)) {
+      setLdRatioHistory((prev) => [
+        ...prev,
+        { iteration: currentMeta.iteration, ldRatio: xfx.l_d as number },
+      ]);
+    }
 
-    // Keep running best values updated
-    setBestLiftCoeff(currentMeta.cl);
-    setBestDragCoeff(currentMeta.cd);
-    setBestLDRatio(currentMeta.cl_cd);
+    if (isUsableXfoilPair(xfx.cl, xfx.cd)) {
+      const cl = xfx.cl as number;
+      const cd = xfx.cd as number;
+      const ld =
+        xfx.l_d != null && Number.isFinite(xfx.l_d)
+          ? (xfx.l_d as number)
+          : cd !== 0
+            ? cl / cd
+            : 0;
+      setBestLiftCoeff(cl);
+      setBestDragCoeff(cd);
+      setBestLDRatio(ld);
+    } else {
+      const dlCl = typeof currentMeta.cl === "number" ? currentMeta.cl : 0;
+      const dlCd = typeof currentMeta.cd === "number" ? currentMeta.cd : 0;
+      const dlLd = typeof currentMeta.l_d === "number" ? currentMeta.l_d : (dlCd !== 0 ? dlCl / dlCd : 0);
+      setBestLiftCoeff(dlCl);
+      setBestDragCoeff(dlCd);
+      setBestLDRatio(dlLd);
+    }
     setOptimizationLoss(currentMeta.loss);
   }, [currentMeta, currentShape]);
 
@@ -335,17 +482,94 @@ export default function OptimizePage() {
     setUpperCoefficients(shape.cst_upper);
     setLowerCoefficients(shape.cst_lower);
 
-    // Final metrics
-    const finalMetrics = {
-      cl: meta.final_cl,
-      cd: meta.final_cd,
-      liftToDragRatio: meta.final_cl_cd,
-      loss: meta.final_loss,
-    };
-    setOptimizationMetrics(finalMetrics);
-    setBestLiftCoeff(meta.final_cl);
-    setBestDragCoeff(meta.final_cd);
-    setBestLDRatio(meta.final_cl_cd);
+    const xf = extractOptXfoilFromCompleteMeta(meta);
+    if (!isUsableXfoilPair(xf.cl, xf.cd)) {
+      toast.error(
+        "Optimization finished without XFoil finals. Falling back to Deep Learning values.",
+      );
+      const dlCl = typeof (meta as any).final_cl === "number" ? (meta as any).final_cl : (typeof (meta as any).cl === "number" ? (meta as any).cl : 0);
+      const dlCd = typeof (meta as any).final_cd === "number" ? (meta as any).final_cd : (typeof (meta as any).cd === "number" ? (meta as any).cd : 0);
+      const ldFromMeta = (meta as any).final_cl_cd ?? (meta as any).l_d;
+      const dlLd = typeof ldFromMeta === "number" ? ldFromMeta : (dlCd !== 0 ? dlCl / dlCd : 0);
+      setOptimizationMetrics({
+        cl: dlCl,
+        cd: dlCd,
+        liftToDragRatio: dlLd,
+        loss: meta.final_loss,
+        xfoilCl: null,
+        xfoilCd: null,
+        xfoilLd: null,
+        xfoilStatus: xf.status,
+      });
+
+      sessionStorage.setItem(
+        "optimizationResults",
+        JSON.stringify({
+          xfoilCl: dlCl,
+          xfoilCd: dlCd,
+          xfoilLd: dlLd,
+          xfoilStatus: xf.status,
+          generations: meta.total_iterations,
+          numIterations: meta.total_iterations,
+          convergenceRate: 100,
+          improvementPercent: 0,
+          timestamp: new Date().toISOString(),
+        }),
+      );
+
+      if (optSessionId) {
+        localStorage.setItem(
+          `opt_result_${optSessionId}`,
+          JSON.stringify({
+            xfoilCl: dlCl,
+            xfoilCd: dlCd,
+            xfoilLd: dlLd,
+            xfoilStatus: xf.status,
+            loss: meta.final_loss,
+            totalIterations: meta.total_iterations,
+            cst_upper: shape.cst_upper,
+            cst_lower: shape.cst_lower,
+          }),
+        );
+      }
+    } else {
+      const finalMetrics = displayMetricsFromXfoil(xf, meta.final_loss);
+      setOptimizationMetrics(finalMetrics);
+      setBestLiftCoeff(finalMetrics.cl);
+      setBestDragCoeff(finalMetrics.cd);
+      setBestLDRatio(finalMetrics.liftToDragRatio);
+
+      sessionStorage.setItem(
+        "optimizationResults",
+        JSON.stringify({
+          xfoilCl: xf.cl,
+          xfoilCd: xf.cd,
+          xfoilLd: finalMetrics.liftToDragRatio,
+          xfoilStatus: xf.status,
+          generations: meta.total_iterations,
+          numIterations: meta.total_iterations,
+          convergenceRate: 100,
+          improvementPercent: 0,
+          timestamp: new Date().toISOString(),
+        }),
+      );
+
+      if (optSessionId) {
+        localStorage.setItem(
+          `opt_result_${optSessionId}`,
+          JSON.stringify({
+            xfoilCl: xf.cl,
+            xfoilCd: xf.cd,
+            xfoilLd: finalMetrics.liftToDragRatio,
+            xfoilStatus: xf.status,
+            loss: meta.final_loss,
+            totalIterations: meta.total_iterations,
+            cst_upper: shape.cst_upper,
+            cst_lower: shape.cst_lower,
+          }),
+        );
+      }
+    }
 
     setIsOptimizing(false);
     setShowResults(true);
@@ -359,38 +583,8 @@ export default function OptimizePage() {
       window.history.replaceState({}, "", url.toString());
     }
 
-    // Store for turbine page
-    sessionStorage.setItem(
-      "optimizationResults",
-      JSON.stringify({
-        bestLiftToDragRatio: meta.final_cl_cd,
-        bestLiftCoefficient: meta.final_cl,
-        bestDragCoefficient: meta.final_cd,
-        generations: meta.total_iterations,
-        numIterations: meta.total_iterations,
-        convergenceRate: 100,
-        improvementPercent: 0,
-      }),
-    );
-
-    // Also store in localStorage keyed by sessionId (persists across tabs)
-    if (optSessionId) {
-      localStorage.setItem(
-        `opt_result_${optSessionId}`,
-        JSON.stringify({
-          cl: meta.final_cl,
-          cd: meta.final_cd,
-          liftToDragRatio: meta.final_cl_cd,
-          loss: meta.final_loss,
-          totalIterations: meta.total_iterations,
-          cst_upper: shape.cst_upper,
-          cst_lower: shape.cst_lower,
-        }),
-      );
-    }
-
     setTimeout(() => setShowResultsModal(true), 500);
-  }, [optComplete, completedFrame]);
+  }, [optComplete, completedFrame, optSessionId]);
 
   // Surface errors
   useEffect(() => {
@@ -546,6 +740,10 @@ export default function OptimizePage() {
       cd: 0,
       liftToDragRatio: 0,
       loss: 0,
+      xfoilCl: null,
+      xfoilCd: null,
+      xfoilLd: null,
+      xfoilStatus: "not_run",
     });
     setBestLiftCoeff(0);
     setBestDragCoeff(0);
@@ -1136,7 +1334,7 @@ export default function OptimizePage() {
                           Best C<sub>L</sub>:
                         </span>
                         <span className="font-black">
-                          {formatValue(optimizationMetrics.cl)}
+                          {formatValue(optimizationMetrics.xfoilCl ?? optimizationMetrics.cl)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1144,13 +1342,14 @@ export default function OptimizePage() {
                           Best C<sub>D</sub>:
                         </span>
                         <span className="font-black">
-                          {formatValue(optimizationMetrics.cd)}
+                          {formatValue(optimizationMetrics.xfoilCd ?? optimizationMetrics.cd)}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Best L/D Ratio:</span>
                         <span className="font-black text-green-700">
-                          {optimizationMetrics.liftToDragRatio?.toFixed(2) ||
+                          {optimizationMetrics.xfoilLd?.toFixed(2) ??
+                            optimizationMetrics.liftToDragRatio?.toFixed(2) ??
                             (
                               optimizationMetrics.cl / optimizationMetrics.cd
                             ).toFixed(2)}
@@ -1402,10 +1601,13 @@ export default function OptimizePage() {
         metrics={optimizationMetrics}
         convergenceData={optHistory.map((h) => ({
           iteration: h.iteration,
-          cl: h.cl,
-          cd: h.cd,
+          cl: h.xfoil_cl ?? 0,
+          cd: h.xfoil_cd ?? 0,
           loss: h.loss,
-          ldRatio: h.cl_cd,
+          ldRatio:
+            h.xfoil_l_d != null && Number.isFinite(h.xfoil_l_d)
+              ? h.xfoil_l_d
+              : 0,
         }))}
         onSaveExperiment={handleSaveExperiment}
         onDownloadMetrics={handleModalDownloadMetrics}

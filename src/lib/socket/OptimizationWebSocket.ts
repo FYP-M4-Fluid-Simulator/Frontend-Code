@@ -15,6 +15,11 @@ export interface OptIterationMeta {
   cl_cd: number;
   lift_force: number;
   drag_force: number;
+  /** XFoil reference (when backend provides it) — preferred for display / turbine */
+  xfoil_cl?: number | null;
+  xfoil_cd?: number | null;
+  xfoil_l_d?: number | null;
+  xfoil_status?: string | null;
 }
 
 export interface OptShape {
@@ -40,6 +45,15 @@ export interface OptCompleteFrame {
     final_cl_cd: number;
     final_drag: number;
     final_loss: number;
+    /** XFoil finals (optional; names may vary by backend — see extractOptXfoilMeta) */
+    final_xfoil_cl?: number | null;
+    final_xfoil_cd?: number | null;
+    final_xfoil_l_d?: number | null;
+    final_xfoil_status?: string | null;
+    xfoil_cl?: number | null;
+    xfoil_cd?: number | null;
+    xfoil_l_d?: number | null;
+    xfoil_status?: string | null;
   };
   shape: OptShape;
   initial_shape: { cst_upper: number[]; cst_lower: number[] };

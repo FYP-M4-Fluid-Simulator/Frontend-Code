@@ -33,7 +33,7 @@ interface ResultsModalProps {
     cd: number;
     liftToDragRatio?: number;
     loss?: number;
-    // XFoil validated results (simulation only)
+    /** Populated when primary cl/cd mirror XFoil */
     xfoilCl?: number | null;
     xfoilCd?: number | null;
     xfoilLd?: number | null;
@@ -71,21 +71,24 @@ export default function ResultsModal({
 
   if (!isOpen) return null;
 
-  // Generate sample convergence data if not provided
+  // Single-point fallback from final XFoil metrics (no synthetic RANS/CFD history)
   const chartData =
     convergenceData.length > 0
       ? convergenceData
-      : Array.from({ length: 20 }, (_, i) => ({
-          iteration: i + 1,
-          cl: metrics.cl * (0.7 + Math.random() * 0.3),
-          cd: metrics.cd * (0.8 + Math.random() * 0.4),
-          ldRatio:
-            (metrics.cl * (0.7 + Math.random() * 0.3)) /
-            (metrics.cd * (0.8 + Math.random() * 0.4)),
-          ...(type === "optimization" && {
-            loss: (metrics.loss || 0.5) * Math.exp(-i / 8),
-          }),
-        }));
+      : [
+          {
+            iteration: 1,
+            cl: metrics.cl,
+            cd: metrics.cd,
+            ldRatio:
+              metrics.liftToDragRatio != null && metrics.liftToDragRatio !== 0
+                ? metrics.liftToDragRatio
+                : metrics.cd !== 0
+                  ? metrics.cl / metrics.cd
+                  : 0,
+            ...(type === "optimization" && { loss: metrics.loss ?? 0 }),
+          },
+        ];
 
   const formatValue = (val: number | undefined | null) => {
     if (val === undefined || val === null) return "0.0000";
@@ -151,7 +154,9 @@ export default function ResultsModal({
                 {type === "simulation" ? "Simulation" : "Optimization"} Results
               </h2>
               <p className="text-blue-300/60 text-sm mt-1">
-                Aerodynamic coefficients and performance metrics
+                {type === "simulation"
+                  ? "XFoil panel-method coefficients (primary)"
+                  : "XFoil panel-method coefficients and optimization metrics"}
               </p>
             </div>
             <button
@@ -169,29 +174,29 @@ export default function ResultsModal({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-xl p-4">
               <div className="text-green-300 text-xs font-semibold mb-2">
-                Lift Coefficient (C<sub>L</sub>)
+                XFoil C<sub>L</sub>
               </div>
               <div className="text-green-100 text-2xl font-bold">
-                {formatValue(metrics.cl)}
+                {formatValue(metrics.xfoilCl ?? metrics.cl)}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-400/30 rounded-xl p-4">
               <div className="text-orange-300 text-xs font-semibold mb-2">
-                Drag Coefficient (C<sub>D</sub>)
+                XFoil C<sub>D</sub>
               </div>
               <div className="text-orange-100 text-2xl font-bold">
-                {formatValue(metrics.cd)}
+                {formatValue(metrics.xfoilCd ?? metrics.cd)}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 rounded-xl p-4">
               <div className="text-blue-300 text-xs font-semibold mb-2">
-                {type === "optimization" ? "L/D Ratio" : "Lift-to-Drag"}
+                {type === "optimization" ? "XFoil L/D" : "XFoil L/D"}
               </div>
               <div className="text-blue-100 text-2xl font-bold">
                 {formatValue(
-                  metrics.liftToDragRatio || metrics.cl / metrics.cd,
+                  metrics.xfoilLd ?? metrics.liftToDragRatio ?? (metrics.cd !== 0 ? metrics.cl / metrics.cd : 0),
                 )}
               </div>
             </div>
@@ -217,75 +222,20 @@ export default function ResultsModal({
             )}
           </div>
 
-          {/* XFoil Validation Panel — simulation only */}
-          {type === "simulation" && (
-            <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/40 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-base font-bold text-indigo-200">
-                    XFoil Validation
-                  </h3>
-                  <p className="text-indigo-300/60 text-xs mt-0.5">
-                    Panel-method reference values (viscous, 2D, steady)
-                  </p>
-                </div>
-                {xfoilStatusBadge(metrics.xfoilStatus)}
+          {/* XFoil status — simulation only (metrics above are XFoil) */}
+          {/* {type === "simulation" && (
+            <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/40 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-indigo-200">
+                  XFoil run status
+                </h3>
+                <p className="text-indigo-300/60 text-xs mt-0.5">
+                  Coefficients in this report are from XFoil (panel method).
+                </p>
               </div>
-
-              {metrics.xfoilStatus === "converged" ? (
-                <div className="grid grid-cols-3 gap-3">
-                  {/* Cl comparison */}
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
-                      C<sub>L</sub>
-                    </div>
-                    <div className="text-white text-xl font-bold">
-                      {metrics.xfoilCl?.toFixed(4) ?? "—"}
-                    </div>
-                    <div className="text-indigo-300/50 text-xs mt-1">
-                      RANS: {metrics.cl.toFixed(4)}
-                    </div>
-                  </div>
-                  {/* Cd comparison */}
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
-                      C<sub>D</sub>
-                    </div>
-                    <div className="text-white text-xl font-bold">
-                      {metrics.xfoilCd?.toFixed(5) ?? "—"}
-                    </div>
-                    <div className="text-indigo-300/50 text-xs mt-1">
-                      RANS: {metrics.cd.toFixed(5)}
-                    </div>
-                  </div>
-                  {/* L/D comparison */}
-                  <div className="bg-black/20 rounded-lg p-3 text-center">
-                    <div className="text-indigo-300/70 text-xs font-semibold mb-1">
-                      L/D
-                    </div>
-                    <div className="text-white text-xl font-bold">
-                      {metrics.xfoilLd?.toFixed(2) ?? "—"}
-                    </div>
-                    <div className="text-indigo-300/50 text-xs mt-1">
-                      RANS: {
-                        metrics.liftToDragRatio != null
-                          ? metrics.liftToDragRatio.toFixed(2)
-                          : (metrics.cd !== 0
-                              ? (metrics.cl / metrics.cd).toFixed(2)
-                              : "—")
-                      }
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-3 text-indigo-300/50 text-sm">
-                  {metrics.xfoilStatus === "not_run" || !metrics.xfoilStatus
-                    ? "XFoil will run at end of simulation."
-                    : "XFoil did not produce a result for this condition. RANS values above remain the primary reference."}
-                </div>
-              )}
+              {xfoilStatusBadge(metrics.xfoilStatus)}
             </div>
-          )}
+          )} */}
 
           {/* Aerodynamic Coefficients Chart */}
           <div className="bg-slate-800/50 border border-blue-500/30 rounded-xl p-6">

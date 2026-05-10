@@ -6,19 +6,85 @@ import {
   ArrowLeft,
   Download,
   Settings,
-  Loader2,
   TrendingUp,
+  ChevronDown,
+  Zap,
+  Sparkles,
 } from "lucide-react";
 import { ProfessionalTurbine } from "../../components/ProfessionalTurbine";
 import { useRouter } from "next/navigation";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
-import { auth } from "@/lib/firebase/config";
-import { PYTHON_BACKEND_URL } from "@/config";
+
+// ─── Turbine scale definitions ───────────────────────────────────────────────
+type TurbineScale = "small" | "medium" | "large";
+
+const TURBINE_SCALES: Record<
+  TurbineScale,
+  { label: string; radius: number; windSpeed: number; tsr: number; color: string; bgColor: string; borderColor: string; icon: string }
+> = {
+  small: {
+    label: "Small",
+    radius: 3,
+    windSpeed: 10,
+    tsr: 6,
+    color: "text-sky-700",
+    bgColor: "bg-sky-50",
+    borderColor: "border-sky-300",
+    icon: "◎",
+  },
+  medium: {
+    label: "Medium",
+    radius: 20,
+    windSpeed: 11,
+    tsr: 7,
+    color: "text-emerald-700",
+    bgColor: "bg-emerald-50",
+    borderColor: "border-emerald-300",
+    icon: "◈",
+  },
+  large: {
+    label: "Large (Utility)",
+    radius: 80,
+    windSpeed: 12,
+    tsr: 8,
+    color: "text-violet-700",
+    bgColor: "bg-violet-50",
+    borderColor: "border-violet-300",
+    icon: "◉",
+  },
+};
+
+const AIR_DENSITY = 1.225; // kg/m³
+
+// ─── Power calculation (pure frontend) ───────────────────────────────────────
+function calculatePower(
+  cl: number,
+  cd: number,
+  scale: TurbineScale,
+): { watts: number; kilowatts: number; rpm: number; cp: number } | null {
+  if (cl <= 0 || cd <= 0) return null;
+  const { radius, windSpeed, tsr } = TURBINE_SCALES[scale];
+
+  // Step 1: Power Coefficient
+  // Cp = 0.593 * (1 - (Cd/Cl) * λ)
+  const cp = 0.593 * (1 - (cd / cl) * tsr);
+
+  // Step 2: Total Power
+  // P = 0.5 * ρ * π * R² * V³ * Cp
+  const watts = 0.5 * AIR_DENSITY * Math.PI * radius ** 2 * windSpeed ** 3 * cp;
+
+  // RPM = (λ * V * 30) / (π * R)
+  const rpm = (tsr * windSpeed * 30) / (Math.PI * radius);
+
+  return { watts, kilowatts: watts / 1000, rpm, cp };
+}
 
 type PowerOutputResult = {
   total_power_watts: number;
   total_power_kilowatts: number;
   operating_rpm: number;
+  cp: number;
+  scale: TurbineScale;
 };
 
 type CFDInputState = {
@@ -28,24 +94,21 @@ type CFDInputState = {
   hasSource: boolean;
 };
 
+type StoredAeroResults = {
+  /** XFoil-only payload (simulation + optimization) */
+  xfoilCl?: number | null;
+  xfoilCd?: number | null;
+  xfoilLd?: number | null;
+  xfoilStatus?: string | null;
+  timestamp?: string;
+  computationTime?: number;
+};
+
 const DEFAULT_CFD_INPUTS: CFDInputState = {
   chordLength: 1,
   angleOfAttack: 5,
   velocity: 30,
   hasSource: false,
-};
-
-const TURBINE_CONSTANTS = {
-  rotor_radius: 35,
-  hub_radius: 1.0,
-  num_blades: 3,
-  num_elements: 20,
-};
-
-const TSR_LIMITS = {
-  min: 1,
-  max: 15,
-  step: 0.1,
 };
 
 export default function TurbinePage() {
@@ -55,13 +118,10 @@ export default function TurbinePage() {
   const [liftToDragRatio, setLiftToDragRatio] = useState(45.0);
   const [liftCoefficient, setLiftCoefficient] = useState(0);
   const [dragCoefficient, setDragCoefficient] = useState(0);
-  const [showPowerPanel, setShowPowerPanel] = useState(false);
-  const [isCalculatingPower, setIsCalculatingPower] = useState(false);
+  const [dataSource, setDataSource] = useState<"simulation" | "optimization" | "none">("none");
   const [powerError, setPowerError] = useState<string | null>(null);
-  const [tsr, setTsr] = useState(7);
-  const [powerResult, setPowerResult] = useState<PowerOutputResult | null>(
-    null,
-  );
+  const [selectedScale, setSelectedScale] = useState<TurbineScale>("medium");
+  const [powerResult, setPowerResult] = useState<PowerOutputResult | null>(null);
   const [cfdInputs, setCfdInputs] = useState<CFDInputState>(DEFAULT_CFD_INPUTS);
 
   const currentPowerKilowatts = powerResult?.total_power_kilowatts ?? null;
@@ -72,33 +132,130 @@ export default function TurbinePage() {
     const savedOptResults = sessionStorage.getItem("optimizationResults");
     const savedCfdState = sessionStorage.getItem("cfdState");
 
+    const parseNumericValue = (value: unknown): number => {
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? value : NaN;
+      }
+      if (typeof value !== "string") return NaN;
+
+      const normalized = value
+        .trim()
+        .replace(/\s+/g, "")
+        .replace("×", "x")
+        .replace("−", "-");
+
+      // Supports forms like "1.38x10-7", "1.38x10^-7", "1.38e-7"
+      const sciMatch = normalized.match(
+        /^([+-]?\d*\.?\d+)[x*]10(?:\^)?([+-]?\d+)$/i,
+      );
+      if (sciMatch) {
+        const base = Number(sciMatch[1]);
+        const exp = Number(sciMatch[2]);
+        if (Number.isFinite(base) && Number.isFinite(exp)) {
+          return base * Math.pow(10, exp);
+        }
+      }
+
+      const numeric = Number(normalized);
+      return Number.isFinite(numeric) ? numeric : NaN;
+    };
+
     const toNumberOrDefault = (value: unknown, fallback: number) => {
-      const parsed = Number(value);
+      const parsed = parseNumericValue(value);
       return Number.isFinite(parsed) ? parsed : fallback;
     };
 
-    if (savedOptResults) {
-      const results = JSON.parse(savedOptResults);
-      setLiftToDragRatio(
-        results.bestLiftToDragRatio || results.liftToDragRatio || 66.6,
-      );
-      setLiftCoefficient(
-        results.bestLiftCoefficient ||
-          results.liftCoefficient ||
-          results.cl ||
-          0,
-      );
-      setDragCoefficient(
-        results.bestDragCoefficient ||
-          results.dragCoefficient ||
-          results.cd ||
-          0,
-      );
-    } else if (savedResults) {
-      const results = JSON.parse(savedResults);
-      setLiftToDragRatio(results.liftToDragRatio || 36.5);
-      setLiftCoefficient(results.liftCoefficient || results.cl || 0);
-      setDragCoefficient(results.dragCoefficient || results.cd || 0);
+    /** Reject sentinel (0,0) blobs — often written when optimizing resets or cache is missing. */
+    const hasUsableCoeffs = (cl: number, cd: number) =>
+      Number.isFinite(cl) &&
+      Number.isFinite(cd) &&
+      !(cl === 0 && cd === 0);
+
+    const parseResults = (raw: string | null): StoredAeroResults | null => {
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw) as StoredAeroResults;
+      } catch {
+        return null;
+      }
+    };
+
+    const getPayloadTimeMs = (payload: StoredAeroResults): number => {
+      if (!payload.timestamp) return NaN;
+      const t = new Date(payload.timestamp).getTime();
+      return Number.isFinite(t) ? t : NaN;
+    };
+
+    const extractXFoilFromPayload = (
+      payload: StoredAeroResults,
+    ): { cl: number; cd: number; ld: number } | null => {
+      const cl = parseNumericValue(payload.xfoilCl);
+      const cd = parseNumericValue(payload.xfoilCd);
+      if (!Number.isFinite(cl) || !Number.isFinite(cd)) return null;
+
+      let ld = parseNumericValue(payload.xfoilLd);
+      if (!Number.isFinite(ld) || ld === 0) {
+        ld = cd !== 0 ? cl / cd : NaN;
+      }
+      if (!Number.isFinite(ld)) ld = 0;
+
+      if (!hasUsableCoeffs(cl, cd)) return null;
+      return { cl, cd, ld };
+    };
+
+    const simulationResults = parseResults(savedResults);
+    const optimizationResults = parseResults(savedOptResults);
+
+    const simExtracted = simulationResults
+      ? extractXFoilFromPayload(simulationResults)
+      : null;
+    const optExtracted = optimizationResults
+      ? extractXFoilFromPayload(optimizationResults)
+      : null;
+    const simTs = simulationResults ? getPayloadTimeMs(simulationResults) : NaN;
+    const optTs = optimizationResults ? getPayloadTimeMs(optimizationResults) : NaN;
+
+    let cl = 0;
+    let cd = 0;
+    let ld = 0;
+    let source: "simulation" | "optimization" | "none" = "none";
+
+    if (simExtracted && optExtracted) {
+      const simTimeOk = Number.isFinite(simTs);
+      const optTimeOk = Number.isFinite(optTs);
+      let pickOptimization = false;
+
+      if (simTimeOk && optTimeOk) {
+        pickOptimization = optTs > simTs;
+      } else if (optTimeOk && !simTimeOk) {
+        pickOptimization = true;
+      } else if (!optTimeOk && simTimeOk) {
+        pickOptimization = false;
+      } else {
+        /** No reliable timestamps → prefer freshest-looking non-sentinel data */
+        pickOptimization = false;
+      }
+
+      const chosen = pickOptimization ? optExtracted : simExtracted;
+      ({ cl, cd, ld } = chosen);
+      source = pickOptimization ? "optimization" : "simulation";
+    } else if (simExtracted) {
+      ({ cl, cd, ld } = simExtracted);
+      source = "simulation";
+    } else if (optExtracted) {
+      ({ cl, cd, ld } = optExtracted);
+      source = "optimization";
+    }
+
+    if (hasUsableCoeffs(cl, cd)) {
+      setLiftCoefficient(cl);
+      setDragCoefficient(cd);
+      const ldShown =
+        Number.isFinite(ld) && ld !== 0 ? ld : cd !== 0 ? cl / cd : 0;
+      setLiftToDragRatio(ldShown);
+      setDataSource(source);
+    } else {
+      setDataSource("none");
     }
 
     if (savedCfdState) {
@@ -125,94 +282,63 @@ export default function TurbinePage() {
     }
   }, []);
 
-  const handleCalculatePower = async () => {
-    setShowPowerPanel(true);
+  const formatCoefficient = (value: number) => {
+    if (!Number.isFinite(value)) return "—";
+    if (value === 0) return "0.0000";
+    if (Math.abs(value) < 0.001) {
+      return value.toExponential(2).replace("e", "e");
+    }
+    return value.toFixed(4);
+  };
+
+  // Auto-calculate power whenever Cl/Cd changes
+  useEffect(() => {
+    if (liftCoefficient > 0 && dragCoefficient > 0) {
+      handleCalculatePower();
+    }
+  }, [liftCoefficient, dragCoefficient, selectedScale]);
+
+  const handleCalculatePower = () => {
     setPowerError(null);
     setPowerResult(null);
-    setIsCalculatingPower(true);
 
-    try {
-      const token = auth?.currentUser
-        ? await auth.currentUser.getIdToken()
-        : "";
-      if (!token) {
-        throw new Error("You must be logged in to calculate power output.");
-      }
-
-      const apiUrl = `${PYTHON_BACKEND_URL}${PYTHON_BACKEND_URL?.endsWith("/") ? "" : "/"}power-output`;
-      const payload = {
-        v_wind: cfdInputs.velocity,
-        alpha_deg: cfdInputs.angleOfAttack,
-        cl: liftCoefficient,
-        cd: dragCoefficient,
-        chord: cfdInputs.chordLength,
-        tsr, // Note: tsr - tip speed ratio
-        ...TURBINE_CONSTANTS,
-      };
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        let message = `Power calculation failed (${response.status}).`;
-        try {
-          const errorData = await response.json();
-          const backendMessage =
-            errorData?.detail || errorData?.message || errorData?.error;
-          if (backendMessage) {
-            message = String(backendMessage);
-          }
-        } catch {
-          // Keep fallback error message if response body is not JSON.
-        }
-        throw new Error(message);
-      }
-
-      const data = await response.json();
-      const totalPowerWatts = Number(data?.total_power_watts);
-      const totalPowerKilowatts = Number(data?.total_power_kilowatts);
-      const operatingRpm = Number(data?.operating_rpm);
-
-      if (
-        !Number.isFinite(totalPowerWatts) ||
-        !Number.isFinite(totalPowerKilowatts) ||
-        !Number.isFinite(operatingRpm)
-      ) {
-        throw new Error("Backend returned an invalid power output response.");
-      }
-
-      setPowerResult({
-        total_power_watts: totalPowerWatts,
-        total_power_kilowatts: totalPowerKilowatts,
-        operating_rpm: operatingRpm,
-      });
-    } catch (error) {
+    if (liftCoefficient <= 0 || dragCoefficient <= 0) {
       setPowerError(
-        error instanceof Error
-          ? error.message
-          : "Unable to calculate power output right now.",
+        "Valid Cl and Cd are required. Please run a CFD simulation first.",
       );
-    } finally {
-      setIsCalculatingPower(false);
+      return;
     }
+
+    const result = calculatePower(liftCoefficient, dragCoefficient, selectedScale);
+
+    if (!result) {
+      setPowerError("Unable to calculate power — check Cl and Cd values.");
+      return;
+    }
+
+    setPowerResult({
+      total_power_watts: result.watts,
+      total_power_kilowatts: result.kilowatts,
+      operating_rpm: result.rpm,
+      cp: result.cp,
+      scale: selectedScale,
+    });
   };
 
   const handleExportResults = () => {
+    const scaleConfig = selectedScale ? TURBINE_SCALES[selectedScale] : null;
     const results = {
       liftToDragRatio,
-      liftCoefficient,
-      dragCoefficient,
-      tsr,
+      xfoilCl: liftCoefficient,
+      xfoilCd: dragCoefficient,
+      turbineScale: selectedScale,
+      rotorRadius: scaleConfig?.radius ?? null,
+      designWindSpeed: scaleConfig?.windSpeed ?? null,
+      tipSpeedRatio: scaleConfig?.tsr ?? null,
+      powerCoefficientCp: powerResult?.cp ?? null,
       operatingRpm: powerResult?.operating_rpm ?? null,
       powerW: powerResult?.total_power_watts ?? null,
       powerKw: powerResult?.total_power_kilowatts ?? null,
-      efficiency: Math.min(98.5, (liftToDragRatio / 80) * 95),
       timestamp: new Date().toISOString(),
     };
 
@@ -300,186 +426,164 @@ export default function TurbinePage() {
             </h3>
 
             <div className="space-y-2 text-sm font-medium">
+              {dataSource === "none" && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="text-[11px] font-bold text-amber-800 uppercase mb-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                    Warning
+                  </div>
+                  <div className="text-[11px] text-amber-700 leading-tight">
+                    No XFoil data found. Run a <span className="font-bold cursor-pointer underline text-amber-900" onClick={() => router.push('/simulate')}>simulation</span> or <span className="font-bold cursor-pointer underline text-amber-900" onClick={() => router.push('/optimize')}>optimization</span> until XFoil results are produced, then open this page again.
+                  </div>
+                </div>
+              )}
+              
+              {dataSource !== "none" && (
+                <div className="mb-3 px-2 py-1 bg-green-50 border border-green-200 rounded text-[10px] font-bold text-green-700 uppercase flex items-center gap-1.5 shadow-sm">
+                  <Sparkles className="w-3 h-3 text-green-500" />
+                  XFoil coefficients ({dataSource}) active
+                </div>
+              )}
+
               <div className="flex justify-between">
-                <span className="text-gray-700">Lift Coeff (Cl):</span>
+                <span className="text-gray-700">XFoil C<sub>L</sub>:</span>
                 <span className="text-base font-black text-cyan-700">
-                  {liftCoefficient.toFixed(4)}
+                  {dataSource !== "none"
+                    ? formatCoefficient(liftCoefficient)
+                    : "—"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-700">Drag Coeff (Cd):</span>
+                <span className="text-gray-700">XFoil C<sub>D</sub>:</span>
                 <span className="text-base font-black text-rose-700">
-                  {dragCoefficient.toFixed(4)}
+                  {dataSource !== "none"
+                    ? formatCoefficient(dragCoefficient)
+                    : "—"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-700">L/D Ratio:</span>
+                <span className="text-gray-700">XFoil L/D:</span>
                 <span className="text-base font-black text-green-700">
-                  {liftToDragRatio.toFixed(1)}
+                  {dataSource !== "none"
+                    ? liftToDragRatio.toFixed(1)
+                    : "—"}
                 </span>
               </div>
-              {/* <div className="flex justify-between">
-                <span className="text-gray-700">RPM:</span>
-                <span className="text-base font-black text-blue-700">
-                  {(liftToDragRatio * 0.25).toFixed(1)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">Power:</span>
-                <span className="text-base font-black text-orange-700">
-                  {(liftToDragRatio * 3.2).toFixed(0)} kW
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">Efficiency:</span>
-                <span className="text-base font-black text-purple-700">
-                  {Math.min(98.5, (liftToDragRatio / 80) * 95).toFixed(1)}%
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">Status:</span>
-                <span className="text-base font-black text-green-600">
-                  OPTIMAL
-                </span>
-              </div> */}
             </div>
 
             {/* Power Panel */}
             <div className="mt-4 pt-3 border-t border-gray-200 space-y-3 text-xs">
+
+              {/* Turbine Scale Selector */}
               <div>
-                <div className="text-xs font-bold text-gray-700 mb-2">
-                  Input Metrics
-                </div>
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Chord Length</span>
-                    <span className="font-semibold text-gray-900">
-                      {cfdInputs.chordLength.toFixed(2)} m
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Angle of Attack</span>
-                    <span className="font-semibold text-gray-900">
-                      {cfdInputs.angleOfAttack.toFixed(2)} °
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Inflow Velocity</span>
-                    <span className="font-semibold text-gray-900">
-                      {cfdInputs.velocity.toFixed(2)} m/s
-                    </span>
-                  </div>
+                <label className="block text-[11px] font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  Turbine Scale
+                </label>
+                <div className="relative">
+                  <select
+                    id="turbine-scale-select"
+                    value={selectedScale}
+                    onChange={(e) => {
+                      setSelectedScale(e.target.value as TurbineScale);
+                      setPowerResult(null);
+                      setPowerError(null);
+                    }}
+                    className="w-full appearance-none bg-white border-2 border-gray-200 hover:border-emerald-400 focus:border-emerald-500 focus:outline-none rounded-lg px-3 py-2 text-xs font-semibold text-gray-800 cursor-pointer transition-colors pr-8"
+                  >
+                    <option value="small">Small</option>
+                    <option value="medium">Medium</option>
+                    <option value="large">Large (Utility)</option>
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
                 </div>
               </div>
 
-              <div>
-                <div className="text-xs font-bold text-gray-700 mb-2">
-                  Turbine Constants
-                </div>
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Rotor Radius</span>
-                    <span className="font-semibold text-gray-900">
-                      {TURBINE_CONSTANTS.rotor_radius.toFixed(1)} m
-                    </span>
+              {/* Scale specs badge */}
+              {(() => {
+                const cfg = TURBINE_SCALES[selectedScale];
+                return (
+                  <div className={`rounded-lg px-3 py-2 ${cfg.bgColor} border ${cfg.borderColor} flex flex-col gap-1`}>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Rotor Radius</span>
+                      <span className={`font-bold ${cfg.color}`}>{cfg.radius} m</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Design Wind Speed</span>
+                      <span className={`font-bold ${cfg.color}`}>{cfg.windSpeed} m/s</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tip Speed Ratio (λ)</span>
+                      <span className={`font-bold ${cfg.color}`}>{cfg.tsr}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Hub Radius</span>
-                    <span className="font-semibold text-gray-900">
-                      {TURBINE_CONSTANTS.hub_radius.toFixed(1)} m
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Number of Blades</span>
-                    <span className="font-semibold text-gray-900">
-                      {TURBINE_CONSTANTS.num_blades}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Number of Elements</span>
-                    <span className="font-semibold text-gray-900">
-                      {TURBINE_CONSTANTS.num_elements}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-bold text-gray-700">TSR</span>
-                  <span className="text-xs font-black text-green-700">
-                    {tsr.toFixed(1)}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={TSR_LIMITS.min}
-                  max={TSR_LIMITS.max}
-                  step={TSR_LIMITS.step}
-                  value={tsr}
-                  onChange={(event) => setTsr(Number(event.target.value))}
-                  className="w-full h-2 accent-green-600"
-                  disabled={isCalculatingPower}
-                />
-              </div>
+                );
+              })()}
 
               <button
+                id="calculate-power-btn"
                 onClick={handleCalculatePower}
-                disabled={isCalculatingPower}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all w-full flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:bg-emerald-400"
+                className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all w-full flex items-center justify-center gap-2"
               >
-                {isCalculatingPower ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Calculating...
-                  </>
-                ) : (
-                  "Calculate"
-                )}
+                <Zap className="h-3.5 w-3.5" />
+                Calculate Power Output
               </button>
 
-              {isCalculatingPower && (
-                <div className="space-y-1">
-                  <div className="text-[11px] text-gray-600">
-                    Calculating power output...
-                  </div>
-                  <div className="w-full h-1.5 bg-green-100 rounded-full overflow-hidden">
-                    <div className="w-1/2 h-full bg-green-500 rounded-full animate-pulse"></div>
-                  </div>
-                </div>
-              )}
-
               {powerError && (
-                <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
+                <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md p-2 leading-relaxed">
                   {powerError}
                 </div>
               )}
 
-              {powerResult && !isCalculatingPower && (
-                <div className="bg-green-50 border border-green-200 rounded-md p-2 space-y-1.5">
-                  <div className="text-xs font-bold text-green-800 mb-1">
-                    Power Output
+              {powerResult && (() => {
+                const cfg = TURBINE_SCALES[powerResult.scale];
+                const absKw = Math.abs(powerResult.total_power_kilowatts);
+                const absW  = Math.abs(powerResult.total_power_watts);
+                return (
+                  <div className={`${cfg.bgColor} border ${cfg.borderColor} rounded-lg p-3 space-y-2`}>
+                    <div className={`text-xs font-black ${cfg.color} flex items-center gap-1.5 mb-0.5`}>
+                      {/* <Zap className="w-3.5 h-3.5" /> */}
+                      Power Output — {cfg.label}
+                    </div>
+
+                    {/* Power Coefficient */}
+                    {/* <div className="flex justify-between items-baseline">
+                      <span className="text-gray-600">Cp (Betz)</span>
+                      <span className={`font-black text-sm ${cfg.color}`}>
+                        {powerResult.cp.toFixed(4)}
+                      </span>
+                    </div> */}
+
+                    {/* RPM */}
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-gray-600">Operating RPM</span>
+                      <span className={`font-black text-sm ${cfg.color}`}>
+                        {powerResult.operating_rpm.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="border-t border-white/60 pt-2 space-y-1">
+                      {/* kW */}
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-gray-600">Power (kW)</span>
+                        <span className={`font-black text-base ${cfg.color}`}>
+                          {absKw >= 1000
+                            ? `${(absKw / 1000).toFixed(2)} MW`
+                            : absKw >= 1
+                              ? `${absKw.toFixed(2)} kW`
+                              : `${(absKw * 1000).toFixed(1)} W`}
+                        </span>
+                      </div>
+                      {/* W (raw) */}
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-gray-600">Power (W)</span>
+                        <span className="font-semibold text-gray-800 text-[11px]">
+                          {absW.toLocaleString(undefined, { maximumFractionDigits: 1 })} W
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-gray-700 text-xs">kW</span>
-                    <span className="font-black text-green-800 text-lg">
-                      {powerResult.total_power_kilowatts.toExponential(3)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-gray-700 text-xs">W</span>
-                    <span className="font-bold text-green-900 text-sm">
-                      {powerResult.total_power_watts.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-gray-700 text-xs">Operating RPM</span>
-                    <span className="font-bold text-green-900 text-sm">
-                      {powerResult.operating_rpm.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -490,6 +594,12 @@ export default function TurbinePage() {
             <ProfessionalTurbine
               liftToDragRatio={liftToDragRatio}
               powerKilowatts={currentPowerKilowatts}
+              rpm={powerResult?.operating_rpm ?? null}
+              scaleFactor={
+                selectedScale === "small" ? 0.55
+                : selectedScale === "large" ? 1.65
+                : 1.0
+              }
             />
           </div>
         </div>
