@@ -604,18 +604,18 @@ export default function SimulatePage() {
       setComputationDuration(durationSeconds);
     }
 
-    const lift = useXfoil ? (cl as number) : (coefficients?.cl as number);
-    const drag = useXfoil ? (cd as number) : (coefficients?.cd as number);
-    const ld =
-      useXfoil && xfoilData?.l_d != null && Number.isFinite(xfoilData.l_d)
-        ? xfoilData.l_d
-        : !useXfoil &&
-            coefficients?.l_d != null &&
-            Number.isFinite(coefficients.l_d)
-          ? coefficients.l_d
-          : drag !== 0
-            ? lift / drag
-            : 0;
+    const lift = useXfoil ? Number(cl) : Number(coefficients?.cl);
+    const drag = useXfoil ? Number(cd) : Number(coefficients?.cd);
+    let ld = drag !== 0 ? lift / drag : 0;
+    if (useXfoil && xfoilData?.l_d != null && Number.isFinite(xfoilData.l_d)) {
+      ld = xfoilData.l_d;
+    } else if (
+      !useXfoil &&
+      coefficients?.l_d != null &&
+      Number.isFinite(coefficients.l_d)
+    ) {
+      ld = coefficients.l_d;
+    }
     const status = xfoilData?.status ?? "not_run";
 
     setSimulationMetrics({
