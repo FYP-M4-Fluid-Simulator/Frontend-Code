@@ -208,6 +208,8 @@ export default function DesignPage() {
         }
         // Clear the stored data after loading
         sessionStorage.removeItem("cstCoefficients");
+        // Clear stale session state so the new airfoil takes priority
+        sessionStorage.removeItem("cfdState");
       } catch (error) {
         console.error("Error loading CST coefficients:", error);
       }
@@ -236,6 +238,8 @@ export default function DesignPage() {
 
         // Clear the stored data after loading
         sessionStorage.removeItem("selectedAirfoil");
+        // Clear stale session state so the new airfoil takes priority
+        sessionStorage.removeItem("cfdState");
       } catch (error) {
         console.error("Error loading selected airfoil:", error);
       }

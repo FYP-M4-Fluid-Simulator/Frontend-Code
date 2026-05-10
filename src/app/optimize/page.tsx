@@ -48,6 +48,7 @@ import type { OptSessionConfig } from "../../lib/http/createOptSession";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
+import { extractOptXfoilFromCompleteMeta } from "@/lib/xfoilMetrics";
 import { PYTHON_BACKEND_URL } from "@/config";
 
 export default function OptimizePage() {
@@ -99,9 +100,9 @@ export default function OptimizePage() {
   >([]);
 
   // Optimization parameters
-  const [timeStepSize, setTimeStepSize] = useState(0.001);
-  const [simulationDuration, setSimulationDuration] = useState(5);
-  const [numIterations, setNumIterations] = useState(30);
+  const [timeStepSize, setTimeStepSize] = useState(0.002);
+  const [simulationDuration, setSimulationDuration] = useState(1);
+  const [numIterations, setNumIterations] = useState(10);
   const [minThickness, setMinThickness] = useState(0.06);
   const [maxThickness, setMaxThickness] = useState(0.25);
   const [reynoldsNumber, setReynoldsNumber] = useState<number>(1e6);
@@ -378,6 +379,8 @@ export default function OptimizePage() {
       window.history.replaceState({}, "", url.toString());
     }
 
+    const xfoil = extractOptXfoilFromCompleteMeta(meta);
+
     // Store for turbine page
     sessionStorage.setItem(
       "optimizationResults",
@@ -390,6 +393,10 @@ export default function OptimizePage() {
         maxThickness: meta.final_max_thickness,
         convergenceRate: 100,
         improvementPercent: 0,
+        xfoilCl: xfoil.cl,
+        xfoilCd: xfoil.cd,
+        xfoilLd: xfoil.l_d,
+        xfoilStatus: xfoil.status,
       }),
     );
 
@@ -406,6 +413,10 @@ export default function OptimizePage() {
           totalIterations: meta.total_iterations,
           cst_upper: shape.cst_upper,
           cst_lower: shape.cst_lower,
+          xfoilCl: xfoil.cl,
+          xfoilCd: xfoil.cd,
+          xfoilLd: xfoil.l_d,
+          xfoilStatus: xfoil.status,
         }),
       );
     }
@@ -641,7 +652,20 @@ export default function OptimizePage() {
         {/* Left: Navigation */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => router.push("/design")}
+            onClick={() => {
+              sessionStorage.setItem(
+                "cfdState",
+                JSON.stringify({
+                  upperCoefficients,
+                  lowerCoefficients,
+                  angleOfAttack,
+                  velocity,
+                  meshDensity,
+                  chordLength,
+                }),
+              );
+              router.push("/design");
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-300 rounded-lg transition-all text-xs font-semibold text-gray-700"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -820,7 +844,7 @@ export default function OptimizePage() {
                       <div className="flex items-center gap-3 mb-2">
                         <input
                           type="range"
-                          min={0}
+                          min={0.001}
                           max={0.005}
                           step={0.001}
                           value={timeStepSize}
@@ -832,7 +856,7 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
-                          min={0}
+                          min={0.001}
                           max={0.005}
                           step={0.001}
                           value={timeStepSize}
@@ -843,7 +867,7 @@ export default function OptimizePage() {
                             setTimeStepSize(
                               Math.min(
                                 0.005,
-                                Math.max(0, Number(e.target.value)),
+                                Math.max(0.001, Number(e.target.value)),
                               ),
                             )
                           }
@@ -863,9 +887,9 @@ export default function OptimizePage() {
                       <div className="flex items-center gap-3 mb-2">
                         <input
                           type="range"
-                          min={1}
-                          max={60}
-                          step={1}
+                          min={0.1}
+                          max={5}
+                          step={0.1}
                           value={simulationDuration}
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
@@ -875,16 +899,16 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
-                          min={1}
-                          max={60}
-                          step={1}
+                          min={0.1}
+                          max={5}
+                          step={0.1}
                           value={simulationDuration}
                           onChange={(e) =>
                             setSimulationDuration(Number(e.target.value))
                           }
                           onBlur={(e) =>
                             setSimulationDuration(
-                              Math.min(60, Math.max(1, Number(e.target.value))),
+                              Math.min(5, Math.max(0.1, Number(e.target.value))),
                             )
                           }
                           disabled={isOptimizing}
@@ -937,9 +961,9 @@ export default function OptimizePage() {
                       <div className="flex items-center gap-3 mb-2">
                         <input
                           type="range"
-                          min={10}
-                          max={200}
-                          step={10}
+                          min={5}
+                          max={100}
+                          step={5}
                           value={numIterations}
                           onChange={(e) =>
                             setNumIterations(Number(e.target.value))
@@ -959,8 +983,8 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setNumIterations(
                               Math.min(
-                                200,
-                                Math.max(10, Number(e.target.value)),
+                                100,
+                                Math.max(5, Number(e.target.value)),
                               ),
                             )
                           }
@@ -1067,7 +1091,7 @@ export default function OptimizePage() {
                         <input
                           type="range"
                           min={0.001}
-                          max={0.1}
+                          max={0.02}
                           step={0.001}
                           value={learningRate}
                           onChange={(e) =>
@@ -1079,7 +1103,7 @@ export default function OptimizePage() {
                         <input
                           type="number"
                           min={0.001}
-                          max={0.1}
+                          max={0.02}
                           step={0.001}
                           value={learningRate.toFixed(3)}
                           onChange={(e) =>
@@ -1088,7 +1112,7 @@ export default function OptimizePage() {
                           onBlur={(e) =>
                             setLearningRate(
                               Math.min(
-                                0.1,
+                                0.02,
                                 Math.max(0.001, Number(e.target.value)),
                               ),
                             )
@@ -1262,13 +1286,15 @@ export default function OptimizePage() {
 
                   {/* Action Buttons */}
                   <div className="space-y-3">
-                    <button
-                      onClick={() => router.push("/turbine")}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
-                    >
-                      <Wind className="w-5 h-5" />
-                      View Turbine
-                    </button>
+                    {xfoilEverConverged && (
+                      <button
+                        onClick={() => router.push("/turbine")}
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
+                      >
+                        <Wind className="w-5 h-5" />
+                        View Turbine
+                      </button>
+                    )}
 
                     <button
                       onClick={() => router.push("/design")}

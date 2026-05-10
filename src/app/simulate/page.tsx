@@ -41,6 +41,7 @@ import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
 import { PYTHON_BACKEND_URL } from "@/config";
+import { extractXfoilFromSessionMeta } from "@/lib/xfoilMetrics";
 
 export default function SimulatePage() {
   const router = useRouter();
@@ -457,12 +458,21 @@ export default function SimulatePage() {
         setComputationDuration(finalDuration);
       }
 
-      // Use XFoil results exclusively — xfoilData arrives in the final_results message
+      const finalMeta = frameRef.current?.meta || {};
+      const fallbackXfoil = extractXfoilFromSessionMeta({
+        ...finalMeta,
+        final_xfoil_cl: xfoilData?.cl,
+        final_xfoil_cd: xfoilData?.cd,
+        final_xfoil_l_d: xfoilData?.l_d,
+        final_xfoil_status: xfoilData?.status,
+      });
+
+      // Use XFoil results with Deep Learning fallbacks
       setSimulationMetrics({
-        xfoilCl: xfoilData?.cl ?? null,
-        xfoilCd: xfoilData?.cd ?? null,
-        xfoilLd: xfoilData?.l_d ?? null,
-        xfoilStatus: xfoilData?.status ?? "not_run",
+        xfoilCl: fallbackXfoil.cl,
+        xfoilCd: fallbackXfoil.cd,
+        xfoilLd: fallbackXfoil.l_d,
+        xfoilStatus: fallbackXfoil.status,
       });
 
       setShowResults(true);
@@ -480,18 +490,19 @@ export default function SimulatePage() {
         setShowResultsModal(true);
       }, 500);
 
+      const simResultsObj = {
+        xfoilCl: fallbackXfoil.cl,
+        xfoilCd: fallbackXfoil.cd,
+        xfoilLd: fallbackXfoil.l_d,
+        xfoilStatus: fallbackXfoil.status,
+        computationTime: finalDuration,
+      };
+
       if (sessionId) {
-        localStorage.setItem(
-          `sim_result_${sessionId}`,
-          JSON.stringify({
-            xfoilCl: xfoilData?.cl ?? null,
-            xfoilCd: xfoilData?.cd ?? null,
-            xfoilLd: xfoilData?.l_d ?? null,
-            xfoilStatus: xfoilData?.status ?? "not_run",
-            computationTime: finalDuration,
-          }),
-        );
+        localStorage.setItem(`sim_result_${sessionId}`, JSON.stringify(simResultsObj));
       }
+      
+      sessionStorage.setItem("simulationResults", JSON.stringify(simResultsObj));
 
       if (simulationIntervalRef.current) {
         clearInterval(simulationIntervalRef.current);
@@ -526,7 +537,20 @@ export default function SimulatePage() {
         {/* Left: Navigation */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => router.push("/design")}
+            onClick={() => {
+              sessionStorage.setItem(
+                "cfdState",
+                JSON.stringify({
+                  upperCoefficients,
+                  lowerCoefficients,
+                  angleOfAttack,
+                  velocity,
+                  meshDensity,
+                  chordLength,
+                }),
+              );
+              router.push("/design");
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-300 rounded-lg transition-all text-xs font-semibold text-gray-700"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -942,13 +966,15 @@ export default function SimulatePage() {
 
                   {/* Action Buttons */}
                   <div className="space-y-3">
-                    <button
-                      onClick={() => router.push("/turbine")}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
-                    >
-                      <Wind className="w-5 h-5" />
-                      View Turbine
-                    </button>
+                    {simulationMetrics.xfoilStatus === "converged" && (
+                      <button
+                        onClick={() => router.push("/turbine")}
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
+                      >
+                        <Wind className="w-5 h-5" />
+                        View Turbine
+                      </button>
+                    )}
 
                     <button
                       onClick={handleNavigateToOptimize}

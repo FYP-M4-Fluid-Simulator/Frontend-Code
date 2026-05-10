@@ -25,7 +25,7 @@ export function isUsableXfoilPair(
 
 /** Session / HTTP payloads from the Python backend (`meta` on result). */
 export function extractXfoilFromSessionMeta(
-  meta: Record<string, unknown> | undefined | null,
+  meta: any,
 ): XfoilMetrics {
   if (!meta) {
     return { cl: null, cd: null, l_d: null, status: "not_run" };
@@ -34,16 +34,22 @@ export function extractXfoilFromSessionMeta(
     readFiniteNumber(meta.final_xfoil_cl) ??
     readFiniteNumber(meta.xfoil_cl) ??
     readFiniteNumber(meta.xfoilCl) ??
+    readFiniteNumber(meta.final_cl) ??
+    readFiniteNumber(meta.cl) ??
     null;
   const cd =
     readFiniteNumber(meta.final_xfoil_cd) ??
     readFiniteNumber(meta.xfoil_cd) ??
     readFiniteNumber(meta.xfoilCd) ??
+    readFiniteNumber(meta.final_cd) ??
+    readFiniteNumber(meta.cd) ??
     null;
   let l_d =
     readFiniteNumber(meta.final_xfoil_l_d) ??
     readFiniteNumber(meta.xfoil_l_d) ??
     readFiniteNumber(meta.xfoilLd) ??
+    readFiniteNumber(meta.final_cl_cd) ??
+    readFiniteNumber(meta.cl_cd) ??
     null;
   if (l_d == null && cl != null && cd != null && cd !== 0) {
     l_d = cl / cd;
@@ -64,14 +70,17 @@ export function extractOptXfoilFromCompleteMeta(
   const cl =
     readFiniteNumber(meta.final_xfoil_cl) ??
     readFiniteNumber(meta.xfoil_cl) ??
+    readFiniteNumber(meta.final_cl) ??
     null;
   const cd =
     readFiniteNumber(meta.final_xfoil_cd) ??
     readFiniteNumber(meta.xfoil_cd) ??
+    readFiniteNumber(meta.final_cd) ??
     null;
   let l_d =
     readFiniteNumber(meta.final_xfoil_l_d) ??
     readFiniteNumber(meta.xfoil_l_d) ??
+    readFiniteNumber(meta.final_cl_cd) ??
     null;
 
   if (l_d == null && cl != null && cd != null && cd !== 0) {

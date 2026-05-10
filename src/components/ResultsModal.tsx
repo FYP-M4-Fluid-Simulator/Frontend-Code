@@ -225,14 +225,16 @@ export default function ResultsModal({
               </>
             )}
 
-            {/* <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-400/30 rounded-xl p-4">
-              <div className="text-gray-300 text-xs font-semibold mb-2">
-                Computation Time
+            {type === "simulation" && (  
+              <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-400/30 rounded-xl p-4">
+                <div className="text-gray-300 text-xs font-semibold mb-2">
+                  Computation Time
+                </div>
+                <div className="text-gray-300 text-2xl font-bold">
+                  {computationTime ? `${computationTime.toFixed(1)}s` : "-"}
+                </div>
               </div>
-              <div className="text-gray-300 text-2xl font-bold">
-                {computationTime ? `${computationTime.toFixed(1)}s` : "-"}
-              </div>
-            </div> */}
+            )}
           </div>
 
           {/* Evolution Charts (Optimization Only) */}
