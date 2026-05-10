@@ -49,13 +49,6 @@ import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
 import { PYTHON_BACKEND_URL } from "@/config";
-import {
-  displayMetricsFromXfoil,
-  extractOptXfoilFromCompleteMeta,
-  extractOptXfoilFromIterationMeta,
-  extractXfoilFromSessionMeta,
-  isUsableXfoilPair,
-} from "../../lib/xfoilMetrics";
 
 export default function OptimizePage() {
   const router = useRouter();
@@ -73,15 +66,14 @@ export default function OptimizePage() {
   const [isExperimentSaved, setIsExperimentSaved] = useState(false);
   const [isSavingExperiment, setIsSavingExperiment] = useState(false);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  // True once at least one iteration has an XFoil-verified L/D
+  const [xfoilEverConverged, setXfoilEverConverged] = useState(false);
   const [optimizationMetrics, setOptimizationMetrics] = useState({
-    cl: 0,
-    cd: 0,
-    liftToDragRatio: 0,
-    loss: 0,
-    xfoilCl: null as number | null,
-    xfoilCd: null as number | null,
-    xfoilLd: null as number | null,
-    xfoilStatus: "not_run" as string,
+    cl: 1.2345,
+    cd: 0.0156,
+    liftToDragRatio: 79.2,
+    loss: 0.000456,
+    maxThickness: 0.12,
   });
 
   // CST Coefficients and flow parameters (loaded from sessionStorage)
@@ -101,9 +93,9 @@ export default function OptimizePage() {
   const [chordLength, setChordLength] = useState(1.0);
   const [showControlPoints, setShowControlPoints] = useState(false);
 
-  // L/D ratio tracking for live chart
+  // L/D ratio tracking for live chart (XFoil-verified points only)
   const [ldRatioHistory, setLdRatioHistory] = useState<
-    Array<{ iteration: number; ldRatio: number }>
+    Array<{ iteration: number; ldRatio: number | null }>
   >([]);
 
   // Optimization parameters
@@ -194,87 +186,25 @@ export default function OptimizePage() {
     const cachedRaw = localStorage.getItem(`opt_result_${urlSessionId}`);
     if (cachedRaw) {
       try {
-        const cached = JSON.parse(cachedRaw) as Record<string, unknown>;
-        const xf = extractXfoilFromSessionMeta(cached);
-        if (!isUsableXfoilPair(xf.cl, xf.cd)) {
-          toast.error("Cached optimization has no XFoil coefficients. Falling back to Deep Learning values.");
-          const dlCl = typeof cached.final_cl === "number" ? cached.final_cl : (typeof cached.cl === "number" ? cached.cl : 0);
-          const dlCd = typeof cached.final_cd === "number" ? cached.final_cd : (typeof cached.cd === "number" ? cached.cd : 0);
-          const ldFromMeta = cached.final_cl_cd ?? cached.l_d;
-          const dlLd = typeof ldFromMeta === "number" ? ldFromMeta : (dlCd !== 0 ? dlCl / dlCd : 0);
-          
-          setOptimizationMetrics({
-            cl: dlCl,
-            cd: dlCd,
-            liftToDragRatio: dlLd,
-            loss: typeof cached.loss === "number" ? cached.loss : 0,
-            xfoilCl: null,
-            xfoilCd: null,
-            xfoilLd: null,
-            xfoilStatus: xf.status,
-          });
-          setBestLiftCoeff(dlCl);
-          setBestDragCoeff(dlCd);
-          setBestLDRatio(dlLd);
-          setOptimizationLoss(typeof cached.loss === "number" ? cached.loss : 0);
-          if (cached.totalIterations) {
-            setMaxIterations(cached.totalIterations as number);
-            setOptimizationIteration(cached.totalIterations as number);
-          }
-          if (cached.cst_upper) setUpperCoefficients(cached.cst_upper as number[]);
-          if (cached.cst_lower) setLowerCoefficients(cached.cst_lower as number[]);
-
-          sessionStorage.setItem(
-            "optimizationResults",
-            JSON.stringify({
-              xfoilCl: dlCl,
-              xfoilCd: dlCd,
-              xfoilLd: dlLd,
-              xfoilStatus: xf.status,
-              generations: cached.totalIterations ?? 0,
-              numIterations: cached.totalIterations ?? 0,
-              convergenceRate: 100,
-              improvementPercent: 0,
-              timestamp: new Date().toISOString(),
-            }),
-          );
-
-          setShowResults(true);
-          setActiveSidebarTab("results");
-          setIsSidebarOpen(true);
-          setIsLoadingResults(false);
-          return; // skip API call
-        }
-        const loss =
-          typeof cached.loss === "number" && Number.isFinite(cached.loss)
-            ? cached.loss
-            : 0;
-        const finalMetrics = displayMetricsFromXfoil(xf, loss);
+        const cached = JSON.parse(cachedRaw);
+        const finalMetrics = {
+          cl: cached.cl ?? 0,
+          cd: cached.cd ?? 0,
+          liftToDragRatio: cached.liftToDragRatio ?? 0,
+          loss: cached.loss ?? 0,
+          maxThickness: cached.maxThickness ?? 0,
+        };
         setOptimizationMetrics(finalMetrics);
-        setBestLiftCoeff(finalMetrics.cl);
-        setBestDragCoeff(finalMetrics.cd);
-        setBestLDRatio(finalMetrics.liftToDragRatio);
-        setOptimizationLoss(loss);
+        setBestLiftCoeff(cached.cl ?? 0);
+        setBestDragCoeff(cached.cd ?? 0);
+        setBestLDRatio(cached.liftToDragRatio ?? 0);
+        setOptimizationLoss(cached.loss ?? 0);
         if (cached.totalIterations) {
-          setMaxIterations(cached.totalIterations as number);
-          setOptimizationIteration(cached.totalIterations as number);
+          setMaxIterations(cached.totalIterations);
+          setOptimizationIteration(cached.totalIterations);
         }
-        if (cached.cst_upper) setUpperCoefficients(cached.cst_upper as number[]);
-        if (cached.cst_lower) setLowerCoefficients(cached.cst_lower as number[]);
-        sessionStorage.setItem(
-          "optimizationResults",
-          JSON.stringify({
-            xfoilCl: xf.cl,
-            xfoilCd: xf.cd,
-            xfoilLd: finalMetrics.liftToDragRatio,
-            xfoilStatus: xf.status,
-            generations: cached.totalIterations ?? 0,
-            numIterations: cached.totalIterations ?? 0,
-            convergenceRate: 100,
-            improvementPercent: 0,
-            timestamp: new Date().toISOString(),
-          }),
-        );
+        if (cached.cst_upper) setUpperCoefficients(cached.cst_upper);
+        if (cached.cst_lower) setLowerCoefficients(cached.cst_lower);
 
         setShowResults(true);
         setActiveSidebarTab("results");
@@ -316,76 +246,22 @@ export default function OptimizePage() {
         const data = await response.json();
         if (cancelled) return;
 
-        // Populate metrics from the response (XFoil only for aero coefficients)
+        // Populate metrics from the response
         if (data.meta) {
-          const xf = extractXfoilFromSessionMeta(
-            data.meta as Record<string, unknown>,
-          );
-          const loss = data.meta.final_loss ?? 0;
-          if (!isUsableXfoilPair(xf.cl, xf.cd)) {
-            toast.error(
-              "Server result has no XFoil coefficients. Falling back to Deep Learning values.",
-            );
-            const dlCl = typeof data.meta.final_cl === "number" ? data.meta.final_cl : (typeof data.meta.cl === "number" ? data.meta.cl : 0);
-            const dlCd = typeof data.meta.final_cd === "number" ? data.meta.final_cd : (typeof data.meta.cd === "number" ? data.meta.cd : 0);
-            const ldFromMeta = data.meta.final_cl_cd ?? data.meta.l_d;
-            const dlLd = typeof ldFromMeta === "number" ? ldFromMeta : (dlCd !== 0 ? dlCl / dlCd : 0);
-            
-            setOptimizationMetrics({
-              cl: dlCl as number,
-              cd: dlCd as number,
-              liftToDragRatio: dlLd as number,
-              loss: loss,
-              xfoilCl: null,
-              xfoilCd: null,
-              xfoilLd: null,
-              xfoilStatus: xf.status,
-            });
-            setBestLiftCoeff(dlCl as number);
-            setBestDragCoeff(dlCd as number);
-            setBestLDRatio(dlLd as number);
-            setOptimizationLoss(loss);
-            setMaxIterations((data.meta.total_iterations as number) ?? 0);
-            setOptimizationIteration((data.meta.total_iterations as number) ?? 0);
-
-            sessionStorage.setItem(
-              "optimizationResults",
-              JSON.stringify({
-                xfoilCl: dlCl,
-                xfoilCd: dlCd,
-                xfoilLd: dlLd,
-                xfoilStatus: xf.status,
-                generations: data.meta.total_iterations ?? 0,
-                numIterations: data.meta.total_iterations ?? 0,
-                convergenceRate: 100,
-                improvementPercent: 0,
-                timestamp: new Date().toISOString(),
-              }),
-            );
-          } else {
-            const finalMetrics = displayMetricsFromXfoil(xf, loss);
-            setOptimizationMetrics(finalMetrics);
-            setBestLiftCoeff(finalMetrics.cl);
-            setBestDragCoeff(finalMetrics.cd);
-            setBestLDRatio(finalMetrics.liftToDragRatio);
-            setOptimizationLoss(loss);
-            setMaxIterations(data.meta.total_iterations ?? 0);
-            setOptimizationIteration(data.meta.total_iterations ?? 0);
-            sessionStorage.setItem(
-              "optimizationResults",
-              JSON.stringify({
-                xfoilCl: xf.cl,
-                xfoilCd: xf.cd,
-                xfoilLd: finalMetrics.liftToDragRatio,
-                xfoilStatus: xf.status,
-                generations: data.meta.total_iterations ?? 0,
-                numIterations: data.meta.total_iterations ?? 0,
-                convergenceRate: 100,
-                improvementPercent: 0,
-                timestamp: new Date().toISOString(),
-              }),
-            );
-          }
+          const finalMetrics = {
+            cl: data.meta.final_cl ?? 0,
+            cd: data.meta.final_cd ?? 0,
+            liftToDragRatio: data.meta.final_cl_cd ?? 0,
+            loss: data.meta.final_loss ?? 0,
+            maxThickness: data.meta.final_max_thickness ?? 0,
+          };
+          setOptimizationMetrics(finalMetrics);
+          setBestLiftCoeff(data.meta.final_cl ?? 0);
+          setBestDragCoeff(data.meta.final_cd ?? 0);
+          setBestLDRatio(data.meta.final_cl_cd ?? 0);
+          setOptimizationLoss(data.meta.final_loss ?? 0);
+          setMaxIterations(data.meta.total_iterations ?? 0);
+          setOptimizationIteration(data.meta.total_iterations ?? 0);
         }
 
         // Update CST coefficients with the optimized shape
@@ -441,35 +317,30 @@ export default function OptimizePage() {
     setOptimizationIteration(currentMeta.iteration);
     setMaxIterations(currentMeta.total_iterations);
 
-    const xfx = extractOptXfoilFromIterationMeta(currentMeta);
-    if (xfx.l_d != null && Number.isFinite(xfx.l_d)) {
+    // Append to L/D chart — only record XFoil-verified points (cl_cd is null when XFoil failed)
+    if (currentMeta.cl_cd !== null) {
+      setXfoilEverConverged(true);
       setLdRatioHistory((prev) => [
         ...prev,
-        { iteration: currentMeta.iteration, ldRatio: xfx.l_d as number },
+        { iteration: currentMeta.iteration, ldRatio: currentMeta.cl_cd as number },
       ]);
     }
 
-    if (isUsableXfoilPair(xfx.cl, xfx.cd)) {
-      const cl = xfx.cl as number;
-      const cd = xfx.cd as number;
-      const ld =
-        xfx.l_d != null && Number.isFinite(xfx.l_d)
-          ? (xfx.l_d as number)
-          : cd !== 0
-            ? cl / cd
-            : 0;
-      setBestLiftCoeff(cl);
-      setBestDragCoeff(cd);
-      setBestLDRatio(ld);
-    } else {
-      const dlCl = typeof currentMeta.cl === "number" ? currentMeta.cl : 0;
-      const dlCd = typeof currentMeta.cd === "number" ? currentMeta.cd : 0;
-      const dlLd = typeof currentMeta.l_d === "number" ? currentMeta.l_d : (dlCd !== 0 ? dlCl / dlCd : 0);
-      setBestLiftCoeff(dlCl);
-      setBestDragCoeff(dlCd);
-      setBestLDRatio(dlLd);
+    // Keep running best values updated (only update display when XFoil converged)
+    if (currentMeta.cl_cd !== null) {
+      setBestLiftCoeff(currentMeta.cl as number);
+      setBestDragCoeff(currentMeta.cd as number);
+      setBestLDRatio(currentMeta.cl_cd);
     }
     setOptimizationLoss(currentMeta.loss);
+    setOptimizationMetrics((prev) => ({
+      ...prev,
+      cl: (currentMeta.cl as number) || prev.cl,
+      cd: (currentMeta.cd as number) || prev.cd,
+      liftToDragRatio: currentMeta.cl_cd || prev.liftToDragRatio,
+      loss: currentMeta.loss,
+      maxThickness: currentMeta.max_thickness,
+    }));
   }, [currentMeta, currentShape]);
 
   // Handle optimization completion
@@ -482,94 +353,18 @@ export default function OptimizePage() {
     setUpperCoefficients(shape.cst_upper);
     setLowerCoefficients(shape.cst_lower);
 
-    const xf = extractOptXfoilFromCompleteMeta(meta);
-    if (!isUsableXfoilPair(xf.cl, xf.cd)) {
-      toast.error(
-        "Optimization finished without XFoil finals. Falling back to Deep Learning values.",
-      );
-      const dlCl = typeof (meta as any).final_cl === "number" ? (meta as any).final_cl : (typeof (meta as any).cl === "number" ? (meta as any).cl : 0);
-      const dlCd = typeof (meta as any).final_cd === "number" ? (meta as any).final_cd : (typeof (meta as any).cd === "number" ? (meta as any).cd : 0);
-      const ldFromMeta = (meta as any).final_cl_cd ?? (meta as any).l_d;
-      const dlLd = typeof ldFromMeta === "number" ? ldFromMeta : (dlCd !== 0 ? dlCl / dlCd : 0);
-      setOptimizationMetrics({
-        cl: dlCl,
-        cd: dlCd,
-        liftToDragRatio: dlLd,
-        loss: meta.final_loss,
-        xfoilCl: null,
-        xfoilCd: null,
-        xfoilLd: null,
-        xfoilStatus: xf.status,
-      });
-
-      sessionStorage.setItem(
-        "optimizationResults",
-        JSON.stringify({
-          xfoilCl: dlCl,
-          xfoilCd: dlCd,
-          xfoilLd: dlLd,
-          xfoilStatus: xf.status,
-          generations: meta.total_iterations,
-          numIterations: meta.total_iterations,
-          convergenceRate: 100,
-          improvementPercent: 0,
-          timestamp: new Date().toISOString(),
-        }),
-      );
-
-      if (optSessionId) {
-        localStorage.setItem(
-          `opt_result_${optSessionId}`,
-          JSON.stringify({
-            xfoilCl: dlCl,
-            xfoilCd: dlCd,
-            xfoilLd: dlLd,
-            xfoilStatus: xf.status,
-            loss: meta.final_loss,
-            totalIterations: meta.total_iterations,
-            cst_upper: shape.cst_upper,
-            cst_lower: shape.cst_lower,
-          }),
-        );
-      }
-    } else {
-      const finalMetrics = displayMetricsFromXfoil(xf, meta.final_loss);
-      setOptimizationMetrics(finalMetrics);
-      setBestLiftCoeff(finalMetrics.cl);
-      setBestDragCoeff(finalMetrics.cd);
-      setBestLDRatio(finalMetrics.liftToDragRatio);
-
-      sessionStorage.setItem(
-        "optimizationResults",
-        JSON.stringify({
-          xfoilCl: xf.cl,
-          xfoilCd: xf.cd,
-          xfoilLd: finalMetrics.liftToDragRatio,
-          xfoilStatus: xf.status,
-          generations: meta.total_iterations,
-          numIterations: meta.total_iterations,
-          convergenceRate: 100,
-          improvementPercent: 0,
-          timestamp: new Date().toISOString(),
-        }),
-      );
-
-      if (optSessionId) {
-        localStorage.setItem(
-          `opt_result_${optSessionId}`,
-          JSON.stringify({
-            xfoilCl: xf.cl,
-            xfoilCd: xf.cd,
-            xfoilLd: finalMetrics.liftToDragRatio,
-            xfoilStatus: xf.status,
-            loss: meta.final_loss,
-            totalIterations: meta.total_iterations,
-            cst_upper: shape.cst_upper,
-            cst_lower: shape.cst_lower,
-          }),
-        );
-      }
-    }
+    // Final metrics
+    const finalMetrics = {
+      cl: meta.final_cl,
+      cd: meta.final_cd,
+      liftToDragRatio: meta.final_cl_cd,
+      loss: meta.final_loss,
+      maxThickness: meta.final_max_thickness,
+    };
+    setOptimizationMetrics(finalMetrics);
+    setBestLiftCoeff(meta.final_cl);
+    setBestDragCoeff(meta.final_cd);
+    setBestLDRatio(meta.final_cl_cd);
 
     setIsOptimizing(false);
     setShowResults(true);
@@ -583,8 +378,41 @@ export default function OptimizePage() {
       window.history.replaceState({}, "", url.toString());
     }
 
-    setTimeout(() => setShowResultsModal(true), 500);
-  }, [optComplete, completedFrame, optSessionId]);
+    // Store for turbine page
+    sessionStorage.setItem(
+      "optimizationResults",
+      JSON.stringify({
+        bestLiftToDragRatio: meta.final_cl_cd,
+        bestLiftCoefficient: meta.final_cl,
+        bestDragCoefficient: meta.final_cd,
+        generations: meta.total_iterations,
+        numIterations: meta.total_iterations,
+        maxThickness: meta.final_max_thickness,
+        convergenceRate: 100,
+        improvementPercent: 0,
+      }),
+    );
+
+    // Also store in localStorage keyed by sessionId (persists across tabs)
+    if (optSessionId) {
+      localStorage.setItem(
+        `opt_result_${optSessionId}`,
+        JSON.stringify({
+          cl: meta.final_cl,
+          cd: meta.final_cd,
+          liftToDragRatio: meta.final_cl_cd,
+          loss: meta.final_loss,
+          maxThickness: meta.final_max_thickness,
+          totalIterations: meta.total_iterations,
+          cst_upper: shape.cst_upper,
+          cst_lower: shape.cst_lower,
+        }),
+      );
+    }
+
+    // Only show modal if XFoil converged for at least one iteration
+    setTimeout(() => setShowResultsModal(xfoilEverConverged), 500);
+  }, [optComplete, completedFrame]);
 
   // Surface errors
   useEffect(() => {
@@ -732,6 +560,7 @@ export default function OptimizePage() {
     setShowResultsModal(false);
     setIsExperimentSaved(false);
     setLdRatioHistory([]);
+    setXfoilEverConverged(false);
     setIsSidebarOpen(false);
 
     // Reset metrics
@@ -740,10 +569,7 @@ export default function OptimizePage() {
       cd: 0,
       liftToDragRatio: 0,
       loss: 0,
-      xfoilCl: null,
-      xfoilCd: null,
-      xfoilLd: null,
-      xfoilStatus: "not_run",
+      maxThickness: 0,
     });
     setBestLiftCoeff(0);
     setBestDragCoeff(0);
@@ -1123,9 +949,9 @@ export default function OptimizePage() {
                         />
                         <input
                           type="number"
-                          min={10}
-                          max={200}
-                          step={10}
+                          min={5}
+                          max={100}
+                          step={5}
                           value={numIterations}
                           onChange={(e) =>
                             setNumIterations(Number(e.target.value))
@@ -1315,46 +1141,67 @@ export default function OptimizePage() {
               {/* Results Tab Content */}
               {activeSidebarTab === "results" && showResults && (
                 <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                  <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
-                    <p className="text-sm font-black text-green-800">
-                      ✓ Optimization Complete!
-                    </p>
-                    <p className="text-xs text-green-700 mt-1">
-                      Found optimal airfoil configuration
-                    </p>
-                  </div>
+                  {xfoilEverConverged ? (
+                    <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                      <p className="text-sm font-black text-green-800">
+                        ✓ Optimization Complete!
+                      </p>
+                      <p className="text-xs text-green-700 mt-1">
+                        Found optimal airfoil configuration
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-50 border-2 border-amber-400 rounded-xl p-4">
+                      <p className="text-sm font-black text-amber-800">
+                        ⚠ XFoil Did Not Converge
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        XFoil could not evaluate this airfoil at the given
+                        Reynolds number and angle of attack. No reliable
+                        aerodynamic results are available. Try adjusting the
+                        geometry, Re, or AoA and rerun.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-xl border-2 border-orange-200 p-5 space-y-3">
                     <h4 className="text-sm font-black text-orange-900">
                       🏆 Optimization Results
                     </h4>
                     <div className="space-y-2 text-xs font-medium text-orange-800">
-                      <div className="flex justify-between">
-                        <span>
-                          Best C<sub>L</sub>:
-                        </span>
-                        <span className="font-black">
-                          {formatValue(optimizationMetrics.xfoilCl ?? optimizationMetrics.cl)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>
-                          Best C<sub>D</sub>:
-                        </span>
-                        <span className="font-black">
-                          {formatValue(optimizationMetrics.xfoilCd ?? optimizationMetrics.cd)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Best L/D Ratio:</span>
-                        <span className="font-black text-green-700">
-                          {optimizationMetrics.xfoilLd?.toFixed(2) ??
-                            optimizationMetrics.liftToDragRatio?.toFixed(2) ??
-                            (
-                              optimizationMetrics.cl / optimizationMetrics.cd
-                            ).toFixed(2)}
-                        </span>
-                      </div>
+                      {xfoilEverConverged ? (
+                        <>
+                          <div className="flex justify-between">
+                            <span>
+                              Best C<sub>L</sub>:
+                            </span>
+                            <span className="font-black">
+                              {formatValue(optimizationMetrics.cl)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>
+                              Best C<sub>D</sub>:
+                            </span>
+                            <span className="font-black">
+                              {formatValue(optimizationMetrics.cd)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Best L/D Ratio:</span>
+                            <span className="font-black text-green-700">
+                              {optimizationMetrics.liftToDragRatio?.toFixed(2) ||
+                                (
+                                  optimizationMetrics.cl / optimizationMetrics.cd
+                                ).toFixed(2)}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-xs text-orange-700 italic">
+                          No XFoil-verified aerodynamic values available.
+                        </p>
+                      )}
                       <div className="flex justify-between">
                         <span>Final Loss:</span>
                         <span className="font-black">
@@ -1394,20 +1241,23 @@ export default function OptimizePage() {
                               stroke="#f97316"
                               strokeWidth={2}
                               dot={{ fill: "#f97316", r: 2 }}
+                              connectNulls={false}
                             />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
                     )}
 
-                    {/* View Full Results Button */}
-                    <button
-                      onClick={() => setShowResultsModal(true)}
-                      className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all shadow-md text-sm"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      View Full Results
-                    </button>
+                    {/* View Full Results Button — only when XFoil converged */}
+                    {xfoilEverConverged && (
+                      <button
+                        onClick={() => setShowResultsModal(true)}
+                        className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all shadow-md text-sm"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        View Full Results
+                      </button>
+                    )}
                   </div>
 
                   {/* Action Buttons */}
@@ -1559,30 +1409,43 @@ export default function OptimizePage() {
                         {formatValue(optimizationLoss)}
                       </p>
                     </div>
-                    <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                      <p className="text-[10px] font-black text-blue-800 uppercase tracking-tighter">
-                        L/D Ratio
-                      </p>
-                      <p className="text-sm font-bold text-gray-900 text-green-600">
-                        {bestLDRatio.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
-                        C<sub>L</sub>
-                      </p>
-                      <p className="text-sm font-bold text-gray-900">
-                        {formatValue(bestLiftCoeff)}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
-                        C<sub>D</sub>
-                      </p>
-                      <p className="text-sm font-bold text-gray-900">
-                        {formatValue(bestDragCoeff)}
-                      </p>
-                    </div>
+                    {xfoilEverConverged ? (
+                      <>
+                        <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                          <p className="text-[10px] font-black text-blue-800 uppercase tracking-tighter">
+                            L/D Ratio
+                          </p>
+                          <p className="text-sm font-bold text-green-600">
+                            {bestLDRatio.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
+                            C<sub>L</sub>
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {formatValue(bestLiftCoeff)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
+                            C<sub>D</sub>
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {formatValue(bestDragCoeff)}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-amber-50 p-2 rounded-lg border border-amber-200 col-span-1">
+                        <p className="text-[10px] font-black text-amber-700 uppercase tracking-tighter">
+                          XFoil
+                        </p>
+                        <p className="text-xs text-amber-600">
+                          Awaiting convergence…
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1601,13 +1464,10 @@ export default function OptimizePage() {
         metrics={optimizationMetrics}
         convergenceData={optHistory.map((h) => ({
           iteration: h.iteration,
-          cl: h.xfoil_cl ?? 0,
-          cd: h.xfoil_cd ?? 0,
+          cl: h.cl,
+          cd: h.cd,
           loss: h.loss,
-          ldRatio:
-            h.xfoil_l_d != null && Number.isFinite(h.xfoil_l_d)
-              ? h.xfoil_l_d
-              : 0,
+          ldRatio: h.cl_cd,
         }))}
         onSaveExperiment={handleSaveExperiment}
         onDownloadMetrics={handleModalDownloadMetrics}

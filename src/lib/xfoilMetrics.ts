@@ -17,10 +17,10 @@ export function isUsableXfoilPair(
   cl: number | null | undefined,
   cd: number | null | undefined,
 ): boolean {
-  const a = cl != null && Number.isFinite(cl) ? cl : null;
-  const b = cd != null && Number.isFinite(cd) ? cd : null;
-  if (a === null || b === null) return false;
-  return !(a === 0 && b === 0);
+  const validCl = cl != null && Number.isFinite(cl) ? cl : null;
+  const validCd = cd != null && Number.isFinite(cd) ? cd : null;
+  if (validCl === null || validCd === null) return false;
+  return !(validCl === 0 && validCd === 0);
 }
 
 /** Session / HTTP payloads from the Python backend (`meta` on result). */
