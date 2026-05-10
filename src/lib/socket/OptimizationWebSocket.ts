@@ -16,6 +16,10 @@ export interface OptIterationMeta {
   lift_force: number;
   drag_force: number;
   max_thickness: number;
+  xfoil_cl?: number | null;
+  xfoil_cd?: number | null;
+  xfoil_l_d?: number | null;
+  xfoil_status?: string | null;
 }
 
 export interface OptShape {
@@ -42,6 +46,14 @@ export interface OptCompleteFrame {
     final_drag: number;
     final_loss: number;
     final_max_thickness: number;
+    final_xfoil_cl?: number | null;
+    final_xfoil_cd?: number | null;
+    final_xfoil_l_d?: number | null;
+    final_xfoil_status?: string | null;
+    xfoil_cl?: number | null;
+    xfoil_cd?: number | null;
+    xfoil_l_d?: number | null;
+    xfoil_status?: string | null;
   };
   shape: OptShape;
   initial_shape: { cst_upper: number[]; cst_lower: number[] };
