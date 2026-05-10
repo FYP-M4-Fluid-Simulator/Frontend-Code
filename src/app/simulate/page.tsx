@@ -537,7 +537,20 @@ export default function SimulatePage() {
         {/* Left: Navigation */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => router.push("/design")}
+            onClick={() => {
+              sessionStorage.setItem(
+                "cfdState",
+                JSON.stringify({
+                  upperCoefficients,
+                  lowerCoefficients,
+                  angleOfAttack,
+                  velocity,
+                  meshDensity,
+                  chordLength,
+                }),
+              );
+              router.push("/design");
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-300 rounded-lg transition-all text-xs font-semibold text-gray-700"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -953,13 +966,15 @@ export default function SimulatePage() {
 
                   {/* Action Buttons */}
                   <div className="space-y-3">
-                    <button
-                      onClick={() => router.push("/turbine")}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
-                    >
-                      <Wind className="w-5 h-5" />
-                      View Turbine
-                    </button>
+                    {simulationMetrics.xfoilStatus === "converged" && (
+                      <button
+                        onClick={() => router.push("/turbine")}
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
+                      >
+                        <Wind className="w-5 h-5" />
+                        View Turbine
+                      </button>
+                    )}
 
                     <button
                       onClick={handleNavigateToOptimize}
