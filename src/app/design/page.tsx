@@ -208,6 +208,8 @@ export default function DesignPage() {
         }
         // Clear the stored data after loading
         sessionStorage.removeItem("cstCoefficients");
+        // Clear stale session state so the new airfoil takes priority
+        sessionStorage.removeItem("cfdState");
       } catch (error) {
         console.error("Error loading CST coefficients:", error);
       }
@@ -236,6 +238,8 @@ export default function DesignPage() {
 
         // Clear the stored data after loading
         sessionStorage.removeItem("selectedAirfoil");
+        // Clear stale session state so the new airfoil takes priority
+        sessionStorage.removeItem("cfdState");
       } catch (error) {
         console.error("Error loading selected airfoil:", error);
       }
@@ -318,7 +322,7 @@ export default function DesignPage() {
     setVelocity(15);
     setMeshDensity("medium");
     setChordLength(1.0);
-    
+
     // Clear previously stored state to avoid unexpected persistence
     sessionStorage.removeItem("cfdState");
     sessionStorage.removeItem("cstCoefficients");
@@ -583,7 +587,7 @@ export default function DesignPage() {
                     className={`flex-1 px-4 py-3 text-sm font-bold transition-all ${activeTab === "cst"
                       ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <Wind className="w-4 h-4" />

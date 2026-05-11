@@ -41,6 +41,7 @@ import { UserProfileDropdown } from "@/components/UserProfileDropdown";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
 import { PYTHON_BACKEND_URL } from "@/config";
+import { extractXfoilFromSessionMeta } from "@/lib/xfoilMetrics";
 
 export default function SimulatePage() {
   const router = useRouter();
@@ -60,53 +61,20 @@ export default function SimulatePage() {
   const [sessionConfig, setSessionConfig] = useState<SessionConfig | undefined>(
     undefined,
   );
+  // Simulation state — only XFoil-verified values are stored
   const [simulationMetrics, setSimulationMetrics] = useState<{
-    cl: number;
-    cd: number;
-    liftToDragRatio: number;
     xfoilCl?: number | null;
     xfoilCd?: number | null;
     xfoilLd?: number | null;
     xfoilStatus?: string;
-  }>({
-    cl: 0,
-    cd: 0,
-    liftToDragRatio: 0,
-  });
+  }>({});
   const [computationDuration, setComputationDuration] = useState(0);
-
-  const formatValue = (val: number | undefined | null) => {
-    if (val === undefined || val === null) return "0.0000";
-    if (val === 0) return "0.0000";
-
-    // Use scientific notation for small values
-    if (Math.abs(val) < 0.001 && Math.abs(val) > 0) {
-      const parts = val.toExponential(2).split("e");
-      return (
-        <span>
-          {parts[0]} &times; 10<sup>{parts[1].replace("+", "")}</sup>
-        </span>
-      );
-    }
-    return val.toFixed(4);
-  };
-
-  // Track coefficient history for graphing
-  const [coefficientHistory, setCoefficientHistory] = useState<
-    Array<{
-      iteration: number;
-      cl: number;
-      cd: number;
-      ldRatio: number;
-    }>
-  >([]);
 
   // Use CFD hook when simulating
   const {
     frameRef,
     isCompleted,
     setIsCompleted,
-    coefficients,
     xfoilData,
     closeConnection,
     sessionId,
@@ -203,9 +171,10 @@ export default function SimulatePage() {
       try {
         const cached = JSON.parse(cachedRaw);
         setSimulationMetrics({
-          cl: cached.liftCoefficient ?? 0,
-          cd: cached.dragCoefficient ?? 0,
-          liftToDragRatio: cached.liftToDragRatio ?? 0,
+          xfoilCl: cached.xfoilCl ?? null,
+          xfoilCd: cached.xfoilCd ?? null,
+          xfoilLd: cached.xfoilLd ?? null,
+          xfoilStatus: cached.xfoilStatus ?? "converged",
         });
         if (cached.computationTime) {
           setComputationDuration(cached.computationTime);
@@ -254,9 +223,10 @@ export default function SimulatePage() {
         // Populate metrics from the response
         if (data.meta) {
           setSimulationMetrics({
-            cl: data.meta.cl ?? 0,
-            cd: data.meta.cd ?? 0,
-            liftToDragRatio: data.meta.l_d ?? 0,
+            xfoilCl: data.meta.xfoil_cl ?? null,
+            xfoilCd: data.meta.xfoil_cd ?? null,
+            xfoilLd: data.meta.xfoil_l_d ?? null,
+            xfoilStatus: data.meta.xfoil_status ?? "converged",
           });
         }
 
@@ -371,20 +341,7 @@ export default function SimulatePage() {
     }
   };
 
-  // Track coefficient history in real-time during simulation
-  useEffect(() => {
-    if (coefficients && isSimulating) {
-      setCoefficientHistory((prev) => [
-        ...prev,
-        {
-          iteration: prev.length + 1,
-          cl: coefficients.cl,
-          cd: coefficients.cd,
-          ldRatio: coefficients.l_d,
-        },
-      ]);
-    }
-  }, [coefficients, isSimulating]);
+  // Coefficient history removed — RANS per-frame cl/cd no longer streamed
 
   const handleSaveExperiment = async (name: string) => {
     const activeSessionId = sessionId || sessionConfig?.runId;
@@ -430,17 +387,15 @@ export default function SimulatePage() {
   };
 
   const handleModalDownloadMetrics = (format: "csv" | "json") => {
+    // Only download when XFoil converged
+    if (simulationMetrics.xfoilStatus !== "converged") return;
     const metrics: OptimizationMetrics = {
-      liftCoefficient: simulationMetrics.cl,
-      dragCoefficient: simulationMetrics.cd,
-      liftToDragRatio:
-        simulationMetrics.liftToDragRatio ||
-        (simulationMetrics.cd !== 0
-          ? simulationMetrics.cl / simulationMetrics.cd
-          : 0),
+      liftCoefficient: simulationMetrics.xfoilCl ?? 0,
+      dragCoefficient: simulationMetrics.xfoilCd ?? 0,
+      liftToDragRatio: simulationMetrics.xfoilLd ?? 0,
       angleOfAttack: angleOfAttack,
       velocity: velocity,
-      reynoldsNumber: velocity * 10000,
+      reynoldsNumber: reynoldsNumber,
     };
 
     const timestamp = new Date().toISOString().slice(0, 10);
@@ -455,17 +410,12 @@ export default function SimulatePage() {
     setIsSimulating(true);
     setSimulationProgress(0);
     setShowResults(false);
-    setShowResultsModal(false); // Ensure modal is hidden at start
-    setIsExperimentSaved(false); // Reset saved status
-    setCoefficientHistory([]); // Reset coefficient history
-    setIsSidebarOpen(false); // Close sidebar when simulation starts
-    setVisualizationType("curl"); // Reset to default
+    setShowResultsModal(false);
+    setIsExperimentSaved(false);
+    setIsSidebarOpen(false);
+    setVisualizationType("curl");
     setComputationDuration(0);
-    setSimulationMetrics({
-      cl: 0,
-      cd: 0,
-      liftToDragRatio: 0,
-    });
+    setSimulationMetrics({});
     sessionStorage.removeItem("simulationResults");
 
     setIsCompleted(false);
@@ -500,72 +450,66 @@ export default function SimulatePage() {
     if (isCompleted && isSimulating) {
       setSimulationProgress(100);
       setIsSimulating(false);
-      // Calculate actual computation time
+      let finalDuration = 0;
       const startTimeStr = sessionStorage.getItem("simulationStartTime");
       if (startTimeStr) {
         const startTime = parseFloat(startTimeStr);
-        const durationSeconds = (performance.now() - startTime) / 1000;
-        setComputationDuration(durationSeconds);
+        finalDuration = (performance.now() - startTime) / 1000;
+        setComputationDuration(finalDuration);
       }
 
-      // Update metrics with final coefficient values
-      if (coefficients) {
-        setSimulationMetrics({
-          cl: coefficients.cl,
-          cd: coefficients.cd,
-          liftToDragRatio: coefficients.l_d,
-          xfoilCl: xfoilData?.cl ?? null,
-          xfoilCd: xfoilData?.cd ?? null,
-          xfoilLd: xfoilData?.l_d ?? null,
-          xfoilStatus: xfoilData?.status ?? 'not_run',
-        });
-      }
+      const finalMeta = frameRef.current?.meta || {};
+      const fallbackXfoil = extractXfoilFromSessionMeta({
+        ...finalMeta,
+        final_xfoil_cl: xfoilData?.cl,
+        final_xfoil_cd: xfoilData?.cd,
+        final_xfoil_l_d: xfoilData?.l_d,
+        final_xfoil_status: xfoilData?.status,
+      });
+
+      // Use XFoil results with Deep Learning fallbacks
+      setSimulationMetrics({
+        xfoilCl: fallbackXfoil.cl,
+        xfoilCd: fallbackXfoil.cd,
+        xfoilLd: fallbackXfoil.l_d,
+        xfoilStatus: fallbackXfoil.status,
+      });
 
       setShowResults(true);
       setActiveSidebarTab("results");
       setIsSidebarOpen(true);
 
-      // Update URL with sessionId so the link can be shared / revisited
       if (sessionId) {
         const url = new URL(window.location.href);
         url.searchParams.set("sessionId", sessionId);
         window.history.replaceState({}, "", url.toString());
       }
 
-      // Show modal after a short delay
+      // Always show modal after completion (modal itself handles xfoil-failed state)
       setTimeout(() => {
         setShowResultsModal(true);
       }, 500);
 
-      // Store final results in sessionStorage (for in-tab use)
-      if (coefficients) {
-        const resultData = {
-          liftToDragRatio: coefficients.l_d,
-          liftCoefficient: coefficients.cl,
-          dragCoefficient: coefficients.cd,
-          computationTime: computationDuration,
-        };
-        sessionStorage.setItem(
-          "simulationResults",
-          JSON.stringify(resultData),
-        );
+      const simResultsObj = {
+        xfoilCl: fallbackXfoil.cl,
+        xfoilCd: fallbackXfoil.cd,
+        xfoilLd: fallbackXfoil.l_d,
+        xfoilStatus: fallbackXfoil.status,
+        computationTime: finalDuration,
+      };
 
-        // Also store in localStorage keyed by sessionId (persists across tabs)
-        if (sessionId) {
-          localStorage.setItem(
-            `sim_result_${sessionId}`,
-            JSON.stringify(resultData),
-          );
-        }
+      if (sessionId) {
+        localStorage.setItem(`sim_result_${sessionId}`, JSON.stringify(simResultsObj));
       }
+      
+      sessionStorage.setItem("simulationResults", JSON.stringify(simResultsObj));
 
-      // Clear interval (kept for cleanup safety)
       if (simulationIntervalRef.current) {
         clearInterval(simulationIntervalRef.current);
         simulationIntervalRef.current = null;
       }
     }
-  }, [isCompleted, isSimulating, coefficients, simulationDuration]);
+  }, [isCompleted, isSimulating, xfoilData, sessionId]);
 
   const handleStopSimulation = () => {
     setIsSimulating(false);
@@ -593,7 +537,20 @@ export default function SimulatePage() {
         {/* Left: Navigation */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => router.push("/design")}
+            onClick={() => {
+              sessionStorage.setItem(
+                "cfdState",
+                JSON.stringify({
+                  upperCoefficients,
+                  lowerCoefficients,
+                  angleOfAttack,
+                  velocity,
+                  meshDensity,
+                  chordLength,
+                }),
+              );
+              router.push("/design");
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-300 rounded-lg transition-all text-xs font-semibold text-gray-700"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -942,124 +899,53 @@ export default function SimulatePage() {
               {/* Results Tab Content */}
               {activeSidebarTab === "results" && showResults && (
                 <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                  <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
-                    <p className="text-sm font-black text-green-800">
-                      ✓ Simulation Complete!
-                    </p>
-                  </div>
+                    <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                      <p className="text-sm font-black text-green-800">
+                        ✓ Simulation Complete!
+                      </p>
+                    </div>
 
                   <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border-2 border-cyan-200 p-5 space-y-4">
                     <h4 className="text-sm font-black text-cyan-900">
                       📊 Simulation Results
                     </h4>
 
-                    {/* Key Metrics */}
-                    <div className="space-y-2 text-xs font-medium text-cyan-800">
-                      <div className="flex justify-between">
-                        <span>
-                          Lift Coefficient (C<sub>L</sub>):
-                        </span>
-                        <span className="font-black">
-                          {formatValue(simulationMetrics.cl)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>
-                          Drag Coefficient (C<sub>D</sub>):
-                        </span>
-                        <span className="font-black">
-                          {formatValue(simulationMetrics.cd)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>L/D Ratio:</span>
-                        <span className="font-black">
-                          {formatValue(simulationMetrics.liftToDragRatio)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Coefficient Graphs */}
-                    <div className="space-y-3 pt-2 border-t border-cyan-200">
-                      <h5 className="text-xs font-black text-cyan-900">
-                        Coefficient Analysis
-                      </h5>
-
-                      {/* Lift Coefficient Bar */}
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-bold text-cyan-700">
-                            C<sub>L</sub>
-                          </span>
-                          <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.cl)}
-                          </span>
-                        </div>
-                        <div className="w-full bg-cyan-100 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full flex items-center justify-end pr-2"
-                            style={{
-                              width: `${Math.min((Math.abs(simulationMetrics.cl) / 1.2) * 100, 100)}%`,
-                            }}
-                          >
-                            <span className="text-[10px] font-bold text-white">
-                              Lift
+                    {simulationMetrics.xfoilStatus === "converged" ? (
+                      <>
+                        {/* XFoil-verified metrics */}
+                        <div className="space-y-2 text-xs font-medium text-cyan-800">
+                          <div className="flex justify-between">
+                            <span>C<sub>L</sub> (XFoil):</span>
+                            <span className="font-black">
+                              {simulationMetrics.xfoilCl?.toFixed(4) ?? "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>C<sub>D</sub> (XFoil):</span>
+                            <span className="font-black">
+                              {simulationMetrics.xfoilCd?.toFixed(5) ?? "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>L/D Ratio (XFoil):</span>
+                            <span className="font-black text-green-700">
+                              {simulationMetrics.xfoilLd?.toFixed(2) ?? "—"}
                             </span>
                           </div>
                         </div>
+                      </>
+                    ) : (
+                      <div className="py-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3">
+                        <p className="font-black mb-1">⚠ XFoil Did Not Converge</p>
+                        <p>
+                          No reliable aerodynamic values available for these
+                          conditions. Adjust Re, AoA or geometry and rerun.
+                        </p>
                       </div>
+                    )}
 
-                      {/* Drag Coefficient Bar */}
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-bold text-cyan-700">
-                            C<sub>D</sub>
-                          </span>
-                          <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.cd)}
-                          </span>
-                        </div>
-                        <div className="w-full bg-red-100 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-red-500 to-red-600 h-full rounded-full flex items-center justify-end pr-2"
-                            style={{
-                              width: `${Math.min((simulationMetrics.cd / 0.1) * 100, 100)}%`,
-                            }}
-                          >
-                            <span className="text-[10px] font-bold text-white">
-                              Drag
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* L/D Ratio Bar */}
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-bold text-cyan-700">
-                            L/D Ratio
-                          </span>
-                          <span className="font-black text-cyan-900">
-                            {formatValue(simulationMetrics.liftToDragRatio)}
-                          </span>
-                        </div>
-                        <div className="w-full bg-green-100 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-green-500 to-green-600 h-full rounded-full flex items-center justify-end pr-2"
-                            style={{
-                              width: `${Math.min((simulationMetrics.liftToDragRatio / 50) * 100, 100)}%`,
-                            }}
-                          >
-                            <span className="text-[10px] font-bold text-white">
-                              Efficiency
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Additional Metrics */}
-                    <div className="space-y-2 pt-2 border-t border-cyan-200 text-xs font-medium text-cyan-800">
+                    {/* Computation Time */}
+                    <div className="pt-2 border-t border-cyan-200 text-xs font-medium text-cyan-800">
                       <div className="flex justify-between">
                         <span>Computation Time:</span>
                         <span className="font-black">
@@ -1068,10 +954,10 @@ export default function SimulatePage() {
                       </div>
                     </div>
 
-                    {/* View Full Results Button */}
+                    {/* View Full Results — always shown */}
                     <button
                       onClick={() => setShowResultsModal(true)}
-                      className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all shadow-md text-sm"
+                      className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all shadow-md text-sm"
                     >
                       <BarChart3 className="w-4 h-4" />
                       View Full Results
@@ -1080,13 +966,15 @@ export default function SimulatePage() {
 
                   {/* Action Buttons */}
                   <div className="space-y-3">
-                    <button
-                      onClick={() => router.push("/turbine")}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
-                    >
-                      <Wind className="w-5 h-5" />
-                      View Turbine
-                    </button>
+                    {simulationMetrics.xfoilStatus === "converged" && (
+                      <button
+                        onClick={() => router.push("/turbine")}
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-black shadow-xl text-base"
+                      >
+                        <Wind className="w-5 h-5" />
+                        View Turbine
+                      </button>
+                    )}
 
                     <button
                       onClick={handleNavigateToOptimize}
@@ -1233,13 +1121,18 @@ export default function SimulatePage() {
         </div>
       </div>
 
-      {/* Results Modal */}
       <ResultsModal
         isOpen={showResultsModal}
         onClose={() => setShowResultsModal(false)}
         type="simulation"
-        metrics={simulationMetrics}
-        convergenceData={coefficientHistory}
+        metrics={{
+          cl: 0, // not used in simulation mode — modal reads xfoilCl
+          cd: 0, // not used in simulation mode — modal reads xfoilCd
+          xfoilCl: simulationMetrics.xfoilCl,
+          xfoilCd: simulationMetrics.xfoilCd,
+          xfoilLd: simulationMetrics.xfoilLd,
+          xfoilStatus: simulationMetrics.xfoilStatus,
+        }}
         computationTime={computationDuration}
         onSaveExperiment={handleSaveExperiment}
         onDownloadMetrics={handleModalDownloadMetrics}
