@@ -9,6 +9,8 @@ interface ProfessionalTurbineProps {
   rpm?: number | null;
   /** 0.5 = small, 1.0 = medium (default), 1.6 = large */
   scaleFactor?: number;
+  /** Show technical annotations (blade length, tower height in pixels) */
+  showAnnotations?: boolean;
 }
 
 export function ProfessionalTurbine({
@@ -16,6 +18,7 @@ export function ProfessionalTurbine({
   powerKilowatts = null,
   rpm = null,
   scaleFactor = 1.0,
+  showAnnotations = true,
 }: ProfessionalTurbineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
@@ -377,30 +380,32 @@ export function ProfessionalTurbine({
       }
 
       // Technical annotations
-      ctx.fillStyle = "rgba(200, 220, 255, 0.9)";
-      ctx.font = "11px monospace";
+      if (showAnnotations) {
+        ctx.fillStyle = "rgba(200, 220, 255, 0.9)";
+        ctx.font = "11px monospace";
 
-      // Blade length annotation
-      ctx.strokeStyle = "rgba(100, 150, 255, 0.5)";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(hubX, hubY);
-      ctx.lineTo(
-        hubX + bladeLength * Math.cos(rotationRef.current),
-        hubY + bladeLength * Math.sin(rotationRef.current),
-      );
-      ctx.stroke();
-      ctx.setLineDash([]);
+        // Blade length annotation
+        ctx.strokeStyle = "rgba(100, 150, 255, 0.5)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(hubX, hubY);
+        ctx.lineTo(
+          hubX + bladeLength * Math.cos(rotationRef.current),
+          hubY + bladeLength * Math.sin(rotationRef.current),
+        );
+        ctx.stroke();
+        ctx.setLineDash([]);
 
-      ctx.fillText(`R = ${bladeLength.toFixed(0)}px`, hubX + 20, hubY - 20);
+        ctx.fillText(`R = ${bladeLength.toFixed(0)}px`, hubX + 20, hubY - 20);
 
-      // Tower height annotation
-      ctx.beginPath();
-      ctx.moveTo(centerX + 30, hubY);
-      ctx.lineTo(centerX + 30, centerY + 50);
-      ctx.stroke();
-      ctx.fillText(`H = ${towerHeight.toFixed(0)}px`, centerX + 35, hubY + towerHeight / 2);
+        // Tower height annotation
+        ctx.beginPath();
+        ctx.moveTo(centerX + 30, hubY);
+        ctx.lineTo(centerX + 30, centerY + 50);
+        ctx.stroke();
+        ctx.fillText(`H = ${towerHeight.toFixed(0)}px`, centerX + 35, hubY + towerHeight / 2);
+      }
 
       // Performance data overlay with enhanced metrics
       // ctx.fillStyle = "rgba(20, 30, 50, 0.92)";
@@ -495,7 +500,7 @@ export function ProfessionalTurbine({
       }
       window.removeEventListener("resize", updateCanvasSize);
     };
-  }, [liftToDragRatio, powerKilowatts, rpm, scaleFactor]);
+  }, [liftToDragRatio, powerKilowatts, rpm, scaleFactor, showAnnotations]);
 
   return (
     <div

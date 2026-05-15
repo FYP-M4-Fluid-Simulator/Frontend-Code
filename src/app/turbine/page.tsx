@@ -8,6 +8,8 @@ import {
   Settings,
   TrendingUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Zap,
   Sparkles,
 } from "lucide-react";
@@ -120,11 +122,13 @@ export default function TurbinePage() {
   const [dragCoefficient, setDragCoefficient] = useState(0);
   const [dataSource, setDataSource] = useState<"simulation" | "optimization" | "none">("none");
   const [powerError, setPowerError] = useState<string | null>(null);
-  const [selectedScale, setSelectedScale] = useState<TurbineScale>("medium");
-  const [powerResult, setPowerResult] = useState<PowerOutputResult | null>(null);
+  const [powerResults, setPowerResults] = useState<Record<TurbineScale, PowerOutputResult | null>>({
+    small: null,
+    medium: null,
+    large: null,
+  });
   const [cfdInputs, setCfdInputs] = useState<CFDInputState>(DEFAULT_CFD_INPUTS);
-
-  const currentPowerKilowatts = powerResult?.total_power_kilowatts ?? null;
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Load latest CFD metrics from sessionStorage if available.
   useEffect(() => {
@@ -296,11 +300,11 @@ export default function TurbinePage() {
     if (liftCoefficient > 0 && dragCoefficient > 0) {
       handleCalculatePower();
     }
-  }, [liftCoefficient, dragCoefficient, selectedScale]);
+  }, [liftCoefficient, dragCoefficient]);
 
   const handleCalculatePower = () => {
     setPowerError(null);
-    setPowerResult(null);
+    setPowerResults({ small: null, medium: null, large: null });
 
     if (liftCoefficient <= 0 || dragCoefficient <= 0) {
       setPowerError(
@@ -309,36 +313,64 @@ export default function TurbinePage() {
       return;
     }
 
-    const result = calculatePower(liftCoefficient, dragCoefficient, selectedScale);
+    // Calculate power for all three scales
+    const scales: TurbineScale[] = ["small", "medium", "large"];
+    const results: Record<TurbineScale, PowerOutputResult | null> = {
+      small: null,
+      medium: null,
+      large: null,
+    };
 
-    if (!result) {
-      setPowerError("Unable to calculate power — check Cl and Cd values.");
-      return;
-    }
-
-    setPowerResult({
-      total_power_watts: result.watts,
-      total_power_kilowatts: result.kilowatts,
-      operating_rpm: result.rpm,
-      cp: result.cp,
-      scale: selectedScale,
+    scales.forEach((scale) => {
+      const result = calculatePower(liftCoefficient, dragCoefficient, scale);
+      if (result) {
+        results[scale] = {
+          total_power_watts: result.watts,
+          total_power_kilowatts: result.kilowatts,
+          operating_rpm: result.rpm,
+          cp: result.cp,
+          scale: scale,
+        };
+      }
     });
+
+    setPowerResults(results);
   };
 
   const handleExportResults = () => {
-    const scaleConfig = selectedScale ? TURBINE_SCALES[selectedScale] : null;
     const results = {
       liftToDragRatio,
       xfoilCl: liftCoefficient,
       xfoilCd: dragCoefficient,
-      turbineScale: selectedScale,
-      rotorRadius: scaleConfig?.radius ?? null,
-      designWindSpeed: scaleConfig?.windSpeed ?? null,
-      tipSpeedRatio: scaleConfig?.tsr ?? null,
-      powerCoefficientCp: powerResult?.cp ?? null,
-      operatingRpm: powerResult?.operating_rpm ?? null,
-      powerW: powerResult?.total_power_watts ?? null,
-      powerKw: powerResult?.total_power_kilowatts ?? null,
+      turbines: {
+        small: powerResults.small ? {
+          rotorRadius: TURBINE_SCALES.small.radius,
+          designWindSpeed: TURBINE_SCALES.small.windSpeed,
+          tipSpeedRatio: TURBINE_SCALES.small.tsr,
+          powerCoefficientCp: powerResults.small.cp,
+          operatingRpm: powerResults.small.operating_rpm,
+          powerW: powerResults.small.total_power_watts,
+          powerKw: powerResults.small.total_power_kilowatts,
+        } : null,
+        medium: powerResults.medium ? {
+          rotorRadius: TURBINE_SCALES.medium.radius,
+          designWindSpeed: TURBINE_SCALES.medium.windSpeed,
+          tipSpeedRatio: TURBINE_SCALES.medium.tsr,
+          powerCoefficientCp: powerResults.medium.cp,
+          operatingRpm: powerResults.medium.operating_rpm,
+          powerW: powerResults.medium.total_power_watts,
+          powerKw: powerResults.medium.total_power_kilowatts,
+        } : null,
+        large: powerResults.large ? {
+          rotorRadius: TURBINE_SCALES.large.radius,
+          designWindSpeed: TURBINE_SCALES.large.windSpeed,
+          tipSpeedRatio: TURBINE_SCALES.large.tsr,
+          powerCoefficientCp: powerResults.large.cp,
+          operatingRpm: powerResults.large.operating_rpm,
+          powerW: powerResults.large.total_power_watts,
+          powerKw: powerResults.large.total_power_kilowatts,
+        } : null,
+      },
       timestamp: new Date().toISOString(),
     };
 
@@ -417,193 +449,274 @@ export default function TurbinePage() {
 
       {/* Main Content - Turbine Visualization */}
       <div className="flex-1 flex overflow-hidden relative bg-gradient-to-br from-gray-50 via-white to-green-50">
-        {/* Performance Stats Overlay */}
-        <div className="absolute top-4 right-4 z-30">
-          <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border-2 border-green-300 p-5 min-w-[280px]">
-            <h3 className="text-sm font-black text-green-900 mb-3 flex items-center gap-2">
-              <Wind className="w-4 h-4" />
-              Performance Summary
-            </h3>
-
-            <div className="space-y-2 text-sm font-medium">
-              {dataSource === "none" && (
-                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="text-[11px] font-bold text-amber-800 uppercase mb-1 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-                    Warning
-                  </div>
-                  <div className="text-[11px] text-amber-700 leading-tight">
-                    No XFoil data found. Run a <span className="font-bold cursor-pointer underline text-amber-900" onClick={() => router.push('/simulate')}>simulation</span> or <span className="font-bold cursor-pointer underline text-amber-900" onClick={() => router.push('/optimize')}>optimization</span> until XFoil results are produced, then open this page again.
-                  </div>
-                </div>
+        {/* Performance Summary Sidebar with Hide/Show */}
+        <div
+          className={`absolute top-4 right-4 z-30 transition-all duration-300 ${
+            sidebarCollapsed ? "translate-x-[calc(100%-2.5rem)]" : "translate-x-0"
+          }`}
+        >
+          <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border-2 border-green-300 overflow-hidden relative">
+            {/* Hide/Show Button - Always Visible */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="absolute left-3 top-3 bg-green-100 hover:bg-green-200 border border-green-400 rounded-lg p-1.5 transition-colors z-50"
+              title={sidebarCollapsed ? "Show Performance Summary" : "Hide Performance Summary"}
+            >
+              {sidebarCollapsed ? (
+                <ChevronLeft className="w-4 h-4 text-green-700" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-green-700" />
               )}
-              
-              {dataSource !== "none" && (
-                <div className="mb-3 px-2 py-1 bg-green-50 border border-green-200 rounded text-[10px] font-bold text-green-700 uppercase flex items-center gap-1.5 shadow-sm">
-                  <Sparkles className="w-3 h-3 text-green-500" />
-                  XFoil coefficients ({dataSource}) active
-                </div>
-              )}
+            </button>
 
-              <div className="flex justify-between">
-                <span className="text-gray-700">XFoil C<sub>L</sub>:</span>
-                <span className="text-base font-black text-cyan-700">
-                  {dataSource !== "none"
-                    ? formatCoefficient(liftCoefficient)
-                    : "—"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">XFoil C<sub>D</sub>:</span>
-                <span className="text-base font-black text-rose-700">
-                  {dataSource !== "none"
-                    ? formatCoefficient(dragCoefficient)
-                    : "—"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">XFoil L/D:</span>
-                <span className="text-base font-black text-green-700">
-                  {dataSource !== "none"
-                    ? liftToDragRatio.toFixed(1)
-                    : "—"}
-                </span>
-              </div>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="p-5 min-w-[280px] pt-12">
+                <h3 className="text-sm font-black text-green-900 mb-3 flex items-center gap-2">
+                  <Wind className="w-4 h-4" />
+                  Performance Summary
+                </h3>
 
-            {/* Power Panel */}
-            <div className="mt-4 pt-3 border-t border-gray-200 space-y-3 text-xs">
-
-              {/* Turbine Scale Selector */}
-              <div>
-                <label className="block text-[11px] font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  Turbine Scale
-                </label>
-                <div className="relative">
-                  <select
-                    id="turbine-scale-select"
-                    value={selectedScale}
-                    onChange={(e) => {
-                      setSelectedScale(e.target.value as TurbineScale);
-                      setPowerResult(null);
-                      setPowerError(null);
-                    }}
-                    className="w-full appearance-none bg-white border-2 border-gray-200 hover:border-emerald-400 focus:border-emerald-500 focus:outline-none rounded-lg px-3 py-2 text-xs font-semibold text-gray-800 cursor-pointer transition-colors pr-8"
-                  >
-                    <option value="small">Small</option>
-                    <option value="medium">Medium</option>
-                    <option value="large">Large (Utility)</option>
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Scale specs badge */}
-              {(() => {
-                const cfg = TURBINE_SCALES[selectedScale];
-                return (
-                  <div className={`rounded-lg px-3 py-2 ${cfg.bgColor} border ${cfg.borderColor} flex flex-col gap-1`}>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Rotor Radius</span>
-                      <span className={`font-bold ${cfg.color}`}>{cfg.radius} m</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Design Wind Speed</span>
-                      <span className={`font-bold ${cfg.color}`}>{cfg.windSpeed} m/s</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tip Speed Ratio (λ)</span>
-                      <span className={`font-bold ${cfg.color}`}>{cfg.tsr}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-
-              {powerError && (
-                <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md p-2 leading-relaxed">
-                  {powerError}
-                </div>
-              )}
-
-              {powerResult && (() => {
-                const cfg = TURBINE_SCALES[powerResult.scale];
-                const absKw = Math.abs(powerResult.total_power_kilowatts);
-                const absW  = Math.abs(powerResult.total_power_watts);
-                return (
-                  <div className={`${cfg.bgColor} border ${cfg.borderColor} rounded-lg p-3 space-y-2`}>
-                    <div className={`text-xs font-black ${cfg.color} flex items-center gap-1.5 mb-0.5`}>
-                      {/* <Zap className="w-3.5 h-3.5" /> */}
-                      Power Output — {cfg.label}
-                    </div>
-
-                    {/* Power Coefficient */}
-                    {/* <div className="flex justify-between items-baseline">
-                      <span className="text-gray-600">Cp (Betz)</span>
-                      <span className={`font-black text-sm ${cfg.color}`}>
-                        {powerResult.cp.toFixed(4)}
-                      </span>
-                    </div> */}
-
-                    {/* RPM */}
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-gray-600">Operating RPM</span>
-                      <span className={`font-black text-sm ${cfg.color}`}>
-                        {powerResult.operating_rpm.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="border-t border-white/60 pt-2 space-y-1">
-                      {/* kW */}
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-gray-600">Power (kW)</span>
-                        <span className={`font-black text-base ${cfg.color}`}>
-                          {absKw >= 1000
-                            ? `${(absKw / 1000).toFixed(2)} MW`
-                            : absKw >= 1
-                              ? `${absKw.toFixed(2)} kW`
-                              : `${(absKw * 1000).toFixed(1)} W`}
-                        </span>
+                <div className="space-y-2 text-sm font-medium">
+                  {dataSource === "none" && (
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="text-[11px] font-bold text-amber-800 uppercase mb-1 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                        Warning
                       </div>
-                      {/* W (raw) */}
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-gray-600">Power (W)</span>
-                        <span className="font-semibold text-gray-800 text-[11px]">
-                          {absW.toLocaleString(undefined, { maximumFractionDigits: 1 })} W
-                        </span>
+                      <div className="text-[11px] text-amber-700 leading-tight">
+                        No XFoil data found. Run a{" "}
+                        <span
+                          className="font-bold cursor-pointer underline text-amber-900"
+                          onClick={() => router.push("/simulate")}
+                        >
+                          simulation
+                        </span>{" "}
+                        or{" "}
+                        <span
+                          className="font-bold cursor-pointer underline text-amber-900"
+                          onClick={() => router.push("/optimize")}
+                        >
+                          optimization
+                        </span>{" "}
+                        until XFoil results are produced, then open this page again.
                       </div>
                     </div>
+                  )}
+
+                  {dataSource !== "none" && (
+                    <div className="mb-3 px-2 py-1 bg-green-50 border border-green-200 rounded text-[10px] font-bold text-green-700 uppercase flex items-center gap-1.5 shadow-sm">
+                      <Sparkles className="w-3 h-3 text-green-500" />
+                      XFoil coefficients ({dataSource}) active
+                    </div>
+                  )}
+
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">
+                      XFoil C<sub>L</sub>:
+                    </span>
+                    <span className="text-base font-black text-cyan-700">
+                      {dataSource !== "none"
+                        ? formatCoefficient(liftCoefficient)
+                        : "—"}
+                    </span>
                   </div>
-                );
-              })()}
-            </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">
+                      XFoil C<sub>D</sub>:
+                    </span>
+                    <span className="text-base font-black text-rose-700">
+                      {dataSource !== "none"
+                        ? formatCoefficient(dragCoefficient)
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">XFoil L/D:</span>
+                    <span className="text-base font-black text-green-700">
+                      {dataSource !== "none" ? liftToDragRatio.toFixed(1) : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                {powerError && (
+                  <div className="mt-4 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md p-2 leading-relaxed">
+                    {powerError}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Collapsed state - just show the button */}
+            {sidebarCollapsed && (
+              <div className="w-10 h-10"></div>
+            )}
           </div>
         </div>
 
-        {/* Turbine Component */}
+        {/* Three Turbines Display */}
         <div className="flex-1 relative">
-          <div className="absolute inset-4 rounded-xl shadow-2xl overflow-hidden border-2 border-gray-300">
-            <ProfessionalTurbine
-              liftToDragRatio={liftToDragRatio}
-              powerKilowatts={currentPowerKilowatts}
-              rpm={powerResult?.operating_rpm ?? null}
-              scaleFactor={
-                selectedScale === "small" ? 0.55
-                : selectedScale === "large" ? 1.65
-                : 1.0
-              }
-            />
-          </div>
-        </div>
+          <div className="absolute inset-4 rounded-xl shadow-2xl overflow-hidden border-2 border-gray-300 bg-[#0a0e1a]">
+            <div className="h-full w-full grid grid-cols-3 gap-0">
+              {/* Small Turbine */}
+              <div className="relative flex flex-col items-center justify-center border-r border-gray-700">
+                {/* Label */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+                  <div className="bg-cyan-900/80 backdrop-blur-sm px-4 py-1 rounded-lg border border-cyan-600">
+                    <span className="text-xs font-bold text-cyan-200 uppercase tracking-wide">
+                      SMALL
+                    </span>
+                  </div>
+                </div>
 
-        {/* Bottom Info Bar */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-30">
-          <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-lg border border-gray-300 px-6 py-2">
-            <div className="text-xs font-medium text-gray-700 text-center">
-              Wind Turbine Performance Visualization • Real-time CFD Analysis
+                {/* Power Output - Above Turbine */}
+                {powerResults.small && (
+                  <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-cyan-900/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-cyan-500 text-center">
+                      <div className="text-lg font-black text-cyan-100">
+                        {(() => {
+                          const absKw = Math.abs(powerResults.small.total_power_kilowatts);
+                          return absKw >= 1
+                            ? `${absKw.toFixed(1)} kW`
+                            : `${(absKw * 1000).toFixed(0)} W`;
+                        })()}
+                      </div>
+                      <div className="text-[9px] font-semibold text-cyan-300">
+                        Cp: {(powerResults.small.cp * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Turbine Canvas */}
+                <div className="flex-1 w-full">
+                  <ProfessionalTurbine
+                    liftToDragRatio={liftToDragRatio}
+                    powerKilowatts={powerResults.small?.total_power_kilowatts ?? null}
+                    rpm={powerResults.small?.operating_rpm ?? null}
+                    scaleFactor={0.55}
+                    showAnnotations={false}
+                  />
+                </div>
+
+                {/* Constants - Below Turbine */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                  <div className="bg-cyan-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-cyan-600">
+                    <div className="flex gap-3 text-[10px] font-semibold text-cyan-200">
+                      <span>R: {TURBINE_SCALES.small.radius}m</span>
+                      <span>TSR: {TURBINE_SCALES.small.tsr}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Medium Turbine */}
+              <div className="relative flex flex-col items-center justify-center border-r border-gray-700">
+                {/* Label */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+                  <div className="bg-green-900/80 backdrop-blur-sm px-4 py-1 rounded-lg border border-green-600">
+                    <span className="text-xs font-bold text-green-200 uppercase tracking-wide">
+                      MEDIUM
+                    </span>
+                  </div>
+                </div>
+
+                {/* Power Output - Above Turbine */}
+                {powerResults.medium && (
+                  <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-green-900/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-green-500 text-center">
+                      <div className="text-lg font-black text-green-100">
+                        {(() => {
+                          const absKw = Math.abs(powerResults.medium.total_power_kilowatts);
+                          return absKw >= 1
+                            ? `${absKw.toFixed(1)} kW`
+                            : `${(absKw * 1000).toFixed(0)} W`;
+                        })()}
+                      </div>
+                      <div className="text-[9px] font-semibold text-green-300">
+                        Cp: {(powerResults.medium.cp * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Turbine Canvas */}
+                <div className="flex-1 w-full">
+                  <ProfessionalTurbine
+                    liftToDragRatio={liftToDragRatio}
+                    powerKilowatts={powerResults.medium?.total_power_kilowatts ?? null}
+                    rpm={powerResults.medium?.operating_rpm ?? null}
+                    scaleFactor={1.0}
+                    showAnnotations={false}
+                  />
+                </div>
+
+                {/* Constants - Below Turbine */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                  <div className="bg-green-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-green-600">
+                    <div className="flex gap-3 text-[10px] font-semibold text-green-200">
+                      <span>R: {TURBINE_SCALES.medium.radius}m</span>
+                      <span>TSR: {TURBINE_SCALES.medium.tsr}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Large Turbine */}
+              <div className="relative flex flex-col items-center justify-center">
+                {/* Label */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+                  <div className="bg-teal-900/80 backdrop-blur-sm px-4 py-1 rounded-lg border border-teal-600">
+                    <span className="text-xs font-bold text-teal-200 uppercase tracking-wide">
+                      LARGE
+                    </span>
+                  </div>
+                </div>
+
+                {/* Power Output - Above Turbine */}
+                {powerResults.large && (
+                  <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-teal-900/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-teal-500 text-center">
+                      <div className="text-lg font-black text-teal-100">
+                        {(() => {
+                          const absKw = Math.abs(powerResults.large.total_power_kilowatts);
+                          return absKw >= 1000
+                            ? `${(absKw / 1000).toFixed(2)} MW`
+                            : `${absKw.toFixed(1)} kW`;
+                        })()}
+                      </div>
+                      <div className="text-[9px] font-semibold text-teal-300">
+                        Cp: {(powerResults.large.cp * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Turbine Canvas */}
+                <div className="flex-1 w-full">
+                  <ProfessionalTurbine
+                    liftToDragRatio={liftToDragRatio}
+                    powerKilowatts={powerResults.large?.total_power_kilowatts ?? null}
+                    rpm={powerResults.large?.operating_rpm ?? null}
+                    scaleFactor={1.65}
+                    showAnnotations={false}
+                  />
+                </div>
+
+                {/* Constants - Below Turbine */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                  <div className="bg-teal-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-teal-600">
+                    <div className="flex gap-3 text-[10px] font-semibold text-teal-200">
+                      <span>R: {TURBINE_SCALES.large.radius}m</span>
+                      <span>TSR: {TURBINE_SCALES.large.tsr}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
+
       </div>
     </div>
   );
