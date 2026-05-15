@@ -496,6 +496,7 @@ export default function SimulatePage() {
         xfoilLd: fallbackXfoil.l_d,
         xfoilStatus: fallbackXfoil.status,
         computationTime: finalDuration,
+        timestamp: new Date().toISOString(),
       };
 
       if (sessionId) {
