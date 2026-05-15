@@ -397,6 +397,7 @@ export default function OptimizePage() {
         xfoilCd: xfoil.cd,
         xfoilLd: xfoil.l_d,
         xfoilStatus: xfoil.status,
+        timestamp: new Date().toISOString(),
       }),
     );
 

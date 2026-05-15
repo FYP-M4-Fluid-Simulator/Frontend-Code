@@ -7,10 +7,8 @@ import {
   Download,
   Settings,
   TrendingUp,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Zap,
   Sparkles,
 } from "lucide-react";
 import { ProfessionalTurbine } from "../../components/ProfessionalTurbine";
@@ -505,14 +503,13 @@ export default function TurbinePage() {
 
                   {dataSource !== "none" && (
                     <div className="mb-3 px-2 py-1 bg-green-50 border border-green-200 rounded text-[10px] font-bold text-green-700 uppercase flex items-center gap-1.5 shadow-sm">
-                      <Sparkles className="w-3 h-3 text-green-500" />
                       XFoil coefficients ({dataSource}) active
                     </div>
                   )}
 
                   <div className="flex justify-between">
                     <span className="text-gray-700">
-                      XFoil C<sub>L</sub>:
+                      Lift Coefficient (C<sub>L</sub>):
                     </span>
                     <span className="text-base font-black text-cyan-700">
                       {dataSource !== "none"
@@ -522,7 +519,7 @@ export default function TurbinePage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-700">
-                      XFoil C<sub>D</sub>:
+                      Drag Coefficient (C<sub>D</sub>):
                     </span>
                     <span className="text-base font-black text-rose-700">
                       {dataSource !== "none"
@@ -531,7 +528,7 @@ export default function TurbinePage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-700">XFoil L/D:</span>
+                    <span className="text-gray-700">Lift-to-Drag Ratio (L/D):</span>
                     <span className="text-base font-black text-green-700">
                       {dataSource !== "none" ? liftToDragRatio.toFixed(1) : "—"}
                     </span>
