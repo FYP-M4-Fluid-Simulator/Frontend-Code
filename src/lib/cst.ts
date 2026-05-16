@@ -56,6 +56,26 @@ function classShape(
 }
 
 /**
+ * Calculate the maximum thickness of a CST airfoil
+ */
+export function calculateMaxThickness(
+  upperWeights: number[],
+  lowerWeights: number[],
+  numPoints = 100,
+) {
+  const x = Array.from({ length: numPoints + 1 }, (_, i) => i / numPoints);
+  const yu = classShape(upperWeights, x, 0);
+  const yl = classShape(lowerWeights, x, 0);
+
+  let maxThickness = 0;
+  for (let i = 0; i < x.length; i++) {
+    const t = yu[i] - yl[i];
+    if (t > maxThickness) maxThickness = t;
+  }
+  return maxThickness;
+}
+
+/**
  * Generate complete CST airfoil - matches Python cst_airfoil function
  * Uses cosine spacing for proper point distribution
  */
