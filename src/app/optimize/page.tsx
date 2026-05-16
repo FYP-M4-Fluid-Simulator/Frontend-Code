@@ -42,7 +42,7 @@ import {
   saveExperimentToBackend,
   type OptimizationMetrics,
 } from "../../lib/exportData";
-import { generateCSTAirfoil } from "../../lib/cst";
+import { generateCSTAirfoil, calculateMaxThickness } from "../../lib/cst";
 import { useOptimization } from "../../lib/socket/OptimizationWebSocket";
 import type { OptSessionConfig } from "../../lib/http/createOptSession";
 import { UserProfileDropdown } from "@/components/UserProfileDropdown";
@@ -160,12 +160,19 @@ export default function OptimizePage() {
     const savedState = sessionStorage.getItem("cfdState");
     if (savedState) {
       const state = JSON.parse(savedState);
-      setUpperCoefficients(state.upperCoefficients || upperCoefficients);
-      setLowerCoefficients(state.lowerCoefficients || lowerCoefficients);
+      const upper = state.upperCoefficients || upperCoefficients;
+      const lower = state.lowerCoefficients || lowerCoefficients;
+      setUpperCoefficients(upper);
+      setLowerCoefficients(lower);
       setAngleOfAttack(state.angleOfAttack || angleOfAttack);
       setVelocity(state.velocity || velocity);
       setMeshDensity(state.meshDensity || meshDensity);
       setChordLength(state.chordLength || chordLength);
+
+      // Calculate current thickness and set constraint range (tightest between default [0.06, 0.25] and [T-0.1, T+0.1])
+      const currentT = calculateMaxThickness(upper, lower);
+      setMinThickness(Math.max(0.06, currentT - 0.1));
+      setMaxThickness(Math.min(0.25, currentT + 0.1));
     }
   }, []);
 
@@ -941,11 +948,16 @@ export default function OptimizePage() {
                         </select>
                         <input
                           type="number"
-                          min={1e4}
-                          max={1e8}
+                          min={1e5}
+                          max={6e6}
                           step={1e5}
                           value={reynoldsNumber}
                           onChange={(e) => setReynoldsNumber(Number(e.target.value))}
+                          onBlur={(e) =>
+                            setReynoldsNumber(
+                              Math.min(6e6, Math.max(1e5, Number(e.target.value))),
+                            )
+                          }
                           disabled={isOptimizing}
                           className={`w-28 px-3 py-2 text-sm border border-gray-300 rounded font-semibold ${isOptimizing ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                         />
